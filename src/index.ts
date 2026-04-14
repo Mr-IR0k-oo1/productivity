@@ -1,41 +1,40 @@
-import { serve } from "bun";
-import index from "./index.html";
+import { serve } from "@hono/node-server";
+import { cors } from "hono/cors";
+import { Hono } from "hono";
 
-const server = serve({
-  routes: {
-    // Serve index.html for all unmatched routes.
-    "/*": index,
+import authRoute from "@/src/routes/auth";
+import workspaceRoute from "@/src/routes/workspace";
+import ideasRoute from "@/src/routes/ideas";
+import tasksRoute from "@/src/routes/tasks";
+import calendarRoute from "@/src/routes/calendar";
+import timeRoute from "@/src/routes/time";
+import reportsRoute from "@/src/routes/reports";
 
-    "/api/hello": {
-      async GET() {
-        return Response.json({
-          message: "Hello, world!",
-          method: "GET",
-        });
-      },
-      async PUT() {
-        return Response.json({
-          message: "Hello, world!",
-          method: "PUT",
-        });
-      },
+const app = new Hono();
+
+app.use("*", cors());
+
+app.get("/", (c) => c.json({ ok: true, service: "PulseForge API" }));
+app.get("/health", (c) => c.json({ ok: true }));
+
+app.route("/api/auth", authRoute);
+app.route("/api/workspace", workspaceRoute);
+app.route("/api/ideas", ideasRoute);
+app.route("/api/tasks", tasksRoute);
+app.route("/api/calendar", calendarRoute);
+app.route("/api/time", timeRoute);
+app.route("/api/reports", reportsRoute);
+
+export default app;
+
+if (process.env.NODE_ENV !== "production") {
+  serve(
+    {
+      fetch: app.fetch,
+      port: 8787,
     },
-
-    "/api/hello/:name": async req => {
-      const name = req.params.name;
-      return Response.json({
-        message: `Hello, ${name}!`,
-      });
+    (info) => {
+      console.log(`PulseForge API running on http://localhost:${info.port}`);
     },
-  },
-
-  development: process.env.NODE_ENV !== "production" && {
-    // Enable browser hot reloading in development
-    hmr: true,
-
-    // Echo console logs from the browser to the server
-    console: true,
-  },
-});
-
-console.log(`🚀 Server running at ${server.url}`);
+  );
+}

@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --muted: #a1a1aa;
+  --card: #0f0f10;
+  --card-border: #1c1c1f;
+}
+
+html,
+body {
+  background:
+    radial-gradient(circle at 10% -10%, rgba(50, 50, 50, 0.18), transparent 45%),
+    radial-gradient(circle at 90% 0%, rgba(80, 80, 80, 0.11), transparent 35%),
+    var(--background);
+  color: var(--foreground);
+  font-family: "Manrope", "Satoshi", "Space Grotesk", sans-serif;
+  min-height: 100%;
+}
+
+* {
+  border-color: var(--card-border);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  letter-spacing: -0.02em;
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-animate {
+  animation: riseIn 340ms ease-out;
+}
