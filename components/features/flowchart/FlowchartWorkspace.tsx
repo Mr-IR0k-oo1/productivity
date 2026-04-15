@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Node, Edge, NodeTypes } from "@xyflow/react";
+import type { Edge, Node, NodeTypes, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
+import { applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
 import {
   ArrowLeft,
   ChevronDown,
@@ -90,19 +91,9 @@ export function FlowchartWorkspace() {
     }
   }, [activeFlowchart]);
 
-  const onNodesChange = useCallback((changes: any[]) => {
+  const onNodesChange = useCallback<OnNodesChange>((changes) => {
     setNodes((nds) => {
-      const updated = changes.reduce((acc, change) => {
-        if (change.type === "position" && change.position) {
-          return acc.map((node) =>
-            node.id === change.id ? { ...node, position: change.position } : node
-          );
-        }
-        if (change.type === "remove") {
-          return acc.filter((node) => node.id !== change.id);
-        }
-        return acc;
-      }, nds);
+      const updated = applyNodeChanges(changes, nds);
 
       const positionChanges = changes.filter((c) => c.type === "position" && c.position);
       if (positionChanges.length > 0) {
@@ -113,14 +104,9 @@ export function FlowchartWorkspace() {
     });
   }, [edges]);
 
-  const onEdgesChange = useCallback((changes: any[]) => {
+  const onEdgesChange = useCallback<OnEdgesChange>((changes) => {
     setEdges((eds) => {
-      const updated = changes.reduce((acc, change) => {
-        if (change.type === "remove") {
-          return acc.filter((edge) => edge.id !== change.id);
-        }
-        return acc;
-      }, eds);
+      const updated = applyEdgeChanges(changes, eds);
 
       if (changes.some((c) => c.type === "remove")) {
         autoSave(nodes, updated);
@@ -130,8 +116,11 @@ export function FlowchartWorkspace() {
     });
   }, [nodes]);
 
-  const onConnect = useCallback(
-    (params: any) => {
+  const onConnect = useCallback<OnConnect>((params) => {
+      if (!params.source || !params.target) {
+        return;
+      }
+
       const newEdge = {
         ...params,
         id: `e-${params.source}-${params.target}-${Date.now()}`,
@@ -178,11 +167,11 @@ export function FlowchartWorkspace() {
     }
   };
 
-  const handleNodeClick = (_: any, node: Node<FlowchartNodeData>) => {
+  const handleNodeClick = (_: React.MouseEvent<Element, MouseEvent>, node: Node<FlowchartNodeData>) => {
     setSelectedNode(node);
   };
 
-  const handleNodeDoubleClick = (_: any, node: Node<FlowchartNodeData>) => {
+  const handleNodeDoubleClick = (_: React.MouseEvent<Element, MouseEvent>, node: Node<FlowchartNodeData>) => {
     setSelectedNode(node);
   };
 

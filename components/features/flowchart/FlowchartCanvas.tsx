@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import type { MouseEvent } from "react";
 import {
   ReactFlow,
   Background,
@@ -16,14 +17,18 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import type { FlowchartNodeData } from "@/stores/flowchart-store";
+
+type FlowchartNode = Node<FlowchartNodeData>;
+
 interface FlowchartCanvasProps {
-  nodes: Node[];
+  nodes: FlowchartNode[];
   edges: Edge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  onNodeClick?: (event: React.MouseEvent, node: Node) => void;
-  onNodeDoubleClick?: (event: React.MouseEvent, node: Node) => void;
+  onNodeClick?: (event: MouseEvent<Element, MouseEvent>, node: FlowchartNode) => void;
+  onNodeDoubleClick?: (event: MouseEvent<Element, MouseEvent>, node: FlowchartNode) => void;
   nodeTypes: NodeTypes;
 }
 
@@ -37,6 +42,20 @@ export function FlowchartCanvas({
   onNodeDoubleClick,
   nodeTypes,
 }: FlowchartCanvasProps) {
+  const handleNodeClick = useCallback(
+    (event: MouseEvent<Element, MouseEvent>, node: Node) => {
+      onNodeClick?.(event, node as FlowchartNode);
+    },
+    [onNodeClick],
+  );
+
+  const handleNodeDoubleClick = useCallback(
+    (event: MouseEvent<Element, MouseEvent>, node: Node) => {
+      onNodeDoubleClick?.(event, node as FlowchartNode);
+    },
+    [onNodeDoubleClick],
+  );
+
   return (
     <div className="h-full w-full">
       <ReactFlow
@@ -45,8 +64,8 @@ export function FlowchartCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
