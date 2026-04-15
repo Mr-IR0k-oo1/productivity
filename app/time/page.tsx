@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -19,22 +19,20 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
-  CheckCircle2,
   Download,
-  Pause,
-  Play,
   Plus,
-  RefreshCw,
   Square,
   Timer,
   UserRound,
 } from "lucide-react";
 
-import { StatCard } from "@/components/common/StatCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
+import { LoadingState } from "@/components/ui/loading-state";
+import { useStartTimerMutation, useStopTimerMutation, useTimeEntriesQuery } from "@/hooks/useTimeEntries";
 import { cn } from "@/lib/utils";
 
 type TimeView = "my" | "team" | "reports";
@@ -331,30 +329,61 @@ function ReportsView() {
   return <TimeChart />;
 }
 
-function TimerPanel() {
+function formatElapsed(seconds: number) {
+  const hours = Math.floor(seconds / 3600)
+    .toString()
+    .padStart(2, "0");
+  const minutes = Math.floor((seconds % 3600) / 60)
+    .toString()
+    .padStart(2, "0");
+  const remainingSeconds = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, "0");
+
+  return `${hours}:${minutes}:${remainingSeconds}`;
+}
+
+function TimerPanel({
+  isRunning,
+  description,
+  elapsedLabel,
+  onStop,
+  isStopping,
+}: {
+  isRunning: boolean;
+  description: string;
+  elapsedLabel: string;
+  onStop: () => void;
+  isStopping: boolean;
+}) {
   return (
     <Card className="border-emerald-950/60 bg-zinc-950/70">
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <div>
           <CardTitle className="text-base text-emerald-300">Currently tracking</CardTitle>
-          <CardDescription>Design new dashboard</CardDescription>
+          <CardDescription>{description}</CardDescription>
         </div>
-        <Badge variant="success">Running</Badge>
+        <Badge variant={isRunning ? "success" : "default"}>{isRunning ? "Running" : "Stopped"}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="text-4xl font-semibold tracking-tight text-zinc-100">02:45:18</div>
+        <div className="text-4xl font-semibold tracking-tight text-zinc-100">{elapsedLabel}</div>
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-          <Input defaultValue="Design new dashboard" />
-          <Button variant="secondary">
-            <Pause className="h-4 w-4" />
-            Pause
+          <Input value={description} readOnly />
+          <Button variant="secondary" disabled>
+            <Timer className="h-4 w-4" />
+            Active
           </Button>
-          <Button variant="secondary" className="border-red-900 text-red-200">
+          <Button
+            variant="secondary"
+            className="border-red-900 text-red-200"
+            onClick={onStop}
+            disabled={!isRunning || isStopping}
+          >
             <Square className="h-4 w-4" />
-            Stop
+            {isStopping ? "Stopping" : "Stop"}
           </Button>
         </div>
-        <Input placeholder="Notes" defaultValue="Focus on spacing, hierarchy and export controls" />
+        <Input placeholder="Notes" value={description} readOnly />
       </CardContent>
     </Card>
   );
@@ -363,11 +392,61 @@ function TimerPanel() {
 export default function TimePage() {
   const [view, setView] = useState<TimeView>("my");
   const [weekMode, setWeekMode] = useState("Current Week");
+  const [now, setNow] = useState(Date.now());
+
+  const timeEntriesQuery = useTimeEntriesQuery();
+  const startTimerMutation = useStartTimerMutation();
+  const stopTimerMutation = useStopTimerMutation();
+
+  const runningEntry = useMemo(
+    () => timeEntriesQuery.data?.find((entry) => entry.isRunning) ?? null,
+    [timeEntriesQuery.data],
+  );
+
+  useEffect(() => {
+    if (!runningEntry) {
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [runningEntry]);
+
+  const runningSeconds = useMemo(() => {
+    if (!runningEntry) {
+      return 0;
+    }
+
+    const startedAtMs = new Date(runningEntry.startedAt).getTime();
+    return Math.max(0, Math.floor((now - startedAtMs) / 1000));
+  }, [now, runningEntry]);
 
   const totalHoursThisWeek = useMemo(
     () => weeklyHours.reduce((sum, value) => sum + value, 0).toFixed(1),
     [],
   );
+
+  const timerDescription = runningEntry?.description?.trim() || "Focus session";
+
+  if (timeEntriesQuery.isLoading) {
+    return <LoadingState label="Loading time entries" description="Preparing your timer and timesheet data" />;
+  }
+
+  if (timeEntriesQuery.error) {
+    return (
+      <ErrorState
+        message={timeEntriesQuery.error instanceof Error ? timeEntriesQuery.error.message : "Could not load time entries"}
+        onRetry={() => {
+          void timeEntriesQuery.refetch();
+        }}
+      />
+    );
+  }
 
   return (
     <div className="page-animate space-y-6">
@@ -393,9 +472,14 @@ export default function TimePage() {
             Next
             <ArrowRight className="h-4 w-4" />
           </Button>
-          <Button>
+          <Button
+            onClick={() => {
+              startTimerMutation.mutate({ description: "Focus session" });
+            }}
+            disabled={Boolean(runningEntry) || startTimerMutation.isPending}
+          >
             <Timer className="h-4 w-4" />
-            Start Timer
+            {startTimerMutation.isPending ? "Starting" : "Start Timer"}
           </Button>
           <Button variant="secondary">
             <Download className="h-4 w-4" />
@@ -443,7 +527,19 @@ export default function TimePage() {
         </Card>
       </section>
 
-      <TimerPanel />
+      <TimerPanel
+        isRunning={Boolean(runningEntry)}
+        description={timerDescription}
+        elapsedLabel={formatElapsed(runningSeconds)}
+        onStop={() => {
+          if (!runningEntry) {
+            return;
+          }
+
+          stopTimerMutation.mutate(runningEntry.id);
+        }}
+        isStopping={stopTimerMutation.isPending}
+      />
 
       <Card className="border-zinc-900 bg-zinc-950/50">
         <CardContent className="pt-6">

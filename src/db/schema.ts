@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   authUserId: uuid("auth_user_id").notNull().unique(),
   fullName: varchar("full_name", { length: 120 }),
+  jobTitle: varchar("job_title", { length: 120 }),
   email: varchar("email", { length: 255 }).notNull().unique(),
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -33,6 +34,15 @@ export const workspaces = pgTable("workspaces", {
   ownerId: uuid("owner_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const workspaceSettings = pgTable("workspace_settings", {
+  workspaceId: uuid("workspace_id")
+    .primaryKey()
+    .references(() => workspaces.id, { onDelete: "cascade" }),
+  settings: jsonb("settings").default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

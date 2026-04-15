@@ -2,74 +2,205 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useSessionContext } from "@/components/providers/SessionProvider";
+import { fetchApiJson } from "@/lib/api/client";
 import { supabaseClient } from "@/lib/supabase/client";
 
 export type TaskDTO = {
   id: string;
   title: string;
+  description: string | null;
+  assigneeId: string | null;
   status: "backlog" | "todo" | "in_progress" | "done" | "blocked";
+  priority: number;
+  dueDate: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 };
 
-async function fetchTasks() {
-  const response = await fetch("/api/tasks", {
-    headers: {
-      "x-workspace-id": "demo-workspace",
-    },
+export type TaskFilters = {
+  status?: TaskDTO["status"];
+  assigneeId?: string;
+  dueFrom?: string;
+  dueTo?: string;
+  search?: string;
+};
+
+export type UpdateTaskPayload = {
+  id: string;
+  title?: string;
+  description?: string | null;
+  assigneeId?: string | null;
+  status?: TaskDTO["status"];
+  priority?: number;
+  dueDate?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export const tasksQueryKey = (workspaceId: string) => ["tasks", workspaceId] as const;
+
+async function fetchFilteredTasks(workspaceId: string, authToken: string | null, filters: TaskFilters) {
+  const searchParams = new URLSearchParams();
+
+  if (filters.status) searchParams.set("status", filters.status);
+  if (filters.assigneeId) searchParams.set("assigneeId", filters.assigneeId);
+  if (filters.dueFrom) searchParams.set("dueFrom", filters.dueFrom);
+  if (filters.dueTo) searchParams.set("dueTo", filters.dueTo);
+  if (filters.search) searchParams.set("search", filters.search);
+
+  const suffix = searchParams.toString();
+  const path = suffix ? `/api/tasks?${suffix}` : "/api/tasks";
+
+  const payload = await fetchApiJson<{ data: TaskDTO[] }>(path, {
+    session: { workspaceId, authToken },
   });
 
-  if (!response.ok) throw new Error("Failed to load tasks");
-  const payload = (await response.json()) as { data: TaskDTO[] };
   return payload.data;
 }
 
-export function useTasksQuery() {
+export function useTasksQuery(filters: TaskFilters = {}) {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+
   return useQuery({
-    queryKey: ["tasks"],
-    queryFn: fetchTasks,
+    queryKey: [...tasksQueryKey(workspaceId), userId ?? "anonymous", filters],
+    queryFn: () => fetchFilteredTasks(workspaceId, authToken, filters),
+    enabled: isReady && Boolean(workspaceId) && Boolean(userId),
+  });
+}
+
+export function useTaskDetailQuery(taskId: string | null) {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+
+  return useQuery({
+    queryKey: [...tasksQueryKey(workspaceId), userId ?? "anonymous", "detail", taskId],
+    queryFn: async () => {
+      const payload = await fetchApiJson<{ data: TaskDTO }>(`/api/tasks/${taskId}`, {
+        session: { workspaceId, authToken },
+      });
+      return payload.data;
+    },
+    enabled: isReady && Boolean(workspaceId) && Boolean(userId) && Boolean(taskId),
   });
 }
 
 export function useCreateTaskMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
   const queryClient = useQueryClient();
+  const queryKey = [...tasksQueryKey(workspaceId), userId ?? "anonymous"];
 
   return useMutation({
-    mutationFn: async (payload: { title: string }) => {
-      const response = await fetch("/api/tasks", {
+    mutationFn: async (payload: {
+      title: string;
+      description?: string;
+      assigneeId?: string;
+      status?: TaskDTO["status"];
+      priority?: number;
+      dueDate?: string;
+      metadata?: Record<string, unknown>;
+    }) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      return fetchApiJson<{ data: TaskDTO }>("/api/tasks", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-workspace-id": "demo-workspace",
         },
+        session: { workspaceId, authToken },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) throw new Error("Failed to create task");
-      return (await response.json()) as { data: TaskDTO };
     },
     onMutate: async (payload) => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      await queryClient.cancelQueries({ queryKey });
 
-      const previous = queryClient.getQueryData<TaskDTO[]>(["tasks"]);
+      const previous = queryClient.getQueryData<TaskDTO[]>(queryKey);
       const optimisticTask: TaskDTO = {
         id: `optimistic-${Date.now()}`,
         title: payload.title,
-        status: "todo",
+        description: payload.description ?? null,
+        assigneeId: payload.assigneeId ?? null,
+        status: payload.status ?? "todo",
+        priority: payload.priority ?? 2,
+        dueDate: payload.dueDate ?? null,
+        metadata: payload.metadata ?? {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
-      queryClient.setQueryData<TaskDTO[]>(["tasks"], (current = []) => [optimisticTask, ...current]);
+      queryClient.setQueryData<TaskDTO[]>(queryKey, (current = []) => [optimisticTask, ...current]);
 
       return { previous };
     },
     onError: (_error, _payload, context) => {
-      if (context?.previous) queryClient.setQueryData(["tasks"], context.previous);
+      if (context?.previous) {
+        queryClient.setQueryData(queryKey, context.previous);
+      }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+export function useUpdateTaskMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryPrefix = [...tasksQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (payload: UpdateTaskPayload) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      const { id, ...body } = payload;
+
+      return fetchApiJson<{ data: TaskDTO }>(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
+        body: JSON.stringify(body),
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryPrefix });
+    },
+  });
+}
+
+export function useDeleteTaskMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryPrefix = [...tasksQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      await fetchApiJson<undefined>(`/api/tasks/${taskId}`, {
+        method: "DELETE",
+        session: { workspaceId, authToken },
+      });
+
+      return taskId;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryPrefix });
     },
   });
 }
 
 export function subscribeToTaskChanges(workspaceId: string, onChange: () => void) {
+  if (!supabaseClient) {
+    return () => undefined;
+  }
+
   const channel = supabaseClient
     .channel(`workspace:${workspaceId}:tasks`)
     .on(
@@ -84,6 +215,6 @@ export function subscribeToTaskChanges(workspaceId: string, onChange: () => void
     .subscribe();
 
   return () => {
-    void supabaseClient.removeChannel(channel);
+    void supabaseClient?.removeChannel(channel);
   };
 }

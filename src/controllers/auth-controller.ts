@@ -3,18 +3,26 @@ import { eq } from "drizzle-orm";
 import { db } from "@/src/db";
 import { users, workspaceMembers, workspaces } from "@/src/db/schema";
 import { supabaseAnon } from "@/src/lib/supabase";
+import { createUniqueWorkspaceSlug } from "@/src/lib/workspace-slug";
 
 type SignUpInput = {
   email: string;
   password: string;
-  fullName?: string;
+  fullName: string;
   workspaceName: string;
+  jobTitle?: string;
 };
 
 export async function signUpWithWorkspace(input: SignUpInput) {
   const { data, error } = await supabaseAnon.auth.signUp({
     email: input.email,
     password: input.password,
+    options: {
+      data: {
+        full_name: input.fullName,
+        ...(input.jobTitle ? { job_title: input.jobTitle } : {}),
+      },
+    },
   });
 
   if (error || !data.user) {
@@ -27,10 +35,11 @@ export async function signUpWithWorkspace(input: SignUpInput) {
       authUserId: data.user.id,
       email: input.email,
       fullName: input.fullName,
+      jobTitle: input.jobTitle,
     })
     .returning({ id: users.id });
 
-  const slug = input.workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const slug = await createUniqueWorkspaceSlug(input.workspaceName);
 
   const [workspace] = await db
     .insert(workspaces)
@@ -51,6 +60,7 @@ export async function signUpWithWorkspace(input: SignUpInput) {
     userId: user.id,
     workspaceId: workspace.id,
     authUserId: data.user.id,
+    session: data.session ?? null,
   };
 }
 
@@ -62,7 +72,7 @@ export async function loginWithPassword(email: string, password: string) {
   }
 
   const [user] = await db
-    .select({ id: users.id, email: users.email, fullName: users.fullName })
+    .select({ id: users.id, email: users.email, fullName: users.fullName, jobTitle: users.jobTitle })
     .from(users)
     .where(eq(users.authUserId, data.user.id))
     .limit(1);

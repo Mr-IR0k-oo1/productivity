@@ -31,6 +31,12 @@ type KanbanTask = {
   subtasksDone: number;
   subtasksTotal: number;
   comments: number;
+  estimateHours: number;
+  progress: number;
+  recurring?: boolean;
+  dependency?: string;
+  startDate: string;
+  endDate: string;
 };
 
 const statusColumns: Array<{ id: TaskStatus; title: string }> = [
@@ -87,14 +93,14 @@ function DraggableTaskCard({
   onClick: () => void;
   onSelect: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     data: { status: task.status },
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? "none" : "transform 180ms ease",
   };
 
   return (

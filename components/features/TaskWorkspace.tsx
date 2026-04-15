@@ -215,13 +215,6 @@ const initialTasks: TaskRecord[] = [
   },
 ];
 
-const statusColumns: Array<{ id: TaskStatus; title: string }> = [
-  { id: "todo", title: "To Do" },
-  { id: "in_progress", title: "In Progress" },
-  { id: "review", title: "Review" },
-  { id: "done", title: "Done" },
-];
-
 const assigneeOptions = ["All", "Arun", "Bala", "Chitra", "Dev"] as const;
 const priorityOptions = ["All", "High", "Medium", "Low"] as const;
 

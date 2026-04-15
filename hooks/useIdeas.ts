@@ -2,6 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useSessionContext } from "@/components/providers/SessionProvider";
+import { fetchApiJson } from "@/lib/api/client";
+
 export type IdeaDTO = {
   id: string;
   title: string;
@@ -13,76 +16,152 @@ export type IdeaDTO = {
   convertedTaskId: string | null;
 };
 
-function buildHeaders() {
-  const token = typeof window !== "undefined" ? window.localStorage.getItem("pf-token") : null;
+export type UpdateIdeaPayload = {
+  id: string;
+  title?: string;
+  summary?: string | null;
+  content?: string | null;
+  status?: IdeaDTO["status"];
+};
 
-  return {
-    "content-type": "application/json",
-    "x-workspace-id": "demo-workspace",
-    ...(token ? { authorization: `Bearer ${token}` } : {}),
-  };
-}
+export const ideasQueryKey = (workspaceId: string) => ["ideas", workspaceId] as const;
 
-async function fetchIdeas() {
-  const response = await fetch("/api/ideas", {
-    headers: {
-      "x-workspace-id": "demo-workspace",
-      ...(() => {
-        const token = typeof window !== "undefined" ? window.localStorage.getItem("pf-token") : null;
-        return token ? { authorization: `Bearer ${token}` } : {};
-      })(),
-    },
+async function fetchIdeas(workspaceId: string, authToken: string | null) {
+  const payload = await fetchApiJson<{ data: IdeaDTO[] }>("/api/ideas", {
+    session: { workspaceId, authToken },
   });
 
-  if (!response.ok) throw new Error("Failed to load ideas");
-  const payload = (await response.json()) as { data: IdeaDTO[] };
   return payload.data;
 }
 
 export function useIdeasQuery() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+
   return useQuery({
-    queryKey: ["ideas"],
-    queryFn: fetchIdeas,
+    queryKey: [...ideasQueryKey(workspaceId), userId ?? "anonymous"],
+    queryFn: () => fetchIdeas(workspaceId, authToken),
+    enabled: isReady && Boolean(workspaceId) && Boolean(userId),
+    retry: false,
+  });
+}
+
+export function useIdeaDetailQuery(ideaId: string | null) {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+
+  return useQuery({
+    queryKey: [...ideasQueryKey(workspaceId), userId ?? "anonymous", "detail", ideaId],
+    queryFn: async () => {
+      const payload = await fetchApiJson<{ data: IdeaDTO }>(`/api/ideas/${ideaId}`, {
+        session: { workspaceId, authToken },
+      });
+
+      return payload.data;
+    },
+    enabled: isReady && Boolean(workspaceId) && Boolean(userId) && Boolean(ideaId),
     retry: false,
   });
 }
 
 export function useCreateIdeaMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
   const queryClient = useQueryClient();
+  const queryKey = [...ideasQueryKey(workspaceId), userId ?? "anonymous"];
 
   return useMutation({
     mutationFn: async (payload: { title: string; summary?: string; content?: string }) => {
-      const response = await fetch("/api/ideas", {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      return fetchApiJson<{ data: IdeaDTO }>("/api/ideas", {
         method: "POST",
-        headers: buildHeaders(),
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) throw new Error("Failed to create idea");
-      return (await response.json()) as { data: IdeaDTO };
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["ideas"] });
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 }
 
 export function useConvertIdeaMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
   const queryClient = useQueryClient();
+  const queryKey = [...ideasQueryKey(workspaceId), userId ?? "anonymous"];
 
   return useMutation({
     mutationFn: async (payload: { ideaId: string; status?: "todo" | "in_progress" | "done" | "blocked" | "backlog" }) => {
-      const response = await fetch(`/api/ideas/${payload.ideaId}/convert`, {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      return fetchApiJson<{ data: { id: string } }>(`/api/ideas/${payload.ideaId}/convert`, {
         method: "POST",
-        headers: buildHeaders(),
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
         body: JSON.stringify({ status: payload.status ?? "todo" }),
       });
-
-      if (!response.ok) throw new Error("Failed to convert idea");
-      return (await response.json()) as { data: { id: string } };
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["ideas"] });
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+export function useUpdateIdeaMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryPrefix = [...ideasQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (payload: UpdateIdeaPayload) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      const { id, ...body } = payload;
+
+      return fetchApiJson<{ data: IdeaDTO }>(`/api/ideas/${id}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
+        body: JSON.stringify(body),
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryPrefix });
+    },
+  });
+}
+
+export function useDeleteIdeaMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryPrefix = [...ideasQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (ideaId: string) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      await fetchApiJson<undefined>(`/api/ideas/${ideaId}`, {
+        method: "DELETE",
+        session: { workspaceId, authToken },
+      });
+
+      return ideaId;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryPrefix });
     },
   });
 }

@@ -1,19 +1,44 @@
+"use client";
+
+import { formatDistanceToNow, isPast, parseISO } from "date-fns";
 import Link from "next/link";
+import { useMemo } from "react";
+import { CheckSquare } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { TableSkeletonRow } from "@/components/ui/skeleton";
+import { useTasksQuery } from "@/hooks/useTasks";
 
 type QuickTask = {
+  id: string;
   title: string;
   priority: "urgent" | "high" | "medium" | "low";
   dueLabel: string;
 };
 
-const tasks: QuickTask[] = [
-  { title: "Review Q1 roadmap", priority: "high", dueLabel: "Today" },
-  { title: "Update team documentation", priority: "medium", dueLabel: "Tomorrow" },
-  { title: "Fix login bug", priority: "urgent", dueLabel: "Today" },
-  { title: "Design new dashboard", priority: "low", dueLabel: "Next week" },
-];
+function mapPriority(priority: number | null | undefined): QuickTask["priority"] {
+  if (priority === 1) return "high";
+  if (priority === 2) return "medium";
+  if (priority === 3) return "low";
+  return "medium";
+}
+
+function toDueLabel(dueDate: string | null): string {
+  if (!dueDate) {
+    return "No due date";
+  }
+
+  const parsed = parseISO(dueDate);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "Invalid due date";
+  }
+
+  const relative = formatDistanceToNow(parsed, { addSuffix: true });
+  return isPast(parsed) ? `Overdue ${relative}` : relative;
+}
 
 function priorityClasses(priority: QuickTask["priority"]) {
   if (priority === "urgent") return "border-rose-900 bg-rose-950/60 text-rose-300";
@@ -23,38 +48,107 @@ function priorityClasses(priority: QuickTask["priority"]) {
 }
 
 export function QuickTasksList() {
+  const tasksQuery = useTasksQuery();
+
+  const tasks = useMemo<QuickTask[]>(() => {
+    const pending = (tasksQuery.data ?? []).filter((task) => task.status !== "done");
+
+    const sorted = pending.sort((left, right) => {
+      const leftPriority = left.priority ?? 2;
+      const rightPriority = right.priority ?? 2;
+
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
+      }
+
+      const leftDue = left.dueDate ? new Date(left.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+      const rightDue = right.dueDate ? new Date(right.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+
+      return leftDue - rightDue;
+    });
+
+    return sorted.slice(0, 5).map((task) => ({
+      id: task.id,
+      title: task.title,
+      priority: mapPriority(task.priority),
+      dueLabel: toDueLabel(task.dueDate),
+    }));
+  }, [tasksQuery.data]);
+
   return (
     <Card className="transition-colors hover:border-zinc-700">
       <CardHeader>
         <CardTitle>Quick Tasks</CardTitle>
-        <p className="text-sm text-zinc-400">Your immediate priorities</p>
+        <p className="text-sm text-[var(--muted)]">Your immediate priorities</p>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {tasks.map((task) => (
-          <div
-            key={task.title}
-            className="flex items-center justify-between rounded-lg border border-zinc-900 bg-zinc-950/60 px-3 py-2.5 transition-colors hover:border-zinc-700"
-          >
-            <div className="flex items-center gap-3">
-              <input type="checkbox" className="h-4 w-4 rounded border-zinc-700 bg-zinc-950" aria-label={task.title} />
-              <p className="text-sm text-zinc-200">{task.title}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`rounded-md border px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${priorityClasses(task.priority)}`}
+      <CardContent>
+        {tasksQuery.error ? (
+          <ErrorState
+            title="Tasks Failed"
+            message={tasksQuery.error instanceof Error ? tasksQuery.error.message : "Failed to load tasks"}
+            onRetry={() => {
+              void tasksQuery.refetch();
+            }}
+            minHeight="min-h-[200px]"
+          />
+        ) : tasksQuery.isLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <TableSkeletonRow key={i} />
+            ))}
+          </div>
+        ) : tasks.length === 0 ? (
+          <EmptyState
+            icon={<CheckSquare className="h-8 w-8" />}
+            title="No tasks assigned"
+            description="Create a new task or assign one to get started"
+            action={{
+              label: "Create Task",
+              onClick: () => (window.location.href = "/tasks"),
+            }}
+            minHeight="min-h-[200px]"
+          />
+        ) : (
+          <div className="space-y-2">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex items-center justify-between rounded-lg border border-[color:var(--card-border)] bg-[var(--surface-strong)] px-3 py-2.5 transition-colors hover:border-zinc-700"
               >
-                {task.priority}
-              </span>
-              <span className="text-xs text-zinc-500">{task.dueLabel}</span>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-700 bg-zinc-950"
+                    aria-label={task.title}
+                  />
+                  <p className="text-sm text-[var(--foreground)]">
+                    {task.title}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`rounded-md border px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${priorityClasses(task.priority)}`}
+                  >
+                    {task.priority}
+                  </span>
+                  <span className="text-xs text-[var(--muted)]">
+                    {task.dueLabel}
+                  </span>
+                </div>
+              </div>
+            ))}
+            <div className="pt-1">
+              <Link
+                href="/tasks"
+                className="text-sm font-medium text-[var(--foreground)] underline-offset-4 hover:underline"
+              >
+                View all tasks
+              </Link>
             </div>
           </div>
-        ))}
-        <div className="pt-1">
-          <Link href="/tasks" className="text-sm font-medium text-zinc-300 underline-offset-4 hover:text-zinc-100 hover:underline">
-            View all tasks
-          </Link>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
 }
+

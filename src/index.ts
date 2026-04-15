@@ -4,6 +4,7 @@ import { Hono } from "hono";
 
 import authRoute from "@/src/routes/auth";
 import workspaceRoute from "@/src/routes/workspace";
+import settingsRoute from "@/src/routes/settings";
 import ideasRoute from "@/src/routes/ideas";
 import tasksRoute from "@/src/routes/tasks";
 import calendarRoute from "@/src/routes/calendar";
@@ -19,6 +20,7 @@ app.get("/health", (c) => c.json({ ok: true }));
 
 app.route("/api/auth", authRoute);
 app.route("/api/workspace", workspaceRoute);
+app.route("/api/settings", settingsRoute);
 app.route("/api/ideas", ideasRoute);
 app.route("/api/tasks", tasksRoute);
 app.route("/api/calendar", calendarRoute);

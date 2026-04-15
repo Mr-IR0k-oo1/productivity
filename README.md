@@ -67,6 +67,9 @@ Copy `.env.example` to `.env.local` and fill:
 - `DATABASE_URL`
 - `APP_URL`
 - `API_URL`
+- `NEXT_PUBLIC_DEFAULT_WORKSPACE_ID` (optional; if omitted, the app resolves the first accessible workspace from the API)
+
+The browser reads the active Supabase session directly, keeps the current workspace id in local storage under `pf-workspace-id`, and falls back to the first accessible workspace when needed.
 
 ## Local Development
 
@@ -75,8 +78,8 @@ npm install
 npm run dev
 ```
 
-- Frontend: http://localhost:3000
-- API: http://localhost:8787
+- Frontend: [http://localhost:3000](http://localhost:3000)
+- API: [http://localhost:8787](http://localhost:8787)
 
 ## Validation Commands
 

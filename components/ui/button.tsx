@@ -9,9 +9,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
-        ghost: "text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100",
-        secondary: "bg-zinc-900 text-zinc-200 border border-zinc-800 hover:bg-zinc-800",
+        default: "bg-[var(--foreground)] text-[var(--background)] hover:opacity-90",
+        ghost: "text-[var(--foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]",
+        secondary: "border border-[color:var(--card-border)] bg-[var(--surface-strong)] text-[var(--foreground)] hover:bg-[var(--accent-soft)]",
       },
       size: {
         default: "h-9 px-4 py-2",

@@ -24,18 +24,19 @@ export const workspaceMiddleware = createMiddleware<WorkspaceBindings>(async (c,
   }
 
   const [member] = await db
-    .select({ workspaceId: workspaceMembers.workspaceId })
+    .select({ workspaceId: workspaceMembers.workspaceId, role: workspaceMembers.role, isActive: workspaceMembers.isActive })
     .from(workspaceMembers)
     .where(
       and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, user.id)),
     )
     .limit(1);
 
-  if (!member) {
+  if (!member || !member.isActive) {
     return c.json({ error: "Workspace membership required" }, 403);
   }
 
   c.set("userId", user.id);
   c.set("workspaceId", workspaceId);
+  c.set("workspaceRole", member.role);
   await next();
 });
