@@ -5,13 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { fetchApiJson } from "@/lib/api/client";
 import { supabaseClient } from "@/lib/supabase/client";
+import type { TaskStatus } from "@/types/task-status";
 
 export type TaskDTO = {
   id: string;
   title: string;
   description: string | null;
   assigneeId: string | null;
-  status: "backlog" | "todo" | "in_progress" | "done" | "blocked";
+  status: TaskStatus;
   priority: number;
   dueDate: string | null;
   metadata: Record<string, unknown>;
@@ -32,7 +33,7 @@ export type UpdateTaskPayload = {
   title?: string;
   description?: string | null;
   assigneeId?: string | null;
-  status?: TaskDTO["status"];
+  status?: TaskStatus;
   priority?: number;
   dueDate?: string | null;
   metadata?: Record<string, unknown>;
@@ -94,7 +95,7 @@ export function useCreateTaskMutation() {
       title: string;
       description?: string;
       assigneeId?: string;
-      status?: TaskDTO["status"];
+      status?: TaskStatus;
       priority?: number;
       dueDate?: string;
       metadata?: Record<string, unknown>;
@@ -189,6 +190,50 @@ export function useDeleteTaskMutation() {
       });
 
       return taskId;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryPrefix });
+    },
+  });
+}
+
+export function useUpdateTaskStatusMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryPrefix = [...tasksQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (payload: { taskId: string; status: TaskStatus }) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      return fetchApiJson<{ data: TaskDTO }>(`/api/tasks/${payload.taskId}/status`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
+        body: JSON.stringify({ status: payload.status }),
+      });
+    },
+    onMutate: async ({ taskId, status }) => {
+      await queryClient.cancelQueries({ queryKey: queryPrefix });
+
+      const previous = queryClient.getQueryData<TaskDTO[]>(queryPrefix);
+
+      queryClient.setQueriesData<TaskDTO[]>({ queryKey: queryPrefix }, (current = []) =>
+        current.map((task) =>
+          task.id === taskId ? { ...task, status } : task
+        )
+      );
+
+      return { previous };
+    },
+    onError: (_error, _payload, context) => {
+      if (context?.previous) {
+        queryClient.setQueriesData({ queryKey: queryPrefix }, context.previous);
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryPrefix });

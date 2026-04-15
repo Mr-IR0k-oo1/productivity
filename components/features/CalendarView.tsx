@@ -696,65 +696,6 @@ export function CalendarView() {
             </CardContent>
           </Card>
         ) : null}
-
-        <section className="grid gap-4 lg:grid-cols-3">
-          <Card className="border-zinc-900 bg-zinc-950/60 lg:col-span-2">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Selected day timeline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {getVisibleHoursForDay(selectedDate, visibleEvents).map((hour) => {
-                const hourEvents = selectedDayEvents.filter((event) => event.start.getHours() === hour);
-                const hourLabel = new Date(selectedDate);
-                hourLabel.setHours(hour, 0, 0, 0);
-
-                return (
-                  <div
-                    key={hour}
-                    className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-lg border border-zinc-900 bg-zinc-950/40 p-3"
-                  >
-                    <div className="text-sm text-zinc-500">{format(hourLabel, "h a")}</div>
-                    <div className="space-y-2">
-                      {hourEvents.length > 0 ? (
-                        hourEvents.map((event) => (
-                          <button
-                            key={event.id}
-                            type="button"
-                            onClick={() => setSelectedEvent(event)}
-                            className="flex w-full items-center justify-between rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-left text-sm text-zinc-200"
-                          >
-                            <span>{event.title}</span>
-                            <span className="text-xs text-zinc-500">{eventTimeLabel(event)}</span>
-                          </button>
-                        ))
-                      ) : (
-                        <p className="text-sm text-zinc-600">Open block</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick add</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {quickActions.map((action) => (
-                <button
-                  key={action}
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border border-zinc-900 bg-zinc-950/50 px-3 py-2 text-left text-sm text-zinc-200 transition-colors hover:border-zinc-700"
-                >
-                  <span>{action}</span>
-                  <Plus className="h-4 w-4 text-zinc-500" />
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-        </section>
       </div>
 
       <aside className="space-y-4">
@@ -788,23 +729,6 @@ export function CalendarView() {
                 </button>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-zinc-900 bg-zinc-950/60">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Sources</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {sourceFilters.map((source) => (
-              <div
-                key={source.label}
-                className="flex items-center gap-2 rounded-md border border-zinc-900 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-300"
-              >
-                <span className={cn("h-2.5 w-2.5 rounded-full", source.color)} />
-                {source.label}
-              </div>
-            ))}
           </CardContent>
         </Card>
 
@@ -853,6 +777,25 @@ export function CalendarView() {
             </div>
           </CardContent>
         </Card>
+
+          <Card className="border-zinc-900 bg-zinc-950/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Quick add</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {quickActions.map((action) => (
+                <button
+                  key={action}
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-lg border border-zinc-900 bg-zinc-950/50 px-3 py-2 text-left text-sm text-zinc-200 transition-colors hover:border-zinc-700"
+                >
+                  <span>{action}</span>
+                  <Plus className="h-4 w-4 text-zinc-500" />
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+
       </aside>
 
       {selectedEvent ? <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} /> : null}

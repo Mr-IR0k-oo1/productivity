@@ -12,8 +12,10 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { taskStatusValues } from "@/types/task-status";
+
 export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"]);
-export const taskStatusEnum = pgEnum("task_status", ["backlog", "todo", "in_progress", "done", "blocked"]);
+export const taskStatusEnum = pgEnum("task_status", taskStatusValues);
 export const ideaStatusEnum = pgEnum("idea_status", ["draft", "validated", "archived", "converted"]);
 
 export const users = pgTable("users", {
@@ -269,5 +271,26 @@ export const activityLog = pgTable(
   },
   (table) => ({
     workspaceIdx: index("activity_log_workspace_idx").on(table.workspaceId),
+  }),
+);
+
+export const flowcharts = pgTable(
+  "flowcharts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    creatorId: uuid("creator_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 200 }).notNull(),
+    data: jsonb("data").default({ nodes: [], edges: [] }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    workspaceIdx: index("flowcharts_workspace_idx").on(table.workspaceId),
+    creatorIdx: index("flowcharts_creator_idx").on(table.creatorId),
   }),
 );

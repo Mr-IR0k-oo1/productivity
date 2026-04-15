@@ -8,6 +8,7 @@ import { ideas, tasks } from "@/src/db/schema";
 import { authMiddleware } from "@/src/middleware/auth";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
+import { taskStatusValues } from "@/types/task-status";
 
 const ideaSchema = z.object({
   title: z.string().min(2),
@@ -27,7 +28,7 @@ const updateIdeaSchema = z
   });
 
 const ideaToTaskSchema = z.object({
-  status: z.enum(["todo", "in_progress", "done", "blocked", "backlog"]).default("todo"),
+  status: z.enum(taskStatusValues).default("todo"),
 });
 
 const ideasRoute = new Hono<WorkspaceBindings>();

@@ -15,8 +15,9 @@ import { GripVertical } from "lucide-react";
 import { TaskCard } from "@/components/features/TaskCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { TaskStatus as SharedTaskStatus } from "@/types/task-status";
 
-type TaskStatus = "todo" | "in_progress" | "review" | "done";
+export type TaskStatus = SharedTaskStatus;
 
 type KanbanTask = {
   id: string;
@@ -191,7 +192,7 @@ export function KanbanBoard({
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid gap-4 overflow-x-auto xl:grid-cols-4">
         {statusColumns.map((column) => (
           <DroppableColumn key={column.id} id={column.id} title={column.title} count={tasksByStatus[column.id].length}>
             {tasksByStatus[column.id].map((task) => (

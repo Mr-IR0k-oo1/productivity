@@ -2,6 +2,7 @@ import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
 
 import { db } from "@/src/db";
 import { taskDependencies, tasks } from "@/src/db/schema";
+import type { TaskStatus } from "@/types/task-status";
 
 type CreateTaskInput = {
   workspaceId: string;
@@ -9,14 +10,14 @@ type CreateTaskInput = {
   title: string;
   description?: string;
   assigneeId?: string;
-  status?: "backlog" | "todo" | "in_progress" | "done" | "blocked";
+  status?: TaskStatus;
   priority?: number;
   dueDate?: Date;
   metadata?: Record<string, unknown>;
 };
 
 type ListTaskFilters = {
-  status?: "backlog" | "todo" | "in_progress" | "done" | "blocked";
+  status?: TaskStatus;
   assigneeId?: string;
   dueFrom?: Date;
   dueTo?: Date;
@@ -27,7 +28,7 @@ type UpdateTaskInput = {
   title?: string;
   description?: string | null;
   assigneeId?: string | null;
-  status?: "backlog" | "todo" | "in_progress" | "done" | "blocked";
+  status?: TaskStatus;
   priority?: number;
   dueDate?: Date | null;
   metadata?: Record<string, unknown>;

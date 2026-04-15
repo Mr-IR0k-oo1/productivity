@@ -16,19 +16,20 @@ import { tasks } from "@/src/db/schema";
 import { authMiddleware } from "@/src/middleware/auth";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
+import { taskStatusValues } from "@/types/task-status";
 
 const createTaskSchema = z.object({
   title: z.string().min(2),
   description: z.string().optional(),
   assigneeId: z.string().uuid().optional(),
-  status: z.enum(["backlog", "todo", "in_progress", "done", "blocked"]).optional(),
+  status: z.enum(taskStatusValues).optional(),
   priority: z.number().int().min(1).max(3).optional(),
   dueDate: z.string().datetime().optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
 const listTaskQuerySchema = z.object({
-  status: z.enum(["backlog", "todo", "in_progress", "done", "blocked"]).optional(),
+  status: z.enum(taskStatusValues).optional(),
   assigneeId: z.string().uuid().optional(),
   dueFrom: z.string().datetime().optional(),
   dueTo: z.string().datetime().optional(),
@@ -40,7 +41,7 @@ const updateTaskSchema = z
     title: z.string().min(2).optional(),
     description: z.string().optional().nullable(),
     assigneeId: z.string().uuid().optional().nullable(),
-    status: z.enum(["backlog", "todo", "in_progress", "done", "blocked"]).optional(),
+    status: z.enum(taskStatusValues).optional(),
     priority: z.number().int().min(1).max(3).optional(),
     dueDate: z.string().datetime().optional().nullable(),
     metadata: z.record(z.unknown()).optional(),
@@ -50,7 +51,7 @@ const updateTaskSchema = z
   });
 
 const updateStatusSchema = z.object({
-  status: z.enum(["backlog", "todo", "in_progress", "done", "blocked"]),
+  status: z.enum(taskStatusValues),
 });
 
 const dependencySchema = z.object({

@@ -1,21 +1,12 @@
-"use client";
+import type { Metadata } from "next";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { LandingPage } from "@/components/landing/LandingPage";
 
-import { useSessionContext } from "@/components/providers/SessionProvider";
+export const metadata: Metadata = {
+  title: "PulseForge | Launch your work",
+  description: "A space-themed launchpad for ideas, tasks, and flowcharts.",
+};
 
 export default function HomePage() {
-  const router = useRouter();
-  const { isReady, userId } = useSessionContext();
-
-  useEffect(() => {
-    if (!isReady) {
-      return;
-    }
-
-    router.replace(userId ? "/dashboard" : "/login");
-  }, [isReady, router, userId]);
-
-  return <div className="flex min-h-screen items-center justify-center text-zinc-400">Loading...</div>;
+  return <LandingPage />;
 }

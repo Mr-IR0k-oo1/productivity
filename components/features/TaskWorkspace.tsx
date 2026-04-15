@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   addDays,
   differenceInCalendarDays,
@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useUpdateTaskStatusMutation, type TaskDTO } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "kanban" | "list" | "calendar" | "gantt";

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { fetchApiJson } from "@/lib/api/client";
+import type { TaskStatus } from "@/types/task-status";
 
 export type IdeaDTO = {
   id: string;
@@ -94,7 +95,7 @@ export function useConvertIdeaMutation() {
   const queryKey = [...ideasQueryKey(workspaceId), userId ?? "anonymous"];
 
   return useMutation({
-    mutationFn: async (payload: { ideaId: string; status?: "todo" | "in_progress" | "done" | "blocked" | "backlog" }) => {
+    mutationFn: async (payload: { ideaId: string; status?: TaskStatus }) => {
       if (!isReady || !userId || !authToken) {
         throw new Error("Authentication is required");
       }

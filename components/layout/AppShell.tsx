@@ -12,7 +12,12 @@ type AppShellProps = {
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/auth") || pathname.startsWith("/login") || pathname.startsWith("/register")) {
+  if (
+    pathname === "/" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register")
+  ) {
     return <>{children}</>;
   }
 
