@@ -16,7 +16,8 @@ export default function AppShell({ children }: AppShellProps) {
     pathname === "/" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/login") ||
-    pathname.startsWith("/register")
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/tasks/")
   ) {
     return <>{children}</>;
   }

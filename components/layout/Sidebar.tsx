@@ -42,6 +42,7 @@ const sampleNotifications = [
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "My Day", href: "/my-day", icon: SunMedium },
   { name: "Ideas", href: "/ideas", icon: Lightbulb },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
   { name: "Calendar", href: "/calendar", icon: Calendar },

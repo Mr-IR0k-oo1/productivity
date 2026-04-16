@@ -34,11 +34,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useUpdateTaskStatusMutation, type TaskDTO } from "@/hooks/useTasks";
+import { useTasksQuery, useUpdateTaskStatusMutation, type TaskDTO } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "kanban" | "list" | "calendar" | "gantt";
-type TaskStatus = "todo" | "in_progress" | "review" | "done";
+type TaskStatus = "backlog" | "todo" | "in_progress" | "review" | "done" | "blocked";
 type TaskPriority = "High" | "Medium" | "Low";
 type DueFilter = "all" | "mine" | "overdue" | "this-week";
 
@@ -64,6 +64,31 @@ type TaskRecord = {
 };
 
 const referenceDate = new Date("2026-04-14T09:00:00");
+
+function mapTaskDTOToRecord(task: TaskDTO): TaskRecord {
+  const priorityMap: Record<number, TaskPriority> = { 1: "High", 2: "Medium", 3: "Low" };
+  const metadata = task.metadata as Record<string, unknown> || {};
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description || "",
+    assignee: (metadata.assigneeName as string) || "Unassigned",
+    initials: ((metadata.assigneeName as string) || "U").slice(0, 2).toUpperCase(),
+    dueDate: task.dueDate || new Date().toISOString(),
+    priority: priorityMap[task.priority] || "Medium",
+    labels: (metadata.labels as string[]) || [],
+    status: task.status,
+    subtasksDone: (metadata.subtasksDone as number) || 0,
+    subtasksTotal: (metadata.subtasksTotal as number) || 0,
+    comments: (metadata.comments as number) || 0,
+    estimateHours: (metadata.estimateHours as number) || 0,
+    progress: (metadata.progress as number) || 0,
+    recurring: metadata.recurring as boolean,
+    dependency: metadata.dependency as string,
+    startDate: (metadata.startDate as string) || new Date().toISOString(),
+    endDate: task.dueDate || new Date().toISOString(),
+  };
+}
 
 const initialTasks: TaskRecord[] = [
   {
@@ -827,6 +852,8 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
 }
 
 export function TaskWorkspace() {
+  const { data: apiTasks, isLoading } = useTasksQuery();
+  const updateTaskStatus = useUpdateTaskStatusMutation();
   const [tasks, setTasks] = useState<TaskRecord[]>(initialTasks);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [search, setSearch] = useState("");
@@ -838,6 +865,12 @@ export function TaskWorkspace() {
   const [selectedTask, setSelectedTask] = useState<TaskRecord | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+
+  useMemo(() => {
+    if (apiTasks && apiTasks.length > 0) {
+      setTasks(apiTasks.map(mapTaskDTOToRecord));
+    }
+  }, [apiTasks]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
