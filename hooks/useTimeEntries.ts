@@ -88,3 +88,94 @@ export function useStopTimerMutation() {
     },
   });
 }
+
+export function useCreateTimeEntryMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryKey = [...timeEntriesQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (payload: {
+      taskId?: string;
+      description?: string;
+      startedAt: string;
+      endedAt: string;
+      durationMinutes?: number;
+    }) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      return fetchApiJson<{ data: TimeEntryDTO }>("/api/time/entries", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
+        body: JSON.stringify(payload),
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+export function useUpdateTimeEntryMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryKey = [...timeEntriesQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (payload: {
+      id: string;
+      taskId?: string;
+      description?: string;
+      startedAt?: string;
+      endedAt?: string;
+      durationMinutes?: number;
+    }) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      const { id, ...body } = payload;
+
+      return fetchApiJson<{ data: TimeEntryDTO }>(`/api/time/entries/${id}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
+        body: JSON.stringify(body),
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}
+
+export function useDeleteTimeEntryMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryKey = [...timeEntriesQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (entryId: string) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      await fetchApiJson<undefined>(`/api/time/entries/${entryId}`, {
+        method: "DELETE",
+        session: { workspaceId, authToken },
+      });
+
+      return entryId;
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+}

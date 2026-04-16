@@ -95,7 +95,7 @@ export function FlowchartWorkspace() {
     setNodes((nds) => {
       const updated = applyNodeChanges(changes, nds);
 
-      const positionChanges = changes.filter((c) => c.type === "position" && c.position);
+      const positionChanges = changes.filter((change) => change.type === "position" && change.position);
       if (positionChanges.length > 0) {
         autoSave(updated, edges);
       }
@@ -108,7 +108,7 @@ export function FlowchartWorkspace() {
     setEdges((eds) => {
       const updated = applyEdgeChanges(changes, eds);
 
-      if (changes.some((c) => c.type === "remove")) {
+      if (changes.some((change) => change.type === "remove")) {
         autoSave(nodes, updated);
       }
 
@@ -176,7 +176,7 @@ export function FlowchartWorkspace() {
   };
 
   const handleUpdateNode = (id: string, data: FlowchartNodeData) => {
-    const updated = nodes.map((n) => (n.id === id ? { ...n, data } : n));
+    const updated = nodes.map((node: Node<FlowchartNodeData>) => (node.id === id ? { ...node, data } : node));
     setNodes(updated);
     if (activeFlowchart) {
       saveFlowchart(activeFlowchart.id, { nodes: updated, edges });
@@ -185,8 +185,8 @@ export function FlowchartWorkspace() {
   };
 
   const handleDeleteNode = (id: string) => {
-    const updated = nodes.filter((n) => n.id !== id);
-    const updatedEdges = edges.filter((e) => e.source !== id && e.target !== id);
+    const updated = nodes.filter((node: Node<FlowchartNodeData>) => node.id !== id);
+    const updatedEdges = edges.filter((edge: Edge) => edge.source !== id && edge.target !== id);
     setNodes(updated);
     setEdges(updatedEdges);
     if (activeFlowchart) {

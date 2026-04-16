@@ -14,6 +14,7 @@ import {
   Sparkles,
   Target,
   ThumbsUp,
+  X,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,8 +22,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { IdeaDTO, useConvertIdeaMutation, useCreateIdeaMutation, useIdeasQuery } from "@/hooks/useIdeas";
+import { IdeaDTO, useConvertIdeaMutation, useCreateIdeaMutation, useIdeasQuery, useUpdateIdeaMutation } from "@/hooks/useIdeas";
+import { useTasksQuery } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type ViewMode = "board" | "list" | "mindmap";
 type IdeaStatus = "draft" | "validated" | "archived" | "converted";
@@ -49,6 +52,7 @@ type IdeaRecord = {
   convertedTaskId?: string;
   relatedIdeaIds: string[];
   comments: IdeaComment[];
+  dependencies: Array<{ type: "idea" | "task"; id: string; title: string }>;
 };
 
 const statusColumns: Array<{ id: IdeaStatus; label: string }> = [
@@ -77,6 +81,7 @@ const initialIdeas: IdeaRecord[] = [
       { id: "c-1", author: "Bala", message: "Would save us 20 minutes every morning.", timestamp: "2h ago" },
       { id: "c-2", author: "Dev", message: "Need confidence scoring in output.", timestamp: "58m ago" },
     ],
+    dependencies: [],
   },
   {
     id: "idea-2",
@@ -93,6 +98,7 @@ const initialIdeas: IdeaRecord[] = [
     createdAt: "Apr 12",
     relatedIdeaIds: ["idea-1", "idea-4"],
     comments: [{ id: "c-3", author: "Arun", message: "Design can lead visual language.", timestamp: "1d ago" }],
+    dependencies: [],
   },
   {
     id: "idea-3",
@@ -109,6 +115,7 @@ const initialIdeas: IdeaRecord[] = [
     createdAt: "Apr 11",
     relatedIdeaIds: ["idea-1"],
     comments: [{ id: "c-4", author: "Dev", message: "Could pair with dependency graph.", timestamp: "8h ago" }],
+    dependencies: [],
   },
   {
     id: "idea-4",
@@ -126,6 +133,7 @@ const initialIdeas: IdeaRecord[] = [
     convertedTaskId: "task-idea-4",
     relatedIdeaIds: ["idea-2"],
     comments: [{ id: "c-5", author: "Chitra", message: "This is already in sprint backlog.", timestamp: "3d ago" }],
+    dependencies: [],
   },
   {
     id: "idea-5",
@@ -142,6 +150,7 @@ const initialIdeas: IdeaRecord[] = [
     createdAt: "Apr 09",
     relatedIdeaIds: [],
     comments: [],
+    dependencies: [],
   },
 ];
 
@@ -166,6 +175,7 @@ function toIdeaRecord(idea: IdeaDTO, previous?: IdeaRecord): IdeaRecord {
     convertedTaskId: idea.convertedTaskId ?? undefined,
     relatedIdeaIds: previous?.relatedIdeaIds ?? [],
     comments: previous?.comments ?? [],
+    dependencies: previous?.dependencies ?? [],
   };
 }
 
@@ -400,18 +410,225 @@ function NewIdeaModal({
   );
 }
 
+type DependencyItem = { type: "idea" | "task"; id: string; title: string };
+
+function DependencyModal({
+  isOpen,
+  onClose,
+  onSave,
+  currentIdeaId,
+  ideas,
+  tasks,
+  existingDependencies,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (dependencies: DependencyItem[]) => void;
+  currentIdeaId: string;
+  ideas: IdeaRecord[];
+  tasks: Array<{ id: string; title: string }>;
+  existingDependencies: DependencyItem[];
+}) {
+  const [activeTab, setActiveTab] = useState<"ideas" | "tasks">("ideas");
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<DependencyItem[]>(existingDependencies);
+
+  const filteredIdeas = ideas
+    .filter((idea) => idea.id !== currentIdeaId)
+    .filter((idea) =>
+      search === "" || idea.title.toLowerCase().includes(search.toLowerCase())
+    );
+
+  const filteredTasks = tasks.filter((task) =>
+    search === "" || task.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const toggleItem = (item: DependencyItem) => {
+    setSelected((current) => {
+      const exists = current.some((s) => s.id === item.id && s.type === item.type);
+      if (exists) {
+        return current.filter((s) => !(s.id === item.id && s.type === item.type));
+      }
+      return [...current, item];
+    });
+  };
+
+  const handleSave = () => {
+    onSave(selected);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-lg border-zinc-800 bg-zinc-950">
+        <CardHeader className="border-b border-zinc-900 pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">Add Dependencies</CardTitle>
+            <Button variant="secondary" size="sm" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("ideas")}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm transition-colors",
+                activeTab === "ideas"
+                  ? "bg-zinc-800 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              )}
+            >
+              Ideas
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("tasks")}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-sm transition-colors",
+                activeTab === "tasks"
+                  ? "bg-zinc-800 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              )}
+            >
+              Tasks
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 p-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={`Search ${activeTab}...`}
+              className="pl-9"
+            />
+          </div>
+
+          <div className="max-h-64 space-y-2 overflow-y-auto">
+            {activeTab === "ideas" ? (
+              filteredIdeas.length === 0 ? (
+                <p className="py-4 text-center text-sm text-zinc-500">No ideas found</p>
+              ) : (
+                filteredIdeas.map((idea) => {
+                  const isSelected = selected.some((s) => s.id === idea.id && s.type === "idea");
+                  return (
+                    <button
+                      key={idea.id}
+                      type="button"
+                      onClick={() => toggleItem({ type: "idea", id: idea.id, title: idea.title })}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-md border p-3 text-left text-sm transition-colors",
+                        isSelected
+                          ? "border-emerald-600 bg-emerald-950/30"
+                          : "border-zinc-800 hover:border-zinc-700"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "flex h-5 w-5 items-center justify-center rounded border",
+                          isSelected
+                            ? "border-emerald-500 bg-emerald-500"
+                            : "border-zinc-700"
+                        )}
+                      >
+                        {isSelected && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-zinc-200">{idea.title}</p>
+                        <p className="truncate text-xs text-zinc-500">{idea.summary}</p>
+                      </div>
+                      <Badge variant="default" className="shrink-0">Idea</Badge>
+                    </button>
+                  );
+                })
+              )
+            ) : filteredTasks.length === 0 ? (
+              <p className="py-4 text-center text-sm text-zinc-500">No tasks found</p>
+            ) : (
+              filteredTasks.map((task) => {
+                const isSelected = selected.some((s) => s.id === task.id && s.type === "task");
+                return (
+                  <button
+                    key={task.id}
+                    type="button"
+                    onClick={() => toggleItem({ type: "task", id: task.id, title: task.title })}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-md border p-3 text-left text-sm transition-colors",
+                      isSelected
+                        ? "border-emerald-600 bg-emerald-950/30"
+                        : "border-zinc-800 hover:border-zinc-700"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-5 w-5 items-center justify-center rounded border",
+                        isSelected
+                          ? "border-emerald-500 bg-emerald-500"
+                          : "border-zinc-700"
+                      )}
+                    >
+                      {isSelected && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+                    </div>
+                    <span className="min-w-0 flex-1 truncate text-zinc-200">{task.title}</span>
+                    <Badge variant="default" className="shrink-0">Task</Badge>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {selected.length > 0 && (
+            <div className="flex flex-wrap gap-2 rounded-md border border-zinc-800 bg-zinc-900/50 p-2">
+              {selected.map((item) => (
+                <Badge key={`${item.type}-${item.id}`} variant="default" className="gap-1 pr-1">
+                  {item.type === "idea" ? <Lightbulb className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+                  {item.title}
+                  <button
+                    type="button"
+                    onClick={() => toggleItem(item)}
+                    className="ml-1 rounded-full p-0.5 hover:bg-zinc-700"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 border-t border-zinc-900 pt-4">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              Save {selected.length > 0 && `(${selected.length})`}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function IdeaDetailModal({
   idea,
   onClose,
   onVote,
   onConvert,
   onAddComment,
+  onAddDependency,
+  onRemoveDependency,
 }: {
   idea: IdeaRecord;
   onClose: () => void;
   onVote: () => void;
   onConvert: () => void;
   onAddComment: (message: string) => void;
+  onAddDependency: () => void;
+  onRemoveDependency: (dependencyId: string) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -454,6 +671,36 @@ function IdeaDetailModal({
                 <CommentThread comments={idea.comments} onAddComment={onAddComment} />
               </CardContent>
             </Card>
+
+            {idea.dependencies.length > 0 && (
+              <Card className="border-zinc-900 bg-zinc-950/60">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Dependencies</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {idea.dependencies.map((dep) => (
+                    <div key={`${dep.type}-${dep.id}`} className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-900/50 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        {dep.type === "idea" ? (
+                          <Lightbulb className="h-4 w-4 text-amber-400" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                        )}
+                        <span className="text-sm text-zinc-200">{dep.title}</span>
+                        <Badge variant="default" className="text-xs">{dep.type}</Badge>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveDependency(dep.id)}
+                        className="rounded-full p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -473,7 +720,7 @@ function IdeaDetailModal({
                   <CheckCircle2 className="h-4 w-4" />
                   {idea.status === "converted" ? "Already Converted" : "Convert to Task"}
                 </Button>
-                <Button className="w-full justify-start" variant="secondary">
+                <Button className="w-full justify-start" variant="secondary" onClick={onAddDependency}>
                   <GitBranch className="h-4 w-4" />
                   Add Dependency Link
                 </Button>
@@ -500,6 +747,10 @@ function IdeaDetailModal({
                 <div className="flex items-center justify-between">
                   <span>Task Link</span>
                   <span className="text-zinc-100">{idea.convertedTaskId ?? "Not converted"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Dependencies</span>
+                  <span className="text-zinc-100">{idea.dependencies.length}</span>
                 </div>
               </CardContent>
             </Card>
@@ -697,6 +948,9 @@ function MindMapView({ ideas, onOpen }: { ideas: IdeaRecord[]; onOpen: (id: stri
 }
 
 export function IdeaWorkspace() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const ideaIdFromQuery = searchParams.get("ideaId");
   const [ideas, setIdeas] = useState<IdeaRecord[]>(initialIdeas);
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [search, setSearch] = useState("");
@@ -704,7 +958,9 @@ export function IdeaWorkspace() {
   const [myIdeasOnly, setMyIdeasOnly] = useState(false);
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [dependenciesOpen, setDependenciesOpen] = useState(false);
   const ideasQuery = useIdeasQuery();
+  const tasksQuery = useTasksQuery();
   const createIdeaMutation = useCreateIdeaMutation();
   const convertIdeaMutation = useConvertIdeaMutation();
   const apiEnabled = ideasQuery.isSuccess;
@@ -717,6 +973,10 @@ export function IdeaWorkspace() {
       return ideasQuery.data.map((idea) => toIdeaRecord(idea, previousById.get(idea.id)));
     });
   }, [ideasQuery.data]);
+
+  useEffect(() => {
+    setSelectedIdeaId(ideaIdFromQuery);
+  }, [ideaIdFromQuery]);
 
   const filteredIdeas = useMemo(() => {
     return ideas.filter((idea) => {
@@ -790,6 +1050,7 @@ export function IdeaWorkspace() {
         {
           onSuccess: (result) => {
             setSelectedIdeaId(result.data.id);
+            router.push(`/ideas?ideaId=${encodeURIComponent(result.data.id)}`);
           },
         },
       );
@@ -810,11 +1071,33 @@ export function IdeaWorkspace() {
       createdAt: "Now",
       relatedIdeaIds: [],
       comments: [],
+      dependencies: [],
     };
 
     setIdeas((current) => [newIdea, ...current]);
     setSelectedIdeaId(newIdea.id);
+    router.push(`/ideas?ideaId=${encodeURIComponent(newIdea.id)}`);
   }
+
+  function handleAddDependency() {
+    setDependenciesOpen(true);
+  }
+
+  function handleRemoveDependency(ideaId: string, dependencyId: string) {
+    updateIdea(ideaId, (idea) => ({
+      ...idea,
+      dependencies: idea.dependencies.filter((d) => d.id !== dependencyId),
+    }));
+  }
+
+  function handleSaveDependencies(ideaId: string, dependencies: DependencyItem[]) {
+    updateIdea(ideaId, (idea) => ({
+      ...idea,
+      dependencies,
+    }));
+  }
+
+  const tasksList = tasksQuery.data?.map((t) => ({ id: t.id, title: t.title })) ?? [];
 
   return (
     <div className="space-y-6 page-animate">
@@ -932,12 +1215,36 @@ export function IdeaWorkspace() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
           {viewMode === "board" ? (
-            <BoardView ideas={filteredIdeas} onOpen={setSelectedIdeaId} onVote={toggleVote} onConvert={convertToTask} />
+            <BoardView
+              ideas={filteredIdeas}
+              onOpen={(ideaId) => {
+                setSelectedIdeaId(ideaId);
+                router.push(`/ideas?ideaId=${encodeURIComponent(ideaId)}`);
+              }}
+              onVote={toggleVote}
+              onConvert={convertToTask}
+            />
           ) : null}
           {viewMode === "list" ? (
-            <ListView ideas={filteredIdeas} onOpen={setSelectedIdeaId} onVote={toggleVote} onConvert={convertToTask} />
+            <ListView
+              ideas={filteredIdeas}
+              onOpen={(ideaId) => {
+                setSelectedIdeaId(ideaId);
+                router.push(`/ideas?ideaId=${encodeURIComponent(ideaId)}`);
+              }}
+              onVote={toggleVote}
+              onConvert={convertToTask}
+            />
           ) : null}
-          {viewMode === "mindmap" ? <MindMapView ideas={filteredIdeas} onOpen={setSelectedIdeaId} /> : null}
+          {viewMode === "mindmap" ? (
+            <MindMapView
+              ideas={filteredIdeas}
+              onOpen={(ideaId) => {
+                setSelectedIdeaId(ideaId);
+                router.push(`/ideas?ideaId=${encodeURIComponent(ideaId)}`);
+              }}
+            />
+          ) : null}
         </div>
 
         <aside className="space-y-4">
@@ -954,7 +1261,10 @@ export function IdeaWorkspace() {
                   <button
                     key={idea.id}
                     type="button"
-                    onClick={() => setSelectedIdeaId(idea.id)}
+                    onClick={() => {
+                      setSelectedIdeaId(idea.id);
+                      router.push(`/ideas?ideaId=${encodeURIComponent(idea.id)}`);
+                    }}
                     className="flex w-full items-center justify-between rounded-md border border-zinc-900 bg-zinc-950/60 px-3 py-2 text-left text-sm text-zinc-200 hover:border-zinc-700"
                   >
                     <span className="line-clamp-1">{idea.title}</span>
@@ -991,12 +1301,29 @@ export function IdeaWorkspace() {
       {selectedIdea ? (
         <IdeaDetailModal
           idea={selectedIdea}
-          onClose={() => setSelectedIdeaId(null)}
+          onClose={() => {
+            setSelectedIdeaId(null);
+            router.replace("/ideas");
+          }}
           onVote={() => toggleVote(selectedIdea.id)}
           onConvert={() => convertToTask(selectedIdea.id)}
           onAddComment={(message) => addComment(selectedIdea.id, message)}
+          onAddDependency={handleAddDependency}
+          onRemoveDependency={(depId) => handleRemoveDependency(selectedIdea.id, depId)}
         />
       ) : null}
+
+      {selectedIdea && dependenciesOpen && (
+        <DependencyModal
+          isOpen={dependenciesOpen}
+          onClose={() => setDependenciesOpen(false)}
+          onSave={(deps) => handleSaveDependencies(selectedIdea.id, deps)}
+          currentIdeaId={selectedIdea.id}
+          ideas={ideas}
+          tasks={tasksList}
+          existingDependencies={selectedIdea.dependencies}
+        />
+      )}
     </div>
   );
 }

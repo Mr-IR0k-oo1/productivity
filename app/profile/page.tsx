@@ -83,6 +83,9 @@ interface UserTimestamps {
   updatedAt?: string;
 }
 
+type VisibilitySetting = "private" | "workspace" | "public";
+type DigestFrequencySetting = "daily" | "weekly" | "never";
+
 function calculateProfileCompletion(profile: Partial<ProfileData>): number {
   const fields = [
     { key: "full_name", weight: 20 },
@@ -133,6 +136,7 @@ type TabType = "basic" | "security" | "privacy" | "preferences";
 export default function UserProfilePage() {
   const router = useRouter();
   const { userId } = useSessionContext();
+  const supabaseClient = supabase;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -195,7 +199,7 @@ export default function UserProfilePage() {
   const completionPercentage = calculateProfileCompletion(formData);
 
   useEffect(() => {
-    if (!userId || !supabase) {
+    if (!userId || !supabaseClient) {
       setLoading(false);
       return;
     }
@@ -203,8 +207,8 @@ export default function UserProfilePage() {
     const fetchProfile = async () => {
       try {
         const [{ data: profileData }, { data: userData }] = await Promise.all([
-          supabase.from("profiles").select("*").eq("id", userId).single(),
-          supabase.from("users").select("*").eq("id", userId).single(),
+          supabaseClient.from("profiles").select("*").eq("id", userId).single(),
+          supabaseClient.from("users").select("*").eq("id", userId).single(),
         ]);
 
         if (profileData) {
@@ -248,7 +252,7 @@ export default function UserProfilePage() {
     };
 
     fetchProfile();
-  }, [userId]);
+  }, [userId, supabaseClient]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -275,11 +279,11 @@ export default function UserProfilePage() {
   };
 
   const handleSave = async () => {
-    if (!userId || !supabase) return;
+    if (!userId || !supabaseClient) return;
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("profiles").upsert({
+      const { error } = await supabaseClient.from("profiles").upsert({
         id: userId,
         ...formData,
         updated_at: new Date().toISOString(),
@@ -310,11 +314,11 @@ export default function UserProfilePage() {
       return;
     }
 
-    if (!supabase) return;
+    if (!supabaseClient) return;
 
     setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await supabaseClient.auth.updateUser({
         password: passwordForm.newPassword,
       });
 
@@ -910,8 +914,7 @@ export default function UserProfilePage() {
                               ...prev,
                               privacySettings: {
                                 ...prev.privacySettings!,
-                                profileVisibility: e.target
-                                  .value as any,
+                                profileVisibility: e.target.value as VisibilitySetting,
                               },
                             }))
                           }
@@ -1016,7 +1019,7 @@ export default function UserProfilePage() {
                       />
                       <div>
                         <p className="font-medium text-[var(--foreground)]">Show Activity Status</p>
-                        <p className="text-xs text-[var(--muted)]">Let others see when you're online</p>
+                        <p className="text-xs text-[var(--muted)]">Let others see when you&apos;re online</p>
                       </div>
                     </label>
                   </div>
@@ -1035,7 +1038,7 @@ export default function UserProfilePage() {
                             ...prev,
                             privacySettings: {
                               ...prev.privacySettings!,
-                              emailVisibility: e.target.value as any,
+                              emailVisibility: e.target.value as VisibilitySetting,
                             },
                           }))
                         }
@@ -1056,7 +1059,7 @@ export default function UserProfilePage() {
                             ...prev,
                             privacySettings: {
                               ...prev.privacySettings!,
-                              phoneVisibility: e.target.value as any,
+                              phoneVisibility: e.target.value as VisibilitySetting,
                             },
                           }))
                         }
@@ -1171,7 +1174,7 @@ export default function UserProfilePage() {
                           ...prev,
                           notificationPreferences: {
                             ...prev.notificationPreferences!,
-                            digestFrequency: e.target.value as any,
+                            digestFrequency: e.target.value as DigestFrequencySetting,
                           },
                         }))
                       }
@@ -1208,7 +1211,7 @@ export default function UserProfilePage() {
                 {/* Quiet Hours */}
                 <div className="space-y-4 rounded-2xl border border-[color:var(--card-border)] bg-[var(--surface-strong)] p-6">
                   <h3 className="text-lg font-semibold text-[var(--foreground)]">Quiet Hours</h3>
-                  <p className="text-sm text-[var(--muted)]">Notifications won't be sent during these hours</p>
+                  <p className="text-sm text-[var(--muted)]">Notifications won&apos;t be sent during these hours</p>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-[var(--muted)]">Start Time</label>

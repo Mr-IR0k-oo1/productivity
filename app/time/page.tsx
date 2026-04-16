@@ -19,12 +19,17 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  Calendar,
   Download,
+  Pencil,
   Plus,
   Square,
   Timer,
+  Trash2,
   UserRound,
+  X,
 } from "lucide-react";
+import { format, addWeeks, subWeeks, startOfWeek, endOfWeek, parseISO } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,7 +37,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
-import { useStartTimerMutation, useStopTimerMutation, useTimeEntriesQuery } from "@/hooks/useTimeEntries";
+import {
+  useCreateTimeEntryMutation,
+  useDeleteTimeEntryMutation,
+  useStartTimerMutation,
+  useStopTimerMutation,
+  useTimeEntriesQuery,
+  useUpdateTimeEntryMutation,
+  type TimeEntryDTO,
+} from "@/hooks/useTimeEntries";
 import { cn } from "@/lib/utils";
 
 type TimeView = "my" | "team" | "reports";
@@ -130,7 +143,159 @@ function ApprovalBadge({ status }: { status: ApprovalState }) {
   return <Badge variant={variants[status]}>{status}</Badge>;
 }
 
-function TimeLogTable({ rows }: { rows: typeof logs }) {
+function ManualEntryModal({
+  entry,
+  onClose,
+  onSave,
+  onDelete,
+  isSaving,
+  isDeleting,
+}: {
+  entry?: TimeEntryDTO;
+  onClose: () => void;
+  onSave: (data: { description: string; startedAt: string; endedAt: string; project: string }) => void;
+  onDelete?: () => void;
+  isSaving: boolean;
+  isDeleting: boolean;
+}) {
+  const [description, setDescription] = useState(entry?.description || "");
+  const [date, setDate] = useState(
+    entry?.startedAt ? format(parseISO(entry.startedAt), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")
+  );
+  const [startTime, setStartTime] = useState(
+    entry?.startedAt ? format(parseISO(entry.startedAt), "HH:mm") : "09:00"
+  );
+  const [endTime, setEndTime] = useState(
+    entry?.endedAt ? format(parseISO(entry.endedAt), "HH:mm") : "10:00"
+  );
+  const [project, setProject] = useState("");
+
+  const handleSubmit = () => {
+    if (!description.trim()) return;
+
+    const startedAt = new Date(`${date}T${startTime}:00`).toISOString();
+    const endedAt = new Date(`${date}T${endTime}:00`).toISOString();
+
+    onSave({ description, startedAt, endedAt, project });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-lg border-zinc-800 bg-zinc-950">
+        <CardHeader className="border-b border-zinc-900">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">{entry ? "Edit Time Entry" : "Add Manual Entry"}</CardTitle>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 p-6">
+          <div>
+            <label className="mb-1.5 block text-sm text-zinc-400">Description *</label>
+            <Input
+              placeholder="What did you work on?"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm text-zinc-400">Date</label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-zinc-400">Project</label>
+              <Input
+                placeholder="Project name"
+                value={project}
+                onChange={(e) => setProject(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-sm text-zinc-400">Start time</label>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-zinc-400">End time</label>
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-zinc-900 pt-4">
+            {entry && onDelete && (
+              <Button
+                variant="secondary"
+                className="bg-red-900/50 text-red-200 hover:bg-red-900"
+                onClick={onDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4" />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            )}
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={!description.trim() || isSaving}>
+              {isSaving ? "Saving..." : entry ? "Update" : "Create"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function TimeLogTable({
+  entries,
+  onEdit,
+  onDelete,
+}: {
+  entries: TimeEntryDTO[];
+  onEdit: (entry: TimeEntryDTO) => void;
+  onDelete: (entryId: string) => void;
+}) {
+  const formatDuration = (entry: TimeEntryDTO) => {
+    if (entry.durationMinutes) {
+      const hours = Math.floor(entry.durationMinutes / 60);
+      const mins = entry.durationMinutes % 60;
+      return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    }
+    if (entry.endedAt && entry.startedAt) {
+      const diff = new Date(entry.endedAt).getTime() - new Date(entry.startedAt).getTime();
+      const mins = Math.floor(diff / 60000);
+      const hours = Math.floor(mins / 60);
+      return hours > 0 ? `${hours}h ${mins % 60}m` : `${mins}m`;
+    }
+    return "Running";
+  };
+
   return (
     <div className="overflow-x-auto rounded-lg border border-zinc-900">
       <table className="w-full min-w-[820px] text-left text-sm">
@@ -141,53 +306,70 @@ function TimeLogTable({ rows }: { rows: typeof logs }) {
             <th className="px-3 py-2">Start Time</th>
             <th className="px-3 py-2">End Time</th>
             <th className="px-3 py-2">Duration</th>
-            <th className="px-3 py-2">Billable</th>
             <th className="px-3 py-2">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.date}-${row.task}`} className="border-t border-zinc-900 text-zinc-200">
-              <td className="px-3 py-2.5">{row.date}</td>
-              <td className="px-3 py-2.5">
-                <p>{row.task}</p>
-                <p className="text-xs text-zinc-500">{row.project}</p>
-              </td>
-              <td className="px-3 py-2.5">{row.start}</td>
-              <td className="px-3 py-2.5">{row.end}</td>
-              <td className="px-3 py-2.5">{row.duration}</td>
-              <td className="px-3 py-2.5">{row.billable ? <Badge variant="success">Yes</Badge> : <Badge variant="default">No</Badge>}</td>
-              <td className="px-3 py-2.5">
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="secondary">Edit</Button>
-                  <Button size="sm" variant="secondary" className="border-red-900 text-red-200">Delete</Button>
-                </div>
+          {entries.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="px-3 py-8 text-center text-zinc-500">
+                No time entries yet. Start a timer or add a manual entry.
               </td>
             </tr>
-          ))}
+          ) : (
+            entries.map((entry) => (
+              <tr key={entry.id} className="border-t border-zinc-900 text-zinc-200">
+                <td className="px-3 py-2.5">{format(parseISO(entry.startedAt), "MMM d")}</td>
+                <td className="px-3 py-2.5">
+                  <p>{entry.description || "No description"}</p>
+                </td>
+                <td className="px-3 py-2.5">{format(parseISO(entry.startedAt), "HH:mm")}</td>
+                <td className="px-3 py-2.5">
+                  {entry.endedAt ? format(parseISO(entry.endedAt), "HH:mm") : "-"}
+                </td>
+                <td className="px-3 py-2.5">{formatDuration(entry)}</td>
+                <td className="px-3 py-2.5">
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => onEdit(entry)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="border-red-900 text-red-200 hover:bg-red-900"
+                      onClick={() => onDelete(entry.id)}
+                      disabled={entry.isRunning}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
   );
 }
 
-function WeeklyCalendarStrip() {
-  return (
-    <div className="grid gap-2 sm:grid-cols-7">
-      {weekdays.map((day) => (
-        <div key={day.day} className="rounded-lg border border-zinc-900 bg-zinc-950/50 p-3 text-center">
-          <p className="text-sm font-medium text-zinc-200">{day.day}</p>
-          <p className="mt-1 text-xs text-zinc-500">{day.hours}h</p>
-          <div className="mt-3 h-2 rounded-full bg-zinc-900">
-            <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (day.hours / 8) * 100)}%` }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+function TimeChart({ entries }: { entries: TimeEntryDTO[] }) {
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function TimeChart() {
+  const budgetData = days.map((label, i) => {
+    const dayDate = new Date(weekStart);
+    dayDate.setDate(dayDate.getDate() + i);
+    const dayEntries = entries.filter(e => {
+      const entryDate = parseISO(e.startedAt);
+      return entryDate.toDateString() === dayDate.toDateString();
+    });
+    const actual = dayEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0) / 60;
+    return { label, estimated: 6, actual: Math.round(actual * 10) / 10 };
+  });
+
+  const totalHours = entries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0) / 60;
+
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="border-zinc-900 bg-zinc-950/50">
@@ -212,28 +394,50 @@ function TimeChart() {
 
       <Card className="border-zinc-900 bg-zinc-950/50">
         <CardHeader>
-          <CardTitle className="text-base">Weekly Trend</CardTitle>
-          <CardDescription>Hours tracked and task throughput over the last four weeks.</CardDescription>
+          <CardTitle className="text-base">Weekly Summary</CardTitle>
+          <CardDescription>Hours tracked this week.</CardDescription>
         </CardHeader>
-        <CardContent className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trendData}>
-              <CartesianGrid stroke="#27272a" strokeDasharray="3 3" />
-              <XAxis dataKey="label" stroke="#a1a1aa" />
-              <YAxis stroke="#a1a1aa" />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="hours" stroke="#22c55e" strokeWidth={2} />
-              <Line type="monotone" dataKey="tasks" stroke="#3b82f6" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+        <CardContent className="flex h-72 flex-col items-center justify-center">
+          <p className="text-6xl font-bold text-emerald-400">
+            {totalHours > 0 ? totalHours.toFixed(1) : "0"}
+          </p>
+          <p className="mt-2 text-zinc-400">hours this week</p>
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function MyTimesheetView() {
+function MyTimesheetView({
+  entries,
+  onEdit,
+  onDelete,
+  onAddEntry,
+}: {
+  entries: TimeEntryDTO[];
+  onEdit: (entry: TimeEntryDTO) => void;
+  onDelete: (entryId: string) => void;
+  onAddEntry: () => void;
+}) {
+  const weekdayData = useMemo(() => {
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+
+    return days.map((day, i) => {
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(dayDate.getDate() + i);
+
+      const dayEntries = entries.filter(e => {
+        const entryDate = parseISO(e.startedAt);
+        return entryDate.toDateString() === dayDate.toDateString();
+      });
+
+      const totalMinutes = dayEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
+
+      return { day, hours: totalMinutes / 60 };
+    });
+  }, [entries]);
+
   return (
     <div className="space-y-4">
       <Card className="border-zinc-900 bg-zinc-950/50">
@@ -242,7 +446,17 @@ function MyTimesheetView() {
           <CardDescription>Mon-Sun hours logged at a glance.</CardDescription>
         </CardHeader>
         <CardContent>
-          <WeeklyCalendarStrip />
+          <div className="grid gap-2 sm:grid-cols-7">
+            {weekdayData.map((day) => (
+              <div key={day.day} className="rounded-lg border border-zinc-900 bg-zinc-950/50 p-3 text-center">
+                <p className="text-sm font-medium text-zinc-200">{day.day}</p>
+                <p className="mt-1 text-xs text-zinc-500">{day.hours.toFixed(1)}h</p>
+                <div className="mt-3 h-2 rounded-full bg-zinc-900">
+                  <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${Math.min(100, (day.hours / 8) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -252,9 +466,9 @@ function MyTimesheetView() {
           <CardDescription>Manual entries, edits and deletions for current timesheet.</CardDescription>
         </CardHeader>
         <CardContent>
-          <TimeLogTable rows={logs} />
+          <TimeLogTable entries={entries} onEdit={onEdit} onDelete={onDelete} />
           <div className="mt-4 flex justify-end">
-            <Button>
+            <Button onClick={onAddEntry}>
               <Plus className="h-4 w-4" />
               Add Manual Entry
             </Button>
@@ -325,8 +539,8 @@ function TeamTimesheetView() {
   );
 }
 
-function ReportsView() {
-  return <TimeChart />;
+function ReportsView({ entries }: { entries: TimeEntryDTO[] }) {
+  return <TimeChart entries={entries} />;
 }
 
 function formatElapsed(seconds: number) {
@@ -393,15 +607,94 @@ export default function TimePage() {
   const [view, setView] = useState<TimeView>("my");
   const [weekMode, setWeekMode] = useState("Current Week");
   const [now, setNow] = useState(Date.now());
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [showEntryModal, setShowEntryModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TimeEntryDTO | null>(null);
 
   const timeEntriesQuery = useTimeEntriesQuery();
   const startTimerMutation = useStartTimerMutation();
   const stopTimerMutation = useStopTimerMutation();
+  const createEntryMutation = useCreateTimeEntryMutation();
+  const updateEntryMutation = useUpdateTimeEntryMutation();
+  const deleteEntryMutation = useDeleteTimeEntryMutation();
 
   const runningEntry = useMemo(
     () => timeEntriesQuery.data?.find((entry) => entry.isRunning) ?? null,
     [timeEntriesQuery.data],
   );
+
+  const weekEntries = useMemo(() => {
+    if (!timeEntriesQuery.data) return [];
+    const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    return timeEntriesQuery.data.filter(e => {
+      const entryDate = parseISO(e.startedAt);
+      return entryDate >= currentWeekStart && entryDate <= weekEnd;
+    });
+  }, [timeEntriesQuery.data, currentWeekStart]);
+
+  const handlePreviousWeek = () => {
+    setCurrentWeekStart(subWeeks(currentWeekStart, 1));
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeekStart(addWeeks(currentWeekStart, 1));
+  };
+
+  const handleCreateEntry = (data: { description: string; startedAt: string; endedAt: string; project: string }) => {
+    createEntryMutation.mutate({
+      description: data.description,
+      startedAt: data.startedAt,
+      endedAt: data.endedAt,
+    });
+    setShowEntryModal(false);
+    setEditingEntry(null);
+  };
+
+  const handleUpdateEntry = (data: { description: string; startedAt: string; endedAt: string; project: string }) => {
+    if (!editingEntry) return;
+    updateEntryMutation.mutate({
+      id: editingEntry.id,
+      description: data.description,
+      startedAt: data.startedAt,
+      endedAt: data.endedAt,
+    });
+    setShowEntryModal(false);
+    setEditingEntry(null);
+  };
+
+  const handleDeleteEntry = (entryId: string) => {
+    if (confirm("Are you sure you want to delete this time entry?")) {
+      deleteEntryMutation.mutate(entryId);
+      setShowEntryModal(false);
+      setEditingEntry(null);
+    }
+  };
+
+  const handleExport = () => {
+    const headers = ["Date", "Description", "Start Time", "End Time", "Duration (hours)"];
+    const rows = weekEntries.map(e => [
+      format(parseISO(e.startedAt), "yyyy-MM-dd"),
+      e.description || "",
+      format(parseISO(e.startedAt), "HH:mm"),
+      e.endedAt ? format(parseISO(e.endedAt), "HH:mm") : "",
+      e.durationMinutes ? (e.durationMinutes / 60).toFixed(2) : "",
+    ]);
+
+    const csv = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `timesheet-${format(currentWeekStart, "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     if (!runningEntry) {
@@ -426,10 +719,9 @@ export default function TimePage() {
     return Math.max(0, Math.floor((now - startedAtMs) / 1000));
   }, [now, runningEntry]);
 
-  const totalHoursThisWeek = useMemo(
-    () => weeklyHours.reduce((sum, value) => sum + value, 0).toFixed(1),
-    [],
-  );
+  const totalHoursThisWeek = useMemo(() => {
+    return (weekEntries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0) / 60).toFixed(1);
+  }, [weekEntries]);
 
   const timerDescription = runningEntry?.description?.trim() || "Focus session";
 
@@ -569,7 +861,7 @@ export default function TimePage() {
 
       {view === "my" ? <MyTimesheetView /> : null}
       {view === "team" ? <TeamTimesheetView /> : null}
-      {view === "reports" ? <ReportsView /> : null}
+      {view === "reports" ? <ReportsView entries={weekEntries} /> : null}
 
       <section className="grid gap-4 lg:grid-cols-3">
         <Card className="border-zinc-900 bg-zinc-950/50">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { format, formatDistanceToNow, endOfDay, isPast, isToday, parseISO } from "date-fns";
-import { ArrowRight, CheckCircle2, Clock3, Flame, TimerReset, TriangleAlert } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock3, Flame, Play, TimerReset, TriangleAlert } from "lucide-react";
 import { useMemo } from "react";
 
 import { useSessionContext } from "@/components/providers/SessionProvider";
@@ -134,7 +134,7 @@ export function MyDayWorkspace() {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Button asChild>
-                    <Link href={runningEntry.taskId ? `/tasks/${runningEntry.taskId}` : "/time"}>
+                    <Link href={runningEntry.taskId ? `/tasks?taskId=${encodeURIComponent(runningEntry.taskId)}` : "/time"}>
                       <Play className="h-4 w-4" />
                       Open task
                     </Link>
@@ -230,7 +230,7 @@ export function MyDayWorkspace() {
                             <p>{formatDueLabel(task.dueDate)}</p>
                           </div>
                           <Button asChild className="md:w-auto">
-                            <Link href={`/tasks/${task.id}`}>
+                            <Link href={`/tasks?taskId=${encodeURIComponent(task.id)}`}>
                               Focus task
                               <ArrowRight className="h-4 w-4" />
                             </Link>

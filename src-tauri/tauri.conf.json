@@ -1,0 +1,40 @@
+{
+  "productName": "PulseForge",
+  "version": "1.0.0",
+  "identifier": "com.pulseforge.app",
+  "build": {
+    "beforeBuildCommand": "node scripts/build-desktop.mjs",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "PulseForge",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "minWidth": 1024,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/256x256.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

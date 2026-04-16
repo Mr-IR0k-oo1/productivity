@@ -101,11 +101,20 @@ function DraggableTaskCard({
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition: isDragging ? "none" : "transform 180ms ease",
+    transition: isDragging ? "none" : "transform 200ms ease, opacity 200ms ease, scale 200ms ease",
+    scale: isDragging ? 0.92 : 1,
+    opacity: isDragging ? 0.85 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={cn(isDragging && "opacity-70") }>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "origin-center rounded-xl transition-shadow duration-200",
+        isDragging && "z-50 shadow-2xl shadow-black/60",
+      )}
+    >
       <div className="mb-2 flex items-center justify-between gap-2">
         <button
           type="button"
@@ -142,7 +151,7 @@ function DraggableTaskCard({
         selected={selected || active}
         overdue={isOverdue(task.dueDate)}
         onClick={onClick}
-        className="shadow-none"
+        className={cn("transition-shadow duration-200", isDragging ? "shadow-xl" : "shadow-none")}
       />
     </div>
   );

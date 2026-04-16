@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   addDays,
   differenceInCalendarDays,
@@ -16,16 +16,22 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
+  Check,
   Clock3,
   Filter,
+  Flag,
   GanttChartSquare,
+  Link2,
   ListFilter,
   Plus,
   Search,
   SquareCheckBig,
   Table2,
+  Trash2,
+  UserPlus,
 } from "lucide-react";
 
 import { KanbanBoard } from "@/components/features/KanbanBoard";
@@ -34,11 +40,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useTasksQuery, useUpdateTaskStatusMutation, type TaskDTO } from "@/hooks/useTasks";
+import {
+  useTasksQuery,
+  useUpdateTaskStatusMutation,
+  useUpdateTaskMutation,
+  useCreateTaskMutation,
+  useDeleteTaskMutation,
+  type TaskDTO,
+} from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 
 type ViewMode = "kanban" | "list" | "calendar" | "gantt";
-type TaskStatus = "backlog" | "todo" | "in_progress" | "review" | "done" | "blocked";
+type TaskStatus = "todo" | "in_progress" | "review" | "done";
 type TaskPriority = "High" | "Medium" | "Low";
 type DueFilter = "all" | "mine" | "overdue" | "this-week";
 
@@ -301,6 +314,8 @@ function TaskToolbar({
   setMyTasksOnly,
   selectedCount,
   onOpenCreate,
+  onBulkStatusChange,
+  onBulkDelete,
 }: {
   viewMode: ViewMode;
   setViewMode: (value: ViewMode) => void;
@@ -316,7 +331,10 @@ function TaskToolbar({
   setMyTasksOnly: (value: boolean) => void;
   selectedCount: number;
   onOpenCreate: () => void;
+  onBulkStatusChange: (status: TaskStatus) => void;
+  onBulkDelete: () => void;
 }) {
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   return (
     <Card className="border-zinc-900 bg-zinc-950/60">
       <CardContent className="space-y-4 p-4 md:p-6">
@@ -427,14 +445,32 @@ function TaskToolbar({
             <p className="text-sm text-zinc-300">
               {selectedCount} task{selectedCount === 1 ? "" : "s"} selected
             </p>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm">
-                Bulk Status
-              </Button>
-              <Button variant="secondary" size="sm">
-                Assign
-              </Button>
-              <Button variant="secondary" size="sm" className="border-red-900 text-red-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Button variant="secondary" size="sm" onClick={() => setShowStatusDropdown(!showStatusDropdown)}>
+                  <Check className="h-4 w-4" />
+                  Bulk Status
+                </Button>
+                {showStatusDropdown && (
+                  <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-zinc-800 bg-zinc-900 p-1 shadow-xl">
+                    {(["todo", "in_progress", "review", "done"] as TaskStatus[]).map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => {
+                          onBulkStatusChange(status);
+                          setShowStatusDropdown(false);
+                        }}
+                        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
+                      >
+                        {status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button variant="secondary" size="sm" className="border-red-900 text-red-200" onClick={onBulkDelete}>
+                <Trash2 className="h-4 w-4" />
                 Delete
               </Button>
             </div>
@@ -448,9 +484,15 @@ function TaskToolbar({
 function TaskDetailPanel({
   task,
   onClose,
+  onStartTimer,
+  onConvertToMilestone,
+  onAddDependency,
 }: {
   task: TaskRecord | null;
   onClose: () => void;
+  onStartTimer?: () => void;
+  onConvertToMilestone?: () => void;
+  onAddDependency?: () => void;
 }) {
   if (!task) return null;
 
@@ -535,16 +577,16 @@ function TaskDetailPanel({
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full justify-start" variant="secondary">
+                <Button className="w-full justify-start" variant="secondary" onClick={onStartTimer}>
                   <Clock3 className="h-4 w-4" />
                   Start timer
                 </Button>
-                <Button className="w-full justify-start" variant="secondary">
-                  <ListFilter className="h-4 w-4" />
+                <Button className="w-full justify-start" variant="secondary" onClick={onConvertToMilestone}>
+                  <Flag className="h-4 w-4" />
                   Convert to milestone
                 </Button>
-                <Button className="w-full justify-start" variant="secondary">
-                  <Filter className="h-4 w-4" />
+                <Button className="w-full justify-start" variant="secondary" onClick={onAddDependency}>
+                  <Link2 className="h-4 w-4" />
                   Add dependency
                 </Button>
               </CardContent>
@@ -582,9 +624,22 @@ function TaskDetailPanel({
 
 function TaskCreateModal({
   onClose,
+  onCreate,
 }: {
   onClose: () => void;
+  onCreate: (data: { title: string; description: string; priority: TaskPriority; dueDate: string }) => void;
 }) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<TaskPriority>("Medium");
+  const [dueDate, setDueDate] = useState("");
+
+  const handleSubmit = () => {
+    if (!title.trim()) return;
+    onCreate({ title: title.trim(), description, priority, dueDate });
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
@@ -603,23 +658,46 @@ function TaskCreateModal({
         </div>
 
         <div className="grid gap-4 p-6 md:grid-cols-2">
-          <Input placeholder="Task title" />
-          <Input placeholder="Assignee" />
-          <Input placeholder="Due date" />
-          <Input placeholder="Priority" />
-          <Input placeholder="Labels" />
-          <Input placeholder="Estimated time" />
-          <textarea
-            className="min-h-[120px] rounded-md border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-zinc-600 md:col-span-2"
-            placeholder="Description"
+          <div className="md:col-span-2">
+            <Input
+              placeholder="Task title *"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            className="h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100"
+          >
+            <option value="High">High Priority</option>
+            <option value="Medium">Medium Priority</option>
+            <option value="Low">Low Priority</option>
+          </select>
+          <Input
+            type="datetime-local"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="w-full"
           />
+          <div className="md:col-span-2">
+            <textarea
+              className="min-h-[120px] w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-zinc-600"
+              placeholder="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-zinc-900 p-6">
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button>Create Task</Button>
+          <Button onClick={handleSubmit} disabled={!title.trim()}>
+            Create Task
+          </Button>
         </div>
       </div>
     </div>
@@ -707,7 +785,7 @@ function ListView({
                       <Button size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
                         View
                       </Button>
-                      <Button size="sm" variant="secondary">
+                      <Button size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
                         Edit
                       </Button>
                     </div>
@@ -852,8 +930,14 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
 }
 
 export function TaskWorkspace() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const taskIdFromQuery = searchParams.get("taskId");
   const { data: apiTasks, isLoading } = useTasksQuery();
   const updateTaskStatus = useUpdateTaskStatusMutation();
+  const updateTask = useUpdateTaskMutation();
+  const createTask = useCreateTaskMutation();
+  const deleteTask = useDeleteTaskMutation();
   const [tasks, setTasks] = useState<TaskRecord[]>(initialTasks);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [search, setSearch] = useState("");
@@ -865,12 +949,23 @@ export function TaskWorkspace() {
   const [selectedTask, setSelectedTask] = useState<TaskRecord | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     if (apiTasks && apiTasks.length > 0) {
       setTasks(apiTasks.map(mapTaskDTOToRecord));
     }
   }, [apiTasks]);
+
+  useEffect(() => {
+    if (!taskIdFromQuery) {
+      setSelectedTask(null);
+      return;
+    }
+
+    const nextTask = tasks.find((task) => task.id === taskIdFromQuery) ?? null;
+    setSelectedTask(nextTask);
+  }, [taskIdFromQuery, tasks]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -912,6 +1007,7 @@ export function TaskWorkspace() {
     setTasks((current) =>
       current.map((task) => (task.id === taskId ? { ...task, status, progress: status === "done" ? 100 : task.progress } : task)),
     );
+    updateTaskStatus.mutate({ taskId, status });
   }
 
   function toggleSelection(taskId: string) {
@@ -922,9 +1018,76 @@ export function TaskWorkspace() {
 
   function openTask(task: TaskRecord) {
     setSelectedTask(task);
+    router.push(`/tasks?taskId=${encodeURIComponent(task.id)}`);
   }
 
   function closeTask() {
+    setSelectedTask(null);
+    router.replace("/tasks");
+  }
+
+  function handleCreateTask(data: { title: string; description: string; priority: TaskPriority; dueDate: string }) {
+    const priorityMap: Record<TaskPriority, number> = { High: 1, Medium: 2, Low: 3 };
+    createTask.mutate({
+      title: data.title,
+      description: data.description,
+      priority: priorityMap[data.priority],
+      dueDate: data.dueDate || undefined,
+      status: "todo",
+    });
+  }
+
+  function handleBulkStatusChange(status: TaskStatus) {
+    selectedTaskIds.forEach((id) => {
+      updateTaskStatus.mutate({ taskId: id, status });
+      setTasks((current) =>
+        current.map((task) => (task.id === id ? { ...task, status, progress: status === "done" ? 100 : task.progress } : task))
+      );
+    });
+    setSelectedTaskIds([]);
+    setBulkStatusOpen(false);
+  }
+
+  function handleBulkDelete() {
+    if (selectedCount === 0) return;
+    if (confirm(`Delete ${selectedCount} task${selectedCount === 1 ? "" : "s"}?`)) {
+      selectedTaskIds.forEach((id) => {
+        deleteTask.mutate(id);
+        setTasks((current) => current.filter((task) => task.id !== id));
+      });
+      setSelectedTaskIds([]);
+    }
+  }
+
+  function handleStartTimer() {
+    if (selectedTask) {
+      router.push(`/time?taskId=${selectedTask.id}`);
+    }
+  }
+
+  function handleConvertToMilestone() {
+    if (selectedTask) {
+      updateTask.mutate({
+        id: selectedTask.id,
+        metadata: { ...selectedTask, isMilestone: true },
+      });
+    }
+    setSelectedTask(null);
+  }
+
+  function handleAddDependency() {
+    if (selectedTask) {
+      const dependency = prompt("Enter task ID to link as dependency:");
+      if (dependency) {
+        updateTask.mutate({
+          id: selectedTask.id,
+          metadata: { ...selectedTask, dependency },
+        });
+        setTasks((current) =>
+          current.map((task) => (task.id === selectedTask.id ? { ...task, dependency } : task))
+        );
+      }
+    }
     setSelectedTask(null);
   }
 
@@ -972,108 +1135,26 @@ export function TaskWorkspace() {
         setMyTasksOnly={setMyTasksOnly}
         selectedCount={selectedCount}
         onOpenCreate={() => setIsCreateOpen(true)}
+        onBulkStatusChange={handleBulkStatusChange}
+        onBulkDelete={handleBulkDelete}
       />
 
       <TaskStats />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-4">
-          {renderView()}
-
-          <Card className="border-zinc-900 bg-zinc-950/50">
-            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 md:p-6">
-              <div>
-                <p className="text-sm font-medium text-zinc-100">Active filters</p>
-                <p className="text-sm text-zinc-500">
-                  {visibleTaskIds.length} visible tasks · {selectedTasks.length} selected task{selectedTasks.length === 1 ? "" : "s"}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="default">{viewMode}</Badge>
-                <Badge variant="default">{priorityFilter} priority</Badge>
-                <Badge variant="default">{assigneeFilter}</Badge>
-                <Badge variant="default">{dueFilter.replace("-", " ")}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <aside className="space-y-4">
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-zinc-400">
-              <div className="flex items-center justify-between">
-                <span>Overdue</span>
-                <span className="text-rose-400">{tasks.filter((task) => parseISO(task.dueDate) < referenceDate).length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Due this week</span>
-                <span className="text-zinc-100">
-                  {tasks.filter((task) =>
-                    isWithinInterval(parseISO(task.dueDate), {
-                      start: startOfWeek(referenceDate, { weekStartsOn: 1 }),
-                      end: endOfWeek(referenceDate, { weekStartsOn: 1 }),
-                    }),
-                  ).length}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Recurring</span>
-                <span className="text-zinc-100">{tasks.filter((task) => task.recurring).length}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Team</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {assigneeOptions.filter((value) => value !== "All").map((assignee) => (
-                <div key={assignee} className="flex items-center gap-3 rounded-lg border border-zinc-900 bg-zinc-950/50 p-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{assignee.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-zinc-200">{assignee}</p>
-                    <p className="text-xs text-zinc-500">Active in current sprint</p>
-                  </div>
-                  <Badge variant="success">Available</Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Upcoming Milestones</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-zinc-400">
-              {tasks
-                .filter((task) => !isAfter(parseISO(task.dueDate), addDays(referenceDate, 7)))
-                .slice(0, 4)
-                .map((task) => {
-                  const due = formatDueDate(task.dueDate);
-
-                  return (
-                    <div key={task.id} className="flex items-center justify-between rounded-md border border-zinc-900 bg-zinc-950/50 px-3 py-2.5">
-                      <div>
-                        <p className="text-sm text-zinc-200">{task.title}</p>
-                        <p className="text-xs text-zinc-500">{task.assignee}</p>
-                      </div>
-                      <span className={cn("text-xs", due.overdue ? "text-rose-400" : "text-zinc-400")}>{due.label}</span>
-                    </div>
-                  );
-                })}
-            </CardContent>
-          </Card>
-        </aside>
+      <div className="space-y-4">
+        {renderView()}
       </div>
 
-      {selectedTask ? <TaskDetailPanel task={selectedTask} onClose={closeTask} /> : null}
-      {isCreateOpen ? <TaskCreateModal onClose={() => setIsCreateOpen(false)} /> : null}
+      {selectedTask ? (
+        <TaskDetailPanel
+          task={selectedTask}
+          onClose={closeTask}
+          onStartTimer={handleStartTimer}
+          onConvertToMilestone={handleConvertToMilestone}
+          onAddDependency={handleAddDependency}
+        />
+      ) : null}
+      {isCreateOpen ? <TaskCreateModal onClose={() => setIsCreateOpen(false)} onCreate={handleCreateTask} /> : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import Sidebar from "@/components/layout/Sidebar";
@@ -11,13 +11,16 @@ type AppShellProps = {
 
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isTaskFocusRoute = pathname === "/tasks" && searchParams.has("taskId");
 
   if (
     pathname === "/" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
-    pathname.startsWith("/tasks/")
+    pathname.startsWith("/tasks/") ||
+    isTaskFocusRoute
   ) {
     return <>{children}</>;
   }

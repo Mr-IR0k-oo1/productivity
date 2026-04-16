@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
   addDays,
+  addHours,
   addMonths,
+  differenceInMinutes,
   endOfMonth,
   endOfWeek,
   format,
@@ -15,11 +17,19 @@ import {
   subMonths,
 } from "date-fns";
 import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  useDraggable,
+  useDroppable,
+} from "@dnd-kit/core";
+import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Download,
+  Edit2,
   Filter,
   Link2,
   MapPin,
@@ -27,14 +37,23 @@ import {
   Plus,
   Search,
   Sparkles,
+  Trash2,
   Users,
 } from "lucide-react";
 
+import { CreateEventModal } from "@/components/features/CreateEventModal";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  useCalendarQuery,
+  useCreateCalendarEventMutation,
+  useUpdateCalendarEventMutation,
+  useDeleteCalendarEventMutation,
+  type CalendarEventDTO,
+} from "@/hooks/useCalendar";
 import { cn } from "@/lib/utils";
 
 type CalendarViewMode = "month" | "week" | "day" | "agenda";
@@ -53,6 +72,8 @@ type CalendarEvent = {
   attendees: string[];
   chipClassName: string;
   dotClassName: string;
+  description?: string;
+  creatorId?: string;
 };
 
 const initialDate = new Date("2026-04-14T09:00:00");
@@ -223,7 +244,7 @@ function CalendarChip({ event, onClick }: { event: CalendarEvent; onClick: () =>
   );
 }
 
-function EventModal({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
+function EventModal({ event, onClose, onEdit, onDelete, onExport }: { event: CalendarEvent; onClose: () => void; onEdit: (event: CalendarEvent) => void; onDelete: (eventId: string) => void; onExport: (event: CalendarEvent) => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
@@ -290,17 +311,21 @@ function EventModal({ event, onClose }: { event: CalendarEvent; onClose: () => v
                 <CardTitle className="text-base">Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full justify-start" variant="secondary">
-                  <Link2 className="h-4 w-4" />
-                  Copy event link
+                <Button className="w-full justify-start" variant="secondary" onClick={() => onEdit(event)}>
+                  <Edit2 className="h-4 w-4" />
+                  Edit event
                 </Button>
                 <Button className="w-full justify-start" variant="secondary">
                   <CalendarDays className="h-4 w-4" />
                   Reschedule
                 </Button>
-                <Button className="w-full justify-start" variant="secondary">
+                <Button className="w-full justify-start" variant="secondary" onClick={() => onExport(event)}>
                   <Download className="h-4 w-4" />
                   Export .ics
+                </Button>
+                <Button className="w-full justify-start bg-red-900/50 text-red-200 hover:bg-red-900" variant="secondary" onClick={() => onDelete(event.id)}>
+                  <Trash2 className="h-4 w-4" />
+                  Delete event
                 </Button>
               </CardContent>
             </Card>
@@ -331,27 +356,304 @@ function EventModal({ event, onClose }: { event: CalendarEvent; onClose: () => v
   );
 }
 
+function DraggableEventChip({ event, onSelect }: { event: CalendarEvent; onSelect: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: event.id,
+    data: event,
+  });
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: isDragging ? 50 : undefined,
+      }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      role="button"
+      tabIndex={0}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className={cn(
+        "cursor-grab rounded-md border px-2 py-1.5 text-xs transition-all active:cursor-grabbing",
+        event.chipClassName,
+        isDragging && "opacity-50 shadow-lg",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium">{event.title}</span>
+        <span className="text-[10px] opacity-80">{format(event.start, "h:mm a")}</span>
+      </div>
+    </div>
+  );
+}
+
+function DroppableDayCell({
+  day,
+  isSelected,
+  isCurrentMonth,
+  dayEvents,
+  onSelect,
+  onDrop,
+  children,
+}: {
+  day: Date;
+  isSelected: boolean;
+  isCurrentMonth: boolean;
+  dayEvents: CalendarEvent[];
+  onSelect: () => void;
+  onDrop: () => void;
+  children?: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: day.toISOString(),
+    data: day,
+  });
+
+  return (
+    <button
+      ref={setNodeRef}
+      type="button"
+      onClick={onSelect}
+      onMouseUp={onDrop}
+      className={cn(
+        "min-h-[150px] rounded-xl border p-3 text-left transition-colors",
+        isSelected ? "border-zinc-700 bg-zinc-900/80" : "border-zinc-900 bg-zinc-950/40 hover:border-zinc-700",
+        !isCurrentMonth && "opacity-45",
+        isOver && "border-emerald-500 bg-emerald-950/30",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-full text-sm",
+            isToday(day) ? "bg-zinc-100 text-zinc-900" : "text-zinc-200",
+          )}
+        >
+          {format(day, "d")}
+        </span>
+        {dayEvents.length > 0 ? (
+          <span className="text-xs text-zinc-500">{dayEvents.length} items</span>
+        ) : null}
+      </div>
+      <div className="mt-3 space-y-2">{children}</div>
+    </button>
+  );
+}
+
 export function CalendarView() {
+  const calendarQuery = useCalendarQuery();
+  const createEventMutation = useCreateCalendarEventMutation();
+  const updateEventMutation = useUpdateCalendarEventMutation();
+  const deleteEventMutation = useDeleteCalendarEventMutation();
+
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [viewDate, setViewDate] = useState(initialDate);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [search, setSearch] = useState("");
+
+  const handleCreate = (eventData: {
+    title: string;
+    description: string;
+    startsAt: string;
+    endsAt: string;
+    kind: EventKind;
+    project: string;
+    location: string;
+  }) => {
+    createEventMutation.mutate({
+      title: eventData.title,
+      description: eventData.description,
+      startsAt: eventData.startsAt,
+      endsAt: eventData.endsAt,
+    });
+  };
+
+  const handleUpdate = (event: CalendarEvent) => {
+    setEditingEvent(event);
+    setIsCreateOpen(true);
+  };
+
+  const handleDelete = (eventId: string) => {
+    if (confirm("Are you sure you want to delete this event?")) {
+      deleteEventMutation.mutate(eventId);
+      setSelectedEvent(null);
+    }
+  };
+
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [sourceFilters, setSourceFilters] = useState<string[]>([]);
+
+  const toggleSourceFilter = (label: string) => {
+    setSourceFilters(prev =>
+      prev.includes(label)
+        ? prev.filter(s => s !== label)
+        : [...prev, label]
+    );
+  };
+
+  const handleDragStart = (event: CalendarEvent) => {
+    setDraggedEvent(event);
+  };
+
+  const handleDragEnd = (day: Date) => {
+    if (draggedEvent) {
+      const duration = differenceInMinutes(draggedEvent.end, draggedEvent.start);
+      const newStart = new Date(day);
+      newStart.setHours(draggedEvent.start.getHours(), draggedEvent.start.getMinutes(), 0, 0);
+      const newEnd = new Date(newStart.getTime() + duration * 60000);
+
+      updateEventMutation.mutate({
+        id: draggedEvent.id,
+        startsAt: newStart.toISOString(),
+        endsAt: newEnd.toISOString(),
+      });
+      setDraggedEvent(null);
+    }
+  };
+
+  const handleExport = () => {
+    const formatICSDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const escapeICS = (text: string) => {
+      return text.replace(/[,;\\]/g, '\\$&').replace(/\n/g, '\\n');
+    };
+
+    const icsEvents = visibleEvents.map(event => {
+      const start = formatICSDate(event.start);
+      const end = formatICSDate(event.end);
+      const uid = `${event.id}@productivity`;
+      return `BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${formatICSDate(new Date())}
+DTSTART:${start}
+DTEND:${end}
+SUMMARY:${escapeICS(event.title)}
+DESCRIPTION:${escapeICS(event.notes || '')}
+LOCATION:${escapeICS(event.location || '')}
+END:VEVENT`;
+    }).join('\n');
+
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//PulseForge//Productivity//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+${icsEvents}
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `calendar-export-${format(new Date(), 'yyyy-MM-dd')}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSingleEventExport = (event: CalendarEvent) => {
+    const formatICSDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const escapeICS = (text: string) => {
+      return text.replace(/[,;\\]/g, '\\$&').replace(/\n/g, '\\n');
+    };
+
+    const uid = `${event.id}@productivity`;
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//PulseForge//Productivity//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${formatICSDate(new Date())}
+DTSTART:${formatICSDate(event.start)}
+DTEND:${formatICSDate(event.end)}
+SUMMARY:${escapeICS(event.title)}
+DESCRIPTION:${escapeICS(event.notes || '')}
+LOCATION:${escapeICS(event.location || '')}
+END:VEVENT
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${event.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const [typeFilter, setTypeFilter] = useState<EventKind | "all">("all");
   const [showMyOnly, setShowMyOnly] = useState(false);
 
+  const apiEvents = useMemo(() => {
+    if (!calendarQuery.data) return [];
+    return calendarQuery.data.map((apiEvent: CalendarEventDTO): CalendarEvent => ({
+      id: apiEvent.id,
+      title: apiEvent.title,
+      start: new Date(apiEvent.startsAt),
+      end: new Date(apiEvent.endsAt),
+      kind: apiEvent.kind || "meeting",
+      project: apiEvent.project || "",
+      owner: "You",
+      location: apiEvent.location || "",
+      notes: apiEvent.description || "",
+      attendees: [],
+      chipClassName: eventKinds[apiEvent.kind || "meeting"].className,
+      dotClassName: apiEvent.kind === "meeting" ? "bg-blue-500" : apiEvent.kind === "focus" ? "bg-emerald-500" : apiEvent.kind === "deadline" ? "bg-amber-500" : apiEvent.kind === "travel" ? "bg-violet-500" : "bg-zinc-400",
+      description: apiEvent.description || "",
+      creatorId: apiEvent.creatorId,
+    }));
+  }, [calendarQuery.data]);
+
+  const allEvents = useMemo(() => {
+    if (apiEvents.length > 0) return apiEvents;
+    return sampleEvents;
+  }, [apiEvents]);
+
   const visibleEvents = useMemo(() => {
-    return sampleEvents.filter((event) => {
+    return allEvents.filter((event) => {
       const matchesSearch =
         search.trim().length === 0 ||
         [event.title, event.project, event.owner, event.location].some((value) =>
           value.toLowerCase().includes(search.toLowerCase()),
         );
       const matchesType = typeFilter === "all" || event.kind === typeFilter;
-      const matchesOwner = showMyOnly ? event.owner === "Alice" : true;
-      return matchesSearch && matchesType && matchesOwner;
+      const matchesSource = sourceFilters.length === 0 || (
+        (sourceFilters.includes("Team calendar") && event.kind === "meeting") ||
+        (sourceFilters.includes("Product milestones") && (event.kind === "deadline" || event.kind === "review")) ||
+        (sourceFilters.includes("1:1s and reviews") && event.kind === "review") ||
+        (sourceFilters.includes("Deadlines") && event.kind === "deadline")
+      );
+      return matchesSearch && matchesType && matchesSource;
     });
-  }, [search, typeFilter, showMyOnly]);
+  }, [allEvents, search, typeFilter, sourceFilters]);
 
   const monthStart = startOfMonth(viewDate);
   const monthDays = useMemo(() => {
@@ -404,13 +706,13 @@ export function CalendarView() {
               <Button variant="secondary" onClick={() => setViewDate(subMonths(viewDate, 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="secondary" onClick={() => setViewDate(initialDate)}>
+              <Button variant="secondary" onClick={() => { setViewDate(new Date()); setSelectedDate(new Date()); }}>
                 Today
               </Button>
               <Button variant="secondary" onClick={() => setViewDate(addMonths(viewDate, 1))}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button onClick={() => setSelectedEvent(sampleEvents[0])}>
+              <Button onClick={() => setIsCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
                 New event
               </Button>
@@ -448,10 +750,50 @@ export function CalendarView() {
                   className="pl-9"
                 />
               </div>
-              <Button variant="secondary">
-                <Filter className="h-4 w-4" />
-                Filters
-              </Button>
+              <div className="relative">
+                <Button variant="secondary" onClick={() => setShowFilters(!showFilters)}>
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {sourceFilters.length > 0 && (
+                    <span className="ml-1.5 rounded-full bg-zinc-700 px-1.5 py-0.5 text-xs">
+                      {sourceFilters.length}
+                    </span>
+                  )}
+                </Button>
+                {showFilters && (
+                  <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-950 p-3 shadow-xl">
+                    <p className="mb-2 text-sm font-medium text-zinc-200">Sources</p>
+                    <div className="space-y-2">
+                      {[
+                        { label: "Team calendar", color: "bg-blue-400" },
+                        { label: "Product milestones", color: "bg-emerald-400" },
+                        { label: "1:1s and reviews", color: "bg-amber-400" },
+                        { label: "Deadlines", color: "bg-rose-400" },
+                      ].map((filter) => (
+                        <label key={filter.label} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={sourceFilters.includes(filter.label)}
+                            onChange={() => toggleSourceFilter(filter.label)}
+                            className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                          />
+                          <span className={cn("h-2 w-2 rounded-full", filter.color)} />
+                          <span className="text-sm text-zinc-300">{filter.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {sourceFilters.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSourceFilters([])}
+                        className="mt-3 w-full text-xs text-zinc-400 hover:text-zinc-200"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -475,7 +817,7 @@ export function CalendarView() {
                 />
                 My items
               </label>
-              <Button variant="secondary">
+              <Button variant="secondary" onClick={handleExport}>
                 <Download className="h-4 w-4" />
                 Export
               </Button>
@@ -498,77 +840,59 @@ export function CalendarView() {
               </div>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
-              <div className="grid grid-cols-7 gap-2 text-xs uppercase tracking-wide text-zinc-500">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
-                  <div key={day} className="px-2 pb-2">
-                    {day}
-                  </div>
-                ))}
-              </div>
+              <DndContext onDragStart={({ active }) => {
+                const event = visibleEvents.find(e => e.id === active.id);
+                if (event) handleDragStart(event);
+              }}>
+                <div className="grid grid-cols-7 gap-2 text-xs uppercase tracking-wide text-zinc-500">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <div key={day} className="px-2 pb-2">
+                      {day}
+                    </div>
+                  ))}
+                </div>
 
-              <div className="grid grid-cols-7 gap-2">
-                {monthDays.map((day) => {
-                  const dayEvents = getDayEvents(visibleEvents, day);
-                  const active = isSameDay(day, selectedDate);
+                <div className="grid grid-cols-7 gap-2">
+                  {monthDays.map((day) => {
+                    const dayEvents = getDayEvents(visibleEvents, day);
+                    const active = isSameDay(day, selectedDate);
 
-                  return (
-                    <button
-                      key={day.toISOString()}
-                      type="button"
-                      onClick={() => setSelectedDate(day)}
-                      className={cn(
-                        "min-h-[150px] rounded-xl border p-3 text-left transition-colors",
-                        active ? "border-zinc-700 bg-zinc-900/80" : "border-zinc-900 bg-zinc-950/40 hover:border-zinc-700",
-                        !isSameMonth(day, monthStart) && "opacity-45",
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={cn(
-                            "flex h-7 w-7 items-center justify-center rounded-full text-sm",
-                            isToday(day) ? "bg-zinc-100 text-zinc-900" : "text-zinc-200",
-                          )}
-                        >
-                          {format(day, "d")}
-                        </span>
-                        {dayEvents.length > 0 ? (
-                          <span className="text-xs text-zinc-500">{dayEvents.length} items</span>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-3 space-y-2">
+                    return (
+                      <DroppableDayCell
+                        key={day.toISOString()}
+                        day={day}
+                        isSelected={active}
+                        isCurrentMonth={isSameMonth(day, monthStart)}
+                        dayEvents={dayEvents}
+                        onSelect={() => setSelectedDate(day)}
+                        onDrop={() => handleDragEnd(day)}
+                      >
                         {dayEvents.slice(0, 3).map((event) => (
-                          <div
+                          <DraggableEventChip
                             key={event.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={(clickEvent) => {
-                              clickEvent.stopPropagation();
-                              setSelectedEvent(event);
-                            }}
-                            onKeyDown={(keyEvent) => {
-                              if (keyEvent.key === "Enter" || keyEvent.key === " ") {
-                                keyEvent.preventDefault();
-                                setSelectedEvent(event);
-                              }
-                            }}
-                            className={cn(
-                              "cursor-grab rounded-md border px-2 py-1.5 text-xs transition-transform hover:-translate-y-0.5",
-                              event.chipClassName,
-                            )}
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium">{event.title}</span>
-                              <span className="text-[10px] opacity-80">{format(event.start, "h:mm a")}</span>
-                            </div>
-                          </div>
+                            event={event}
+                            onSelect={() => setSelectedEvent(event)}
+                          />
                         ))}
                         {dayEvents.length > 3 ? <p className="text-xs text-zinc-500">+{dayEvents.length - 3} more</p> : null}
+                      </DroppableDayCell>
+                    );
+                  })}
+                </div>
+                <DragOverlay>
+                  {draggedEvent ? (
+                    <div className={cn(
+                      "cursor-grabbing rounded-md border px-2 py-1.5 text-xs shadow-lg",
+                      draggedEvent.chipClassName,
+                    )}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{draggedEvent.title}</span>
+                        <span className="text-[10px] opacity-80">{format(draggedEvent.start, "h:mm a")}</span>
                       </div>
-                    </button>
-                  );
-                })}
-              </div>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             </CardContent>
           </Card>
         ) : null}
@@ -798,7 +1122,21 @@ export function CalendarView() {
 
       </aside>
 
-      {selectedEvent ? <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} /> : null}
+      {selectedEvent ? <EventModal event={selectedEvent} onClose={() => setSelectedEvent(null)} onEdit={handleUpdate} onDelete={handleDelete} onExport={handleSingleEventExport} /> : null}
+      {isCreateOpen && (
+        <CreateEventModal
+          onClose={() => {
+            setIsCreateOpen(false);
+            setEditingEvent(null);
+          }}
+          onCreate={(data) => {
+            handleCreate(data);
+            setIsCreateOpen(false);
+            setEditingEvent(null);
+          }}
+          initialDate={editingEvent?.start}
+        />
+      )}
     </div>
   );
 }
