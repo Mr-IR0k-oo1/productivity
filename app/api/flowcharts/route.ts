@@ -2,57 +2,45 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/src/db";
 import { flowcharts, users, workspaceMembers } from "@/src/db/schema";
+import { supabaseAdmin } from "@/src/lib/supabase";
 import { eq, and } from "drizzle-orm";
-import { validateSession } from "@/src/lib/auth";
 
-async function getAuthUser(request: NextRequest) {
+async function getAuthUserId(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7).trim();
+    const { data } = await supabaseAdmin.auth.getUser(token);
+    return data.user?.id ?? null;
   }
-
-  const token = authHeader.slice(7).trim();
-  return validateSession(token);
-}
-
-async function getUserAndWorkspace(request: NextRequest) {
-  const user = await getAuthUser(request);
-  if (!user) {
-    return null;
-  }
-
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return null;
-  }
-
-  const [member] = await db
-    .select()
-    .from(workspaceMembers)
-    .where(and(
-      eq(workspaceMembers.workspaceId, workspaceId),
-      eq(workspaceMembers.userId, user.id)
-    ))
-    .limit(1);
-
-  if (!member || !member.isActive) {
-    return null;
-  }
-
-  return { userId: user.id, workspaceId };
+  return null;
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await getUserAndWorkspace(request);
-    if (!context) {
+    const authUserId = await getAuthUserId(request);
+    if (!authUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const workspaceId = request.headers.get("x-workspace-id");
+    if (!workspaceId) {
+      return NextResponse.json({ error: "Workspace ID required" }, { status: 400 });
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.authUserId, authUserId))
+      .limit(1);
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     const rows = await db
       .select()
       .from(flowcharts)
-      .where(eq(flowcharts.workspaceId, context.workspaceId))
+      .where(eq(flowcharts.workspaceId, workspaceId))
       .orderBy(flowcharts.updatedAt);
 
     return NextResponse.json({ data: rows });
@@ -64,9 +52,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await getUserAndWorkspace(request);
-    if (!context) {
+    const authUserId = await getAuthUserId(request);
+    if (!authUserId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const workspaceId = request.headers.get("x-workspace-id");
+    if (!workspaceId) {
+      return NextResponse.json({ error: "Workspace ID required" }, { status: 400 });
     }
 
     const body = await request.json();
@@ -74,11 +67,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
     }
 
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.authUserId, authUserId))
+      .limit(1);
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const [member] = await db
+      .select()
+      .from(workspaceMembers)
+      .where(and(
+        eq(workspaceMembers.workspaceId, workspaceId),
+        eq(workspaceMembers.userId, user.id)
+      ))
+      .limit(1);
+
+    if (!member || !member.isActive) {
+      return NextResponse.json({ error: "Workspace membership required" }, { status: 403 });
+    }
+
     const [created] = await db
       .insert(flowcharts)
       .values({
-        workspaceId: context.workspaceId,
-        creatorId: context.userId,
+        workspaceId,
+        creatorId: user.id,
         name: body.name,
         data: body.data ?? { nodes: [], edges: [] },
       })

@@ -2,27 +2,37 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/src/db";
 import { flowcharts, users, workspaceMembers } from "@/src/db/schema";
+import { supabaseAdmin } from "@/src/lib/supabase";
 import { eq, and } from "drizzle-orm";
-import { validateSession } from "@/src/lib/auth";
 
-async function getAuthUser(request: NextRequest) {
+async function getAuthUserId(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return null;
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7).trim();
+    const { data } = await supabaseAdmin.auth.getUser(token);
+    return data.user?.id ?? null;
   }
-
-  const token = authHeader.slice(7).trim();
-  return validateSession(token);
+  return null;
 }
 
 async function getUserAndWorkspace(request: NextRequest) {
-  const user = await getAuthUser(request);
-  if (!user) {
+  const authUserId = await getAuthUserId(request);
+  if (!authUserId) {
     return null;
   }
 
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
+    return null;
+  }
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.authUserId, authUserId))
+    .limit(1);
+
+  if (!user) {
     return null;
   }
 

@@ -20,10 +20,10 @@ export const ideaStatusEnum = pgEnum("idea_status", ["draft", "validated", "arch
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
+  authUserId: uuid("auth_user_id").notNull().unique(),
   fullName: varchar("full_name", { length: 120 }),
   jobTitle: varchar("job_title", { length: 120 }),
+  email: varchar("email", { length: 255 }).notNull().unique(),
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -292,22 +292,5 @@ export const flowcharts = pgTable(
   (table) => ({
     workspaceIdx: index("flowcharts_workspace_idx").on(table.workspaceId),
     creatorIdx: index("flowcharts_creator_idx").on(table.creatorId),
-  }),
-);
-
-export const sessions = pgTable(
-  "sessions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    token: varchar("token", { length: 255 }).notNull().unique(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => ({
-    tokenIdx: index("sessions_token_idx").on(table.token),
-    userIdx: index("sessions_user_idx").on(table.userId),
   }),
 );
