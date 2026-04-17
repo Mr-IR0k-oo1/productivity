@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import type { Node, Edge } from "@xyflow/react";
 
+import { fetchApiJson } from "@/lib/api/client";
+import { useSessionContext } from "@/components/providers/SessionProvider";
+
 export type FlowchartNodeData = {
   label: string;
   nodeType?: string;
@@ -40,7 +43,25 @@ type FlowchartState = {
   saveFlowchart: (id: string, data: FlowchartData) => Promise<void>;
   renameFlowchart: (id: string, name: string) => Promise<void>;
   deleteFlowchart: (id: string) => Promise<void>;
+  duplicateFlowchart: (flowchart: Flowchart) => Promise<Flowchart | null>;
 };
+
+function getSessionContext() {
+  try {
+    const context = useSessionContext();
+    return {
+      workspaceId: context.workspaceId,
+      authToken: context.authToken,
+      isReady: context.isReady,
+    };
+  } catch {
+    return {
+      workspaceId: undefined,
+      authToken: null,
+      isReady: false,
+    };
+  }
+}
 
 export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   flowcharts: [],
@@ -65,11 +86,17 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   setError: (error) => set({ error }),
 
   loadFlowcharts: async () => {
+    const { workspaceId, authToken, isReady } = getSessionContext();
+    if (!isReady || !workspaceId) {
+      set({ error: "Session not ready", isLoading: false });
+      return;
+    }
+
     set({ isLoading: true, error: null });
     try {
-      const res = await fetch("/api/flowcharts");
-      if (!res.ok) throw new Error("Failed to load flowcharts");
-      const json = await res.json();
+      const json = await fetchApiJson<{ data: Flowchart[] }>("/api/flowcharts", {
+        session: { workspaceId, authToken },
+      });
       set({ flowcharts: json.data, isLoading: false });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "Unknown error", isLoading: false });
@@ -77,14 +104,19 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   },
 
   createFlowchart: async (name: string) => {
+    const { workspaceId, authToken, isReady } = getSessionContext();
+    if (!isReady || !workspaceId) {
+      set({ error: "Session not ready" });
+      return null;
+    }
+
     try {
-      const res = await fetch("/api/flowcharts", {
+      const json = await fetchApiJson<{ data: Flowchart }>("/api/flowcharts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json" },
+        session: { workspaceId, authToken },
         body: JSON.stringify({ name, data: { nodes: [], edges: [] } }),
       });
-      if (!res.ok) throw new Error("Failed to create flowchart");
-      const json = await res.json();
       const flowchart = json.data;
       set((state) => ({ flowcharts: [flowchart, ...state.flowcharts] }));
       return flowchart;
@@ -95,14 +127,16 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   },
 
   saveFlowchart: async (id: string, data: FlowchartData) => {
+    const { workspaceId, authToken, isReady } = getSessionContext();
+    if (!isReady || !workspaceId) return;
+
     try {
-      const res = await fetch(`/api/flowcharts/${id}`, {
+      const json = await fetchApiJson<{ data: Flowchart }>(`/api/flowcharts/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json" },
+        session: { workspaceId, authToken },
         body: JSON.stringify({ data }),
       });
-      if (!res.ok) throw new Error("Failed to save flowchart");
-      const json = await res.json();
       set((state) => ({
         flowcharts: state.flowcharts.map((f) => (f.id === id ? json.data : f)),
         activeFlowchart: state.activeFlowchart?.id === id ? json.data : state.activeFlowchart,
@@ -113,14 +147,16 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   },
 
   renameFlowchart: async (id: string, name: string) => {
+    const { workspaceId, authToken, isReady } = getSessionContext();
+    if (!isReady || !workspaceId) return;
+
     try {
-      const res = await fetch(`/api/flowcharts/${id}`, {
+      const json = await fetchApiJson<{ data: Flowchart }>(`/api/flowcharts/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "content-type": "application/json" },
+        session: { workspaceId, authToken },
         body: JSON.stringify({ name }),
       });
-      if (!res.ok) throw new Error("Failed to rename flowchart");
-      const json = await res.json();
       set((state) => ({
         flowcharts: state.flowcharts.map((f) => (f.id === id ? json.data : f)),
         activeFlowchart: state.activeFlowchart?.id === id ? json.data : state.activeFlowchart,
@@ -131,15 +167,41 @@ export const useFlowchartStore = create<FlowchartState>((set, get) => ({
   },
 
   deleteFlowchart: async (id: string) => {
+    const { workspaceId, authToken, isReady } = getSessionContext();
+    if (!isReady || !workspaceId) return;
+
     try {
-      const res = await fetch(`/api/flowcharts/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete flowchart");
+      await fetchApiJson<undefined>(`/api/flowcharts/${id}`, {
+        method: "DELETE",
+        session: { workspaceId, authToken },
+      });
       set((state) => ({
         flowcharts: state.flowcharts.filter((f) => f.id !== id),
         activeFlowchart: state.activeFlowchart?.id === id ? null : state.activeFlowchart,
       }));
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  },
+
+  duplicateFlowchart: async (flowchart: Flowchart) => {
+    const { workspaceId, authToken, isReady } = getSessionContext();
+    if (!isReady || !workspaceId) return null;
+
+    try {
+      const newName = `${flowchart.name} (Copy)`;
+      const json = await fetchApiJson<{ data: Flowchart }>("/api/flowcharts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        session: { workspaceId, authToken },
+        body: JSON.stringify({ name: newName, data: flowchart.data }),
+      });
+      const duplicated = json.data;
+      set((state) => ({ flowcharts: [duplicated, ...state.flowcharts] }));
+      return duplicated;
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : "Unknown error" });
+      return null;
     }
   },
 }));

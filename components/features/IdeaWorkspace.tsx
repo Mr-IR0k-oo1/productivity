@@ -5,15 +5,18 @@ import {
   CheckCircle2,
   ChevronRight,
   Columns3,
+  Edit2,
   GitBranch,
   Lightbulb,
   List,
   MessageCircle,
+  Pencil,
   Plus,
   Search,
   Sparkles,
   Target,
   ThumbsUp,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -22,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { IdeaDTO, useConvertIdeaMutation, useCreateIdeaMutation, useIdeasQuery, useUpdateIdeaMutation } from "@/hooks/useIdeas";
+import { IdeaDTO, useConvertIdeaMutation, useCreateIdeaMutation, useDeleteIdeaMutation, useIdeasQuery, useUpdateIdeaMutation, useVoteIdeaMutation } from "@/hooks/useIdeas";
 import { useTasksQuery } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -621,6 +624,8 @@ function IdeaDetailModal({
   onAddComment,
   onAddDependency,
   onRemoveDependency,
+  onEdit,
+  onDelete,
 }: {
   idea: IdeaRecord;
   onClose: () => void;
@@ -629,6 +634,8 @@ function IdeaDetailModal({
   onAddComment: (message: string) => void;
   onAddDependency: () => void;
   onRemoveDependency: (dependencyId: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -723,6 +730,14 @@ function IdeaDetailModal({
                 <Button className="w-full justify-start" variant="secondary" onClick={onAddDependency}>
                   <GitBranch className="h-4 w-4" />
                   Add Dependency Link
+                </Button>
+                <Button className="w-full justify-start" variant="secondary" onClick={onEdit}>
+                  <Edit2 className="h-4 w-4" />
+                  Edit Idea
+                </Button>
+                <Button className="w-full justify-start bg-red-900/50 text-red-200 hover:bg-red-900" variant="secondary" onClick={onDelete}>
+                  <Trash2 className="h-4 w-4" />
+                  Delete Idea
                 </Button>
               </CardContent>
             </Card>
@@ -963,6 +978,8 @@ export function IdeaWorkspace() {
   const tasksQuery = useTasksQuery();
   const createIdeaMutation = useCreateIdeaMutation();
   const convertIdeaMutation = useConvertIdeaMutation();
+  const deleteIdeaMutation = useDeleteIdeaMutation();
+  const voteIdeaMutation = useVoteIdeaMutation();
   const apiEnabled = ideasQuery.isSuccess;
 
   useEffect(() => {
@@ -1094,6 +1111,55 @@ export function IdeaWorkspace() {
     updateIdea(ideaId, (idea) => ({
       ...idea,
       dependencies,
+    }));
+  }
+
+  function handleEditIdea(ideaId: string) {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+
+    const newTitle = prompt("Edit title:", idea.title);
+    if (newTitle && newTitle !== idea.title) {
+      updateIdea(ideaId, (i) => ({ ...i, title: newTitle }));
+    }
+
+    const newSummary = prompt("Edit summary:", idea.summary);
+    if (newSummary && newSummary !== idea.summary) {
+      updateIdea(ideaId, (i) => ({ ...i, summary: newSummary }));
+    }
+
+    const newContent = prompt("Edit content:", idea.content);
+    if (newContent && newContent !== idea.content) {
+      updateIdea(ideaId, (i) => ({ ...i, content: newContent }));
+    }
+  }
+
+  function handleDeleteIdea(ideaId: string) {
+    if (!confirm("Are you sure you want to delete this idea?")) return;
+
+    if (apiEnabled) {
+      deleteIdeaMutation.mutate(ideaId);
+    }
+
+    setIdeas((current) => current.filter((i) => i.id !== ideaId));
+    setSelectedIdeaId(null);
+    router.push("/ideas");
+  }
+
+  function handleVoteIdea(ideaId: string) {
+    const idea = ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+
+    const newVoted = !idea.votedByMe;
+
+    if (apiEnabled) {
+      voteIdeaMutation.mutate({ ideaId, vote: newVoted });
+    }
+
+    updateIdea(ideaId, (i) => ({
+      ...i,
+      votedByMe: newVoted,
+      votes: newVoted ? i.votes + 1 : Math.max(0, i.votes - 1),
     }));
   }
 
@@ -1305,11 +1371,13 @@ export function IdeaWorkspace() {
             setSelectedIdeaId(null);
             router.replace("/ideas");
           }}
-          onVote={() => toggleVote(selectedIdea.id)}
+          onVote={() => handleVoteIdea(selectedIdea.id)}
           onConvert={() => convertToTask(selectedIdea.id)}
           onAddComment={(message) => addComment(selectedIdea.id, message)}
           onAddDependency={handleAddDependency}
           onRemoveDependency={(depId) => handleRemoveDependency(selectedIdea.id, depId)}
+          onEdit={() => handleEditIdea(selectedIdea.id)}
+          onDelete={() => handleDeleteIdea(selectedIdea.id)}
         />
       ) : null}
 

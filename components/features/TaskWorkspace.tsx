@@ -316,6 +316,8 @@ function TaskToolbar({
   onOpenCreate,
   onBulkStatusChange,
   onBulkDelete,
+  activeFilterCount,
+  clearAllFilters,
 }: {
   viewMode: ViewMode;
   setViewMode: (value: ViewMode) => void;
@@ -333,6 +335,8 @@ function TaskToolbar({
   onOpenCreate: () => void;
   onBulkStatusChange: (status: TaskStatus) => void;
   onBulkDelete: () => void;
+  activeFilterCount: number;
+  clearAllFilters: () => void;
 }) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   return (
@@ -390,9 +394,14 @@ function TaskToolbar({
                 className="pl-9"
               />
             </div>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={activeFilterCount > 0 ? clearAllFilters : undefined}>
               <Filter className="h-4 w-4" />
               Filters
+              {activeFilterCount > 0 && (
+                <span className="ml-1.5 rounded-full bg-zinc-700 px-1.5 py-0.5 text-xs">
+                  {activeFilterCount}
+                </span>
+              )}
             </Button>
           </div>
         </div>
@@ -951,6 +960,24 @@ export function TaskWorkspace() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (search.trim()) count++;
+    if (priorityFilter !== "All") count++;
+    if (assigneeFilter !== "All") count++;
+    if (dueFilter !== "all") count++;
+    if (myTasksOnly) count++;
+    return count;
+  }, [search, priorityFilter, assigneeFilter, dueFilter, myTasksOnly]);
+
+  const clearAllFilters = () => {
+    setSearch("");
+    setPriorityFilter("All");
+    setAssigneeFilter("All");
+    setDueFilter("all");
+    setMyTasksOnly(false);
+  };
+
   useEffect(() => {
     if (apiTasks && apiTasks.length > 0) {
       setTasks(apiTasks.map(mapTaskDTOToRecord));
@@ -1137,6 +1164,8 @@ export function TaskWorkspace() {
         onOpenCreate={() => setIsCreateOpen(true)}
         onBulkStatusChange={handleBulkStatusChange}
         onBulkDelete={handleBulkDelete}
+        activeFilterCount={activeFilterCount}
+        clearAllFilters={clearAllFilters}
       />
 
       <TaskStats />

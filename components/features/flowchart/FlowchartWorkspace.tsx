@@ -1,29 +1,42 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { Edge, Node, NodeTypes, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { NodeTypes, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
 import { applyEdgeChanges, applyNodeChanges } from "@xyflow/react";
+
 import {
   ArrowLeft,
-  ChevronDown,
+  Check,
   Download,
-  Grip,
+  ImageIcon,
+  Minimize2,
   Pencil,
   Plus,
   Save,
   Trash2,
   Upload,
+  Maximize2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import { useFlowchartStore, type FlowchartNodeData, type Flowchart } from "@/stores/flowchart-store";
+import { useSessionContext } from "@/components/providers/SessionProvider";
+import {
+  useFlowchartsQuery,
+  useCreateFlowchartMutation,
+  useUpdateFlowchartMutation,
+  useDeleteFlowchartMutation,
+} from "@/hooks/useFlowcharts";
+import type { Flowchart, FlowchartData, FlowchartNodeData } from "@/stores/flowchart-store";
+import type { Edge as FlowchartEdge } from "@xyflow/react";
 
 import { FlowchartCanvas } from "./FlowchartCanvas";
 import { FlowchartList } from "./FlowchartList";
 import { NodeEditorModal } from "./NodeEditorModal";
 import { NodePalette } from "./NodePalette";
+import { EdgeEditorModal } from "./EdgeEditorModal";
+
+type FlowchartNode = FlowchartData["nodes"][number];
 
 const nodeTypes: NodeTypes = {
   start: (props) => <div {...props} className="rounded-full bg-emerald-500 px-6 py-4 text-sm font-medium text-white" />,
@@ -44,7 +57,7 @@ const nodeTypes: NodeTypes = {
   ),
 };
 
-const nodeTypeDefaults: Record<string, Partial<Node<FlowchartNodeData>>> = {
+const nodeTypeDefaults: Record<string, Partial<FlowchartNode>> = {
   start: { data: { label: "Start", nodeType: "start" } },
   end: { data: { label: "End", nodeType: "end" } },
   process: { data: { label: "Process", nodeType: "process" } },
@@ -54,29 +67,31 @@ const nodeTypeDefaults: Record<string, Partial<Node<FlowchartNodeData>>> = {
 };
 
 export function FlowchartWorkspace() {
-  const {
-    flowcharts,
-    activeFlowchart,
-    isLoading,
-    loadFlowcharts,
-    createFlowchart,
-    saveFlowchart,
-    renameFlowchart,
-    deleteFlowchart,
-    setActiveFlowchart,
-  } = useFlowchartStore();
+  const { workspaceId, isReady } = useSessionContext();
+  const { data: flowcharts = [], isLoading } = useFlowchartsQuery();
+  const createMutation = useCreateFlowchartMutation();
+  const updateMutation = useUpdateFlowchartMutation();
+  const deleteMutation = useDeleteFlowchartMutation();
 
-  const [nodes, setNodes] = useState<Node<FlowchartNodeData>[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
-  const [selectedNode, setSelectedNode] = useState<Node<FlowchartNodeData> | null>(null);
+  const [activeFlowchart, setActiveFlowchart] = useState<Flowchart | null>(null);
+  const [nodes, setNodes] = useState<FlowchartNode[]>([]);
+  const [edges, setEdges] = useState<FlowchartEdge[]>([]);
+  const [selectedNode, setSelectedNode] = useState<FlowchartNode | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<FlowchartEdge | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showList, setShowList] = useState(true);
+  const [showMinimap, setShowMinimap] = useState(true);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [isExportingPng, setIsExportingPng] = useState(false);
 
-  useEffect(() => {
-    loadFlowcharts();
-  }, [loadFlowcharts]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     if (activeFlowchart) {
@@ -91,9 +106,31 @@ export function FlowchartWorkspace() {
     }
   }, [activeFlowchart]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!activeFlowchart) return;
+
+      if (e.key === "Delete" && selectedNode) {
+        handleDeleteNode(selectedNode.id);
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+
+      if (e.key === "Escape" && selectedNode) {
+        setSelectedNode(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeFlowchart, selectedNode]);
+
   const onNodesChange = useCallback<OnNodesChange>((changes) => {
     setNodes((nds) => {
-      const updated = applyNodeChanges(changes, nds);
+      const updated = applyNodeChanges(changes, nds) as typeof nodes;
 
       const positionChanges = changes.filter((change) => change.type === "position" && change.position);
       if (positionChanges.length > 0) {
@@ -137,24 +174,29 @@ export function FlowchartWorkspace() {
   );
 
   const autoSave = useCallback(
-    (nds: Node<FlowchartNodeData>[], eds: Edge[]) => {
+    (nds: FlowchartNode[], eds: FlowchartEdge[]) => {
       if (activeFlowchart) {
-        saveFlowchart(activeFlowchart.id, { nodes: nds, edges: eds });
+        updateMutation.mutate({ id: activeFlowchart.id, data: { nodes: nds, edges: eds } });
       }
     },
-    [activeFlowchart, saveFlowchart]
+    [activeFlowchart, updateMutation]
   );
 
   const handleSave = async () => {
     if (!activeFlowchart) return;
     setIsSaving(true);
-    await saveFlowchart(activeFlowchart.id, { nodes, edges });
+    try {
+      await updateMutation.mutateAsync({ id: activeFlowchart.id, data: { nodes, edges } });
+      showToast("Flowchart saved successfully");
+    } catch {
+      showToast("Failed to save flowchart", "error");
+    }
     setIsSaving(false);
   };
 
   const handleAddNode = (type: string) => {
     const defaultNode = nodeTypeDefaults[type];
-    const newNode: Node<FlowchartNodeData> = {
+    const newNode: FlowchartNode = {
       id: `node-${Date.now()}`,
       type,
       position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
@@ -163,56 +205,112 @@ export function FlowchartWorkspace() {
     const updated = [...nodes, newNode];
     setNodes(updated);
     if (activeFlowchart) {
-      saveFlowchart(activeFlowchart.id, { nodes: updated, edges });
+      updateMutation.mutate({ id: activeFlowchart.id, data: { nodes: updated, edges } });
     }
   };
 
-  const handleNodeClick = (_: React.MouseEvent<Element, MouseEvent>, node: Node<FlowchartNodeData>) => {
+  const handleNodeClick = (_: unknown, node: FlowchartNode) => {
     setSelectedNode(node);
   };
 
-  const handleNodeDoubleClick = (_: React.MouseEvent<Element, MouseEvent>, node: Node<FlowchartNodeData>) => {
+  const handleNodeDoubleClick = (_: unknown, node: FlowchartNode) => {
     setSelectedNode(node);
   };
 
   const handleUpdateNode = (id: string, data: FlowchartNodeData) => {
-    const updated = nodes.map((node: Node<FlowchartNodeData>) => (node.id === id ? { ...node, data } : node));
+    const updated = nodes.map((node) => (node.id === id ? { ...node, data } : node));
     setNodes(updated);
     if (activeFlowchart) {
-      saveFlowchart(activeFlowchart.id, { nodes: updated, edges });
+      updateMutation.mutate({ id: activeFlowchart.id, data: { nodes: updated, edges } });
     }
     setSelectedNode(null);
+  };
+
+  const handleEdgeClick = (_: unknown, edge: FlowchartEdge) => {
+    setSelectedEdge(edge);
+  };
+
+  const handleUpdateEdge = (id: string, data: { label?: string }) => {
+    const updated = edges.map((edge) => (edge.id === id ? { ...edge, data: { ...edge.data, ...data } } : edge));
+    setEdges(updated);
+    if (activeFlowchart) {
+      updateMutation.mutate({ id: activeFlowchart.id, data: { nodes, edges: updated } });
+    }
+    setSelectedEdge(null);
+  };
+
+  const handleDeleteEdge = (id: string) => {
+    const updated = edges.filter((edge) => edge.id !== id);
+    setEdges(updated);
+    if (activeFlowchart) {
+      updateMutation.mutate({ id: activeFlowchart.id, data: { nodes, edges: updated } });
+    }
+    setSelectedEdge(null);
+    showToast("Connection deleted");
   };
 
   const handleDeleteNode = (id: string) => {
-    const updated = nodes.filter((node: Node<FlowchartNodeData>) => node.id !== id);
-    const updatedEdges = edges.filter((edge: Edge) => edge.source !== id && edge.target !== id);
+    const updated = nodes.filter((node) => node.id !== id);
+    const updatedEdges = edges.filter((edge) => edge.source !== id && edge.target !== id);
     setNodes(updated);
     setEdges(updatedEdges);
     if (activeFlowchart) {
-      saveFlowchart(activeFlowchart.id, { nodes: updated, edges: updatedEdges });
+      updateMutation.mutate({ id: activeFlowchart.id, data: { nodes: updated, edges: updatedEdges } });
     }
     setSelectedNode(null);
+    showToast("Node deleted");
   };
 
   const handleCreate = async () => {
-    const flowchart = await createFlowchart("Untitled Flowchart");
-    if (flowchart) {
-      setActiveFlowchart(flowchart);
+    if (createMutation.isPending) {
+      return;
+    }
+    try {
+      const result = await createMutation.mutateAsync({ name: "Untitled Flowchart" });
+      if (result?.data) {
+        setActiveFlowchart(result.data);
+        showToast("Flowchart created");
+      } else {
+        showToast("Failed to create flowchart: No data returned", "error");
+      }
+    } catch (error) {
+      showToast(`Failed to create flowchart: ${error instanceof Error ? error.message : "Unknown error"}`, "error");
     }
   };
 
   const handleRename = async () => {
     if (!activeFlowchart || !editName.trim()) return;
-    await renameFlowchart(activeFlowchart.id, editName.trim());
-    setIsEditing(false);
+    try {
+      await updateMutation.mutateAsync({ id: activeFlowchart.id, name: editName.trim() });
+      setActiveFlowchart({ ...activeFlowchart, name: editName.trim() });
+      setIsEditing(false);
+      showToast("Flowchart renamed");
+    } catch {
+      showToast("Failed to rename flowchart", "error");
+    }
   };
 
   const handleDelete = async () => {
     if (!activeFlowchart) return;
     if (confirm("Are you sure you want to delete this flowchart?")) {
-      await deleteFlowchart(activeFlowchart.id);
-      setActiveFlowchart(null);
+      try {
+        await deleteMutation.mutateAsync(activeFlowchart.id);
+        setActiveFlowchart(null);
+        showToast("Flowchart deleted");
+      } catch {
+        showToast("Failed to delete flowchart", "error");
+      }
+    }
+  };
+
+  const handleDuplicate = async (flowchart: Flowchart) => {
+    try {
+      const result = await createMutation.mutateAsync({ name: `${flowchart.name} (Copy)`, data: flowchart.data });
+      if (result?.data) {
+        showToast("Flowchart duplicated");
+      }
+    } catch {
+      showToast("Failed to duplicate flowchart", "error");
     }
   };
 
@@ -230,6 +328,35 @@ export function FlowchartWorkspace() {
     a.download = `${activeFlowchart.name}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    showToast("Exported as JSON");
+  };
+
+  const handleExportPng = async () => {
+    if (!activeFlowchart) return;
+    setIsExportingPng(true);
+    try {
+      const canvas = document.querySelector(".react-flow canvas") as HTMLCanvasElement;
+      if (canvas) {
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((b) => {
+            if (b) resolve(b);
+            else reject(new Error("Failed to create blob"));
+          }, "image/png");
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${activeFlowchart.name}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast("Exported as PNG");
+      } else {
+        showToast("Canvas not found", "error");
+      }
+    } catch {
+      showToast("Failed to export PNG", "error");
+    }
+    setIsExportingPng(false);
   };
 
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,14 +370,36 @@ export function FlowchartWorkspace() {
           setNodes(data.nodes);
           setEdges(data.edges);
           if (activeFlowchart) {
-            saveFlowchart(activeFlowchart.id, data);
+            updateMutation.mutate({ id: activeFlowchart.id, data });
+            showToast("Imported successfully");
           }
         }
       } catch {
-        alert("Invalid flowchart file");
+        showToast("Invalid flowchart file", "error");
       }
     };
     reader.readAsText(file);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteFromList = async (id: string) => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      showToast("Flowchart deleted");
+    } catch {
+      showToast("Failed to delete flowchart", "error");
+    }
+  };
+
+  const handleRenameFromList = async (id: string, name: string) => {
+    try {
+      await updateMutation.mutateAsync({ id, name });
+      showToast("Flowchart renamed");
+    } catch {
+      showToast("Failed to rename flowchart", "error");
+    }
   };
 
   if (isLoading) {
@@ -266,16 +415,28 @@ export function FlowchartWorkspace() {
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950/60 p-4">
           <h1 className="text-xl font-semibold text-zinc-100">Flowcharts</h1>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={handleCreate} disabled={createMutation.isPending}>
+            {createMutation.isPending ? (
+              <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <Plus className="mr-2 h-4 w-4" />
+            )}
             New Flowchart
           </Button>
         </div>
         <FlowchartList
           flowcharts={flowcharts}
           onSelect={setActiveFlowchart}
-          onDelete={deleteFlowchart}
+          onDelete={handleDeleteFromList}
+          onRename={handleRenameFromList}
+          onDuplicate={handleDuplicate}
         />
+        {toast && (
+          <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 ${toast.type === "success" ? "bg-emerald-900/90 text-emerald-200" : "bg-red-900/90 text-red-200"}`}>
+            {toast.type === "success" ? <Check className="h-4 w-4" /> : null}
+            {toast.message}
+          </div>
+        )}
       </div>
     );
   }
@@ -309,12 +470,24 @@ export function FlowchartWorkspace() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowMinimap(!showMinimap)}
+            title={showMinimap ? "Hide minimap" : "Show minimap"}
+          >
+            {showMinimap ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleExportPng} disabled={isExportingPng}>
+            <ImageIcon className="mr-2 h-4 w-4" />
+            {isExportingPng ? "Exporting..." : "PNG"}
+          </Button>
           <Button variant="secondary" size="sm" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
           <label>
-            <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
             <Button variant="secondary" size="sm" asChild>
               <span><Upload className="mr-2 h-4 w-4" />Import</span>
             </Button>
@@ -341,7 +514,9 @@ export function FlowchartWorkspace() {
             onConnect={onConnect}
             onNodeClick={handleNodeClick}
             onNodeDoubleClick={handleNodeDoubleClick}
+            onEdgeClick={handleEdgeClick}
             nodeTypes={nodeTypes}
+            showMinimap={showMinimap}
           />
         </div>
       </div>
@@ -353,6 +528,22 @@ export function FlowchartWorkspace() {
           onUpdate={handleUpdateNode}
           onDelete={handleDeleteNode}
         />
+      )}
+
+      {selectedEdge && (
+        <EdgeEditorModal
+          edge={selectedEdge}
+          onClose={() => setSelectedEdge(null)}
+          onUpdate={handleUpdateEdge}
+          onDelete={handleDeleteEdge}
+        />
+      )}
+
+      {toast && (
+        <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-lg px-4 py-3 ${toast.type === "success" ? "bg-emerald-900/90 text-emerald-200" : "bg-red-900/90 text-red-200"}`}>
+          {toast.type === "success" ? <Check className="h-4 w-4" /> : null}
+          {toast.message}
+        </div>
       )}
     </div>
   );

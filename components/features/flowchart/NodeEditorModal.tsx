@@ -5,11 +5,12 @@ import { Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Node } from "@xyflow/react";
-import type { FlowchartNodeData } from "@/stores/flowchart-store";
+import type { FlowchartNodeData, FlowchartData } from "@/stores/flowchart-store";
+
+type FlowchartNode = FlowchartData["nodes"][number];
 
 interface NodeEditorModalProps {
-  node: Node<FlowchartNodeData>;
+  node: FlowchartNode;
   onClose: () => void;
   onUpdate: (id: string, data: FlowchartNodeData) => void;
   onDelete: (id: string) => void;

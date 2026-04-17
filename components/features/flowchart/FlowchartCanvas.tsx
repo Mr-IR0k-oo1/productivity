@@ -1,35 +1,35 @@
 "use client";
 
-import { useCallback } from "react";
-import type { MouseEvent } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
   BackgroundVariant,
-  type Node,
-  type Edge,
   type NodeTypes,
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
+  type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import type { FlowchartNodeData } from "@/stores/flowchart-store";
+import type { FlowchartData } from "@/stores/flowchart-store";
 
-type FlowchartNode = Node<FlowchartNodeData>;
+type FlowchartNode = FlowchartData["nodes"][number];
+type FlowchartEdge = FlowchartData["edges"][number];
 
 interface FlowchartCanvasProps {
   nodes: FlowchartNode[];
-  edges: Edge[];
+  edges: FlowchartEdge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  onNodeClick?: (event: MouseEvent<Element, MouseEvent>, node: FlowchartNode) => void;
-  onNodeDoubleClick?: (event: MouseEvent<Element, MouseEvent>, node: FlowchartNode) => void;
+  onNodeClick?: NodeMouseHandler<FlowchartNode>;
+  onNodeDoubleClick?: NodeMouseHandler<FlowchartNode>;
+  onEdgeClick?: (event: React.MouseEvent, edge: FlowchartEdge) => void;
   nodeTypes: NodeTypes;
+  showMinimap?: boolean;
 }
 
 export function FlowchartCanvas({
@@ -40,22 +40,10 @@ export function FlowchartCanvas({
   onConnect,
   onNodeClick,
   onNodeDoubleClick,
+  onEdgeClick,
   nodeTypes,
+  showMinimap = true,
 }: FlowchartCanvasProps) {
-  const handleNodeClick = useCallback(
-    (event: MouseEvent<Element, MouseEvent>, node: Node) => {
-      onNodeClick?.(event, node as FlowchartNode);
-    },
-    [onNodeClick],
-  );
-
-  const handleNodeDoubleClick = useCallback(
-    (event: MouseEvent<Element, MouseEvent>, node: Node) => {
-      onNodeDoubleClick?.(event, node as FlowchartNode);
-    },
-    [onNodeDoubleClick],
-  );
-
   return (
     <div className="h-full w-full">
       <ReactFlow
@@ -64,8 +52,9 @@ export function FlowchartCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={handleNodeClick}
-        onNodeDoubleClick={handleNodeDoubleClick}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onEdgeClick={onEdgeClick}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
@@ -87,11 +76,13 @@ export function FlowchartCanvas({
           showFitView
           showInteractive={false}
         />
-        <MiniMap
-          className="rounded-lg border border-zinc-800 bg-zinc-900"
-          nodeColor="#3f3f46"
-          maskColor="rgba(0, 0, 0, 0.8)"
-        />
+        {showMinimap && (
+          <MiniMap
+            className="rounded-lg border border-zinc-800 bg-zinc-900"
+            nodeColor="#3f3f46"
+            maskColor="rgba(0, 0, 0, 0.8)"
+          />
+        )}
       </ReactFlow>
     </div>
   );

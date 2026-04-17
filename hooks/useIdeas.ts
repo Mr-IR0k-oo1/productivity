@@ -166,3 +166,29 @@ export function useDeleteIdeaMutation() {
     },
   });
 }
+
+export function useVoteIdeaMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryPrefix = [...ideasQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (payload: { ideaId: string; vote: boolean }) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      return fetchApiJson<{ data: { votes: number } }>(`/api/ideas/${payload.ideaId}/vote`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        session: { workspaceId, authToken },
+        body: JSON.stringify({ vote: payload.vote }),
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryPrefix });
+    },
+  });
+}

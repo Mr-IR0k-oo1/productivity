@@ -20,6 +20,8 @@ import {
 } from "recharts";
 import {
   Activity,
+  Check,
+  Copy,
   Download,
   Filter,
   FolderKanban,
@@ -29,13 +31,16 @@ import {
   Timer,
   TrendingUp,
   Users,
+  X,
 } from "lucide-react";
+import { format } from "date-fns";
 
 import { StatCard } from "@/components/common/StatCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type DateRange = "7d" | "30d" | "90d" | "custom";
 type ReportTab = "productivity" | "team" | "time" | "projects" | "activity";
@@ -157,6 +162,11 @@ function ReportHeader({
   setMemberFilter,
   projectFilter,
   setProjectFilter,
+  onExport,
+  onRefresh,
+  onShare,
+  onSchedule,
+  isRefreshing,
 }: {
   dateRange: DateRange;
   setDateRange: (v: DateRange) => void;
@@ -168,6 +178,11 @@ function ReportHeader({
   setMemberFilter: (v: string) => void;
   projectFilter: string;
   setProjectFilter: (v: string) => void;
+  onExport: () => void;
+  onRefresh: () => void;
+  onShare: () => void;
+  onSchedule: () => void;
+  isRefreshing: boolean;
 }) {
   return (
     <Card className="border-zinc-900 bg-zinc-950/60">
@@ -189,12 +204,12 @@ function ReportHeader({
               <option value="Excel">Excel</option>
               <option value="CSV">CSV</option>
             </select>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={onExport}>
               <Download className="h-4 w-4" />
               Export
             </Button>
-            <Button variant="secondary">
-              <RefreshCw className="h-4 w-4" />
+            <Button variant="secondary" onClick={onRefresh} disabled={isRefreshing}>
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
               Refresh
             </Button>
           </div>
@@ -230,16 +245,102 @@ function ReportHeader({
           onChange={(e) => setProjectFilter(e.target.value)}
           placeholder="Filter by project"
         />
-        <Button variant="secondary">
+        <Button variant="secondary" onClick={onShare}>
           <Link2 className="h-4 w-4" />
           Share Link
         </Button>
-        <Button variant="secondary">
+        <Button variant="secondary" onClick={onSchedule}>
           <Mail className="h-4 w-4" />
           Schedule Weekly
         </Button>
       </CardContent>
     </Card>
+  );
+}
+
+function ShareLinkModal({ onClose }: { onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-md border-zinc-800 bg-zinc-950">
+        <CardHeader className="border-b border-zinc-900">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">Share Report Link</CardTitle>
+            <button type="button" onClick={onClose} className="rounded-full p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 p-6">
+          <p className="text-sm text-zinc-400">Copy this link to share the current report view:</p>
+          <div className="flex gap-2">
+            <Input value={window.location.href} readOnly className="flex-1" />
+            <Button onClick={handleCopy} variant={copied ? "secondary" : "default"}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          {copied && <p className="text-sm text-emerald-400">Copied to clipboard!</p>}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ScheduleReportModal({ onClose, email, setEmail, frequency, setFrequency, onSchedule }: {
+  onClose: () => void;
+  email: string;
+  setEmail: (v: string) => void;
+  frequency: string;
+  setFrequency: (v: string) => void;
+  onSchedule: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-md border-zinc-800 bg-zinc-950">
+        <CardHeader className="border-b border-zinc-900">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">Schedule Report</CardTitle>
+            <button type="button" onClick={onClose} className="rounded-full p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 p-6">
+          <div>
+            <label className="mb-1.5 block text-sm text-zinc-400">Email address</label>
+            <Input
+              type="email"
+              placeholder="team@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm text-zinc-400">Frequency</label>
+            <select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+              className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100"
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-zinc-900 pt-4">
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button onClick={onSchedule} disabled={!email}>Schedule</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -307,6 +408,12 @@ export default function ReportsPage() {
   const [showOverdueOnly, setShowOverdueOnly] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [labelFilter, setLabelFilter] = useState("all");
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleEmail, setScheduleEmail] = useState("");
+  const [scheduleFrequency, setScheduleFrequency] = useState("weekly");
+  const [copied, setCopied] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filteredTeam = useMemo(() => {
     return teamRows.filter((r) => (memberFilter ? r.name.toLowerCase().includes(memberFilter.toLowerCase()) : true));
@@ -319,6 +426,52 @@ export default function ReportsPage() {
       return byProject && byOverdue;
     });
   }, [projectFilter, showOverdueOnly]);
+
+  const handleExport = () => {
+    let content = "";
+    let filename = "";
+    const timestamp = format(new Date(), "yyyy-MM-dd");
+
+    if (exportType === "CSV") {
+      const headers = ["Report Type", "Value", "Trend"];
+      const rows = kpis.map(k => [k.title, k.value, k.trend]);
+      content = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+      filename = `report-${tab}-${timestamp}.csv`;
+    } else {
+      content = `Report: ${tab}\nGenerated: ${format(new Date(), "PPP")}\n\nKPI Summary:\n${kpis.map(k => `${k.title}: ${k.value}`).join("\n")}`;
+      filename = `report-${tab}-${timestamp}.${exportType.toLowerCase()}`;
+    }
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 1000);
+    window.location.reload();
+  };
+
+  const handleCopyShareLink = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleScheduleReport = () => {
+    if (!scheduleEmail) return;
+    alert(`Report scheduled for ${scheduleEmail} (${scheduleFrequency})`);
+    setShowScheduleModal(false);
+    setScheduleEmail("");
+  };
 
   return (
     <div className="page-animate space-y-6">
@@ -333,6 +486,11 @@ export default function ReportsPage() {
         setMemberFilter={setMemberFilter}
         projectFilter={projectFilter}
         setProjectFilter={setProjectFilter}
+        onExport={handleExport}
+        onRefresh={handleRefresh}
+        onShare={() => setShowShareModal(true)}
+        onSchedule={() => setShowScheduleModal(true)}
+        isRefreshing={isRefreshing}
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -695,6 +853,18 @@ export default function ReportsPage() {
           Reports page scaffold complete with dark-friendly charts, export controls, advanced filters, and share/schedule actions.
         </CardContent>
       </Card>
+
+      {showShareModal && <ShareLinkModal onClose={() => setShowShareModal(false)} />}
+      {showScheduleModal && (
+        <ScheduleReportModal
+          onClose={() => setShowScheduleModal(false)}
+          email={scheduleEmail}
+          setEmail={setScheduleEmail}
+          frequency={scheduleFrequency}
+          setFrequency={setScheduleFrequency}
+          onSchedule={handleScheduleReport}
+        />
+      )}
     </div>
   );
 }

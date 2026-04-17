@@ -479,7 +479,26 @@ function MyTimesheetView({
   );
 }
 
-function TeamTimesheetView() {
+function TeamTimesheetView({ entries }: { entries: TimeEntryDTO[] }) {
+  const [approvalStatus, setApprovalStatus] = useState<Record<string, ApprovalState>>({});
+  const [memberFilter, setMemberFilter] = useState("");
+
+  const handleApprove = (member: string) => {
+    setApprovalStatus(prev => ({ ...prev, [member]: "Approved" }));
+  };
+
+  const handleReject = (member: string) => {
+    setApprovalStatus(prev => ({ ...prev, [member]: "Rejected" }));
+  };
+
+  const handleBulkApprove = () => {
+    const newStatus: Record<string, ApprovalState> = {};
+    teamLogs.forEach(log => {
+      newStatus[log.member] = "Approved";
+    });
+    setApprovalStatus(prev => ({ ...prev, ...newStatus }));
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-zinc-900 bg-zinc-950/50">
@@ -488,9 +507,13 @@ function TeamTimesheetView() {
           <CardDescription>Filter, review and bulk approve logs.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
-          <Input placeholder="Filter by member" />
+          <Input
+            placeholder="Filter by member"
+            value={memberFilter}
+            onChange={(e) => setMemberFilter(e.target.value)}
+          />
           <Input placeholder="Filter by date" />
-          <Button>Bulk Approve</Button>
+          <Button onClick={handleBulkApprove}>Bulk Approve</Button>
         </CardContent>
       </Card>
 
@@ -510,27 +533,32 @@ function TeamTimesheetView() {
               </tr>
             </thead>
             <tbody>
-              {teamLogs.map((row) => (
-                <tr key={`${row.member}-${row.date}`} className="border-t border-zinc-900 text-zinc-200">
-                  <td className="px-3 py-2.5 flex items-center gap-2">
-                    <UserRound className="h-4 w-4 text-zinc-500" />
-                    {row.member}
-                  </td>
-                  <td className="px-3 py-2.5">{row.date}</td>
-                  <td className="px-3 py-2.5">{row.hours}h</td>
-                  <td className="px-3 py-2.5"><ApprovalBadge status={row.status} /></td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="secondary">
-                        Approve
-                      </Button>
-                      <Button size="sm" variant="secondary" className="border-red-900 text-red-200">
-                        Reject
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {teamLogs
+                .filter(row => !memberFilter || row.member.toLowerCase().includes(memberFilter.toLowerCase()))
+                .map((row) => {
+                const status = approvalStatus[row.member] || row.status;
+                return (
+                  <tr key={`${row.member}-${row.date}`} className="border-t border-zinc-900 text-zinc-200">
+                    <td className="px-3 py-2.5 flex items-center gap-2">
+                      <UserRound className="h-4 w-4 text-zinc-500" />
+                      {row.member}
+                    </td>
+                    <td className="px-3 py-2.5">{row.date}</td>
+                    <td className="px-3 py-2.5">{row.hours}h</td>
+                    <td className="px-3 py-2.5"><ApprovalBadge status={status} /></td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => handleApprove(row.member)} disabled={status === "Approved"}>
+                          Approve
+                        </Button>
+                        <Button size="sm" variant="secondary" className="border-red-900 text-red-200 hover:bg-red-900" onClick={() => handleReject(row.member)} disabled={status === "Rejected"}>
+                          Reject
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </CardContent>
@@ -756,11 +784,12 @@ export default function TimePage() {
             <option value="Current Week">Current Week</option>
             <option value="Current Month">Current Month</option>
           </select>
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={handlePreviousWeek}>
             <ArrowLeft className="h-4 w-4" />
             Previous
           </Button>
-          <Button variant="secondary">
+          <span className="text-sm text-zinc-400">{format(currentWeekStart, "MMM d")} - {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "MMM d")}</span>
+          <Button variant="secondary" onClick={handleNextWeek}>
             Next
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -773,7 +802,7 @@ export default function TimePage() {
             <Timer className="h-4 w-4" />
             {startTimerMutation.isPending ? "Starting" : "Start Timer"}
           </Button>
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={handleExport}>
             <Download className="h-4 w-4" />
             Export Timesheet
           </Button>
@@ -859,8 +888,21 @@ export default function TimePage() {
         </CardContent>
       </Card>
 
-      {view === "my" ? <MyTimesheetView /> : null}
-      {view === "team" ? <TeamTimesheetView /> : null}
+      {view === "my" ? (
+        <MyTimesheetView
+          entries={weekEntries}
+          onEdit={(entry) => {
+            setEditingEntry(entry);
+            setShowEntryModal(true);
+          }}
+          onDelete={handleDeleteEntry}
+          onAddEntry={() => {
+            setEditingEntry(null);
+            setShowEntryModal(true);
+          }}
+        />
+      ) : null}
+      {view === "team" ? <TeamTimesheetView entries={weekEntries} /> : null}
       {view === "reports" ? <ReportsView entries={weekEntries} /> : null}
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -908,6 +950,20 @@ export default function TimePage() {
           Time page scaffold complete with timer controls, logs, approvals, and insights ready for backend integration.
         </CardContent>
       </Card>
+
+      {showEntryModal && (
+        <ManualEntryModal
+          entry={editingEntry || undefined}
+          onClose={() => {
+            setShowEntryModal(false);
+            setEditingEntry(null);
+          }}
+          onSave={editingEntry ? handleUpdateEntry : handleCreateEntry}
+          onDelete={editingEntry ? () => handleDeleteEntry(editingEntry.id) : undefined}
+          isSaving={createEntryMutation.isPending || updateEntryMutation.isPending}
+          isDeleting={deleteEntryMutation.isPending}
+        />
+      )}
     </div>
   );
 }

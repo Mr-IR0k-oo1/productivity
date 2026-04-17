@@ -5,51 +5,21 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { REMEMBER_ME_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
-import { supabase } from "@/lib/supabase";
 
-type RegisterResponse = {
-  data: {
-    userId: string;
-    workspaceId: string;
-    authUserId: string;
-    session: {
-      access_token: string;
-      refresh_token: string;
-    } | null;
-  };
-};
-
-type RegisterFormProps = {
-  onRegistered?: () => void;
-};
-
-type RegisterFormData = {
-  fullName: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  workspaceName: string;
-  jobTitle: string;
-};
-
-export default function RegisterForm({ onRegistered }: RegisterFormProps) {
-  const [formData, setFormData] = useState<RegisterFormData>({
+export default function RegisterForm() {
+  const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
     workspaceName: "",
-    jobTitle: "",
   });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-
     setFormData((current) => ({
       ...current,
       [name]: value,
@@ -59,29 +29,25 @@ export default function RegisterForm({ onRegistered }: RegisterFormProps) {
   const handleRegister = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
-    setSuccessMessage(null);
 
-    const fullName = formData.fullName.trim();
-    const email = formData.email.trim();
-    const workspaceName = formData.workspaceName.trim();
-    const jobTitle = formData.jobTitle.trim();
+    const { fullName, email, password, confirmPassword, workspaceName } = formData;
 
-    if (fullName.length < 2) {
+    if (fullName.trim().length < 2) {
       setErrorMessage("Full name must be at least 2 characters.");
       return;
     }
 
-    if (workspaceName.length < 2) {
+    if (workspaceName.trim().length < 2) {
       setErrorMessage("Workspace name must be at least 2 characters.");
       return;
     }
 
-    if (formData.password.length < 8) {
+    if (password.length < 8) {
       setErrorMessage("Password must be at least 8 characters.");
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       setErrorMessage("Passwords do not match.");
       return;
     }
@@ -89,55 +55,30 @@ export default function RegisterForm({ onRegistered }: RegisterFormProps) {
     setLoading(true);
 
     try {
-      if (!supabase) {
-        throw new Error("Supabase is not configured in this environment.");
-      }
-
-      window.localStorage.setItem(REMEMBER_ME_STORAGE_KEY, "true");
-
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch("/api/auth", {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          email,
-          password: formData.password,
-          fullName,
-          workspaceName,
-          jobTitle: jobTitle || undefined,
+          action: "register",
+          email: email.trim(),
+          password,
+          fullName: fullName.trim(),
+          workspaceName: workspaceName.trim(),
         }),
       });
 
-      const payload = (await response.json().catch(() => null)) as RegisterResponse | { error?: string } | null;
+      const payload = await response.json();
 
       if (!response.ok) {
-        throw new Error(payload && "error" in payload ? payload.error ?? "Failed to create account" : "Failed to create account");
+        throw new Error(payload.error ?? "Failed to create account");
       }
 
-      const session = payload && "data" in payload ? payload.data.session : null;
+      document.cookie = `session_token=${payload.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
 
-      if (session) {
-        const { error } = await supabase.auth.setSession({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-        });
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        if (payload && "data" in payload && payload.data.workspaceId) {
-          window.localStorage.setItem(WORKSPACE_STORAGE_KEY, payload.data.workspaceId);
-        }
-
-        router.replace("/dashboard");
-        router.refresh();
-        return;
-      }
-
-      setSuccessMessage("Registration successful. Please check your email to confirm your account.");
-      onRegistered?.();
+      router.replace("/dashboard");
+      router.refresh();
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to create account");
     } finally {
@@ -216,22 +157,7 @@ export default function RegisterForm({ onRegistered }: RegisterFormProps) {
         />
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm text-[var(--muted)]">
-          Job Title <span className="opacity-80">(optional)</span>
-        </label>
-        <Input
-          type="text"
-          name="jobTitle"
-          value={formData.jobTitle}
-          onChange={handleChange}
-          placeholder="Founder / Product Manager"
-          autoComplete="organization-title"
-        />
-      </div>
-
       {errorMessage && <p className="text-sm text-rose-400">{errorMessage}</p>}
-      {successMessage && <p className="text-sm text-emerald-400">{successMessage}</p>}
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Creating account..." : "Create Account & Workspace"}
@@ -241,7 +167,7 @@ export default function RegisterForm({ onRegistered }: RegisterFormProps) {
         Already have an account?{" "}
         <button
           type="button"
-          onClick={() => window.location.assign("/login")}
+          onClick={() => router.push("/login")}
           className="text-[var(--accent)] transition-colors hover:opacity-80"
         >
           Sign in
