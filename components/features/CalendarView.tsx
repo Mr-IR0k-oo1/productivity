@@ -59,6 +59,61 @@ import { cn } from "@/lib/utils";
 type CalendarViewMode = "month" | "week" | "day" | "agenda";
 type EventKind = "meeting" | "focus" | "deadline" | "review" | "travel";
 
+function CalendarLoadingSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-6">
+        <div className="space-y-4">
+          <div className="h-8 w-32 rounded bg-zinc-800" />
+          <div className="h-4 w-48 rounded bg-zinc-800" />
+          <div className="flex gap-2">
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+          </div>
+        </div>
+      </div>
+      <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-6">
+        <div className="grid grid-cols-7 gap-px">
+          {Array.from({ length: 35 }).map((_, i) => (
+            <div key={i} className="aspect-square rounded bg-zinc-800/50" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalendarEmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/20 py-16 text-center">
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <div className="rounded-full bg-zinc-900 p-4">
+            <svg className="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-zinc-200">No events scheduled</h3>
+          <p className="mt-1 text-sm text-zinc-500">Create your first calendar event</p>
+        </div>
+        <button
+          onClick={onCreate}
+          type="button"
+          className="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Create Event
+        </button>
+      </div>
+    </div>
+  );
+}
+
 type CalendarEvent = {
   id: string;
   title: string;
@@ -459,6 +514,8 @@ export function CalendarView() {
   const createEventMutation = useCreateCalendarEventMutation();
   const updateEventMutation = useUpdateCalendarEventMutation();
   const deleteEventMutation = useDeleteCalendarEventMutation();
+  const isLoading = calendarQuery.isLoading;
+  const showEmptyState = calendarQuery.isSuccess && calendarQuery.data?.length === 0;
 
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [viewDate, setViewDate] = useState(initialDate);
@@ -693,6 +750,12 @@ END:VCALENDAR`;
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
       <div className="space-y-6">
+        {isLoading ? (
+          <CalendarLoadingSkeleton />
+        ) : showEmptyState && calendarEvents.length === 0 ? (
+          <CalendarEmptyState onCreate={() => setIsCreateOpen(true)} />
+        ) : (
+          <>
         <Card className="border-zinc-900 bg-zinc-950/60">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 md:p-6">
             <div>
@@ -1020,6 +1083,8 @@ END:VCALENDAR`;
             </CardContent>
           </Card>
         ) : null}
+          </>
+        )}
       </div>
 
       <aside className="space-y-4">

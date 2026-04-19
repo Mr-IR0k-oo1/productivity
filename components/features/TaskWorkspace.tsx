@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, memo } from "react";
 import {
   addDays,
   differenceInCalendarDays,
@@ -274,7 +274,7 @@ function getTaskWindow(task: TaskRecord) {
   };
 }
 
-function TaskStats() {
+const TaskStats = memo(() => {
   const stats = [
     { title: "Open Tasks", value: "18", trend: "+3 this week" },
     { title: "Overdue", value: "2", trend: "Needs attention", positive: false },
@@ -297,9 +297,9 @@ function TaskStats() {
       ))}
     </section>
   );
-}
+});
 
-function TaskToolbar({
+const TaskToolbar = memo(({
   viewMode,
   setViewMode,
   search,
@@ -337,36 +337,9 @@ function TaskToolbar({
   onBulkDelete: () => void;
   activeFilterCount: number;
   clearAllFilters: () => void;
-}) {
+}) => {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  return (
-    <Card className="border-zinc-900 bg-zinc-950/60">
-      <CardContent className="space-y-4 p-4 md:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Tasks</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-100">Task workspace</h1>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Manage tasks across Kanban, list, calendar, and gantt views from one workspace.
-            </p>
-          </div>
-          <Button onClick={onOpenCreate}>
-            <Plus className="h-4 w-4" />
-            New Task
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { id: "kanban", label: "Kanban", icon: SquareCheckBig },
-            { id: "list", label: "List", icon: Table2 },
-            { id: "calendar", label: "Calendar", icon: CalendarDays },
-            { id: "gantt", label: "Gantt", icon: GanttChartSquare },
-          ].map((item) => {
-            const Icon = item.icon;
-            const active = viewMode === item.id;
-
-            return (
+  return memo((
               <button
                 key={item.id}
                 type="button"
@@ -484,11 +457,11 @@ function TaskToolbar({
               </Button>
             </div>
           </div>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
+) : null}
+       </CardContent>
+     </Card>
+   );
+});
 
 function TaskDetailPanel({
   task,
@@ -713,7 +686,7 @@ function TaskCreateModal({
   );
 }
 
-function ListView({
+const ListView = memo(({
   tasks,
   selectedTaskIds,
   onToggleSelect,
@@ -723,7 +696,7 @@ function ListView({
   selectedTaskIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onOpenTask: (task: TaskRecord) => void;
-}) {
+}) => {
   return (
     <Card className="border-zinc-900 bg-zinc-950/60">
       <CardHeader className="border-b border-zinc-900 pb-4">
@@ -807,7 +780,7 @@ function ListView({
       </CardContent>
     </Card>
   );
-}
+});
 
 function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (task: TaskRecord) => void }) {
   const monthDate = referenceDate;
@@ -938,11 +911,108 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
   );
 }
 
+function TaskLoadingSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-6">
+        <div className="space-y-4">
+          <div className="h-8 w-32 rounded bg-zinc-800" />
+          <div className="h-4 w-48 rounded bg-zinc-800" />
+          <div className="flex gap-2">
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="rounded-xl border border-zinc-900 bg-zinc-950/50 p-6">
+            <div className="h-4 w-20 rounded bg-zinc-800" />
+            <div className="mt-3 h-8 w-16 rounded bg-zinc-800" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-4">
+        {["To Do", "In Progress", "Review", "Done"].map((col) => (
+          <div key={col} className="space-y-3 rounded-xl border border-zinc-900 bg-zinc-950/40 p-3">
+            <div className="h-5 w-16 rounded bg-zinc-800" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 rounded-lg border border-zinc-900 bg-zinc-900/50" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TaskEmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/20 py-16 text-center">
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <div className="rounded-full bg-zinc-900 p-4">
+            <svg className="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-zinc-200">No tasks yet</h3>
+          <p className="mt-1 text-sm text-zinc-500">Create your first task to get started</p>
+        </div>
+        <button
+          onClick={onCreate}
+          type="button"
+          className="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Create Task
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TaskErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-red-900/50 bg-red-950/20 py-16 text-center">
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <div className="rounded-full bg-red-900/30 p-4">
+            <svg className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-red-200">Unable to load tasks</h3>
+          <p className="mt-1 text-sm text-red-400">{message}</p>
+        </div>
+        <button
+          onClick={onRetry}
+          type="button"
+          className="inline-flex items-center gap-2 rounded-lg bg-red-900/50 px-4 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-900"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function TaskWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const taskIdFromQuery = searchParams.get("taskId");
-  const { data: apiTasks, isLoading } = useTasksQuery();
+  const { data: apiTasks, isLoading, isError, error, refetch } = useTasksQuery();
   const updateTaskStatus = useUpdateTaskStatusMutation();
   const updateTask = useUpdateTaskMutation();
   const createTask = useCreateTaskMutation();
@@ -1145,6 +1215,16 @@ export function TaskWorkspace() {
     return <GanttView tasks={filteredTasks} onOpenTask={openTask} />;
   }
 
+  if (isLoading) {
+    return <TaskLoadingSkeleton />;
+  }
+
+  if (isError) {
+    return <TaskErrorState message={error?.message || "Failed to load tasks"} onRetry={() => refetch()} />;
+  }
+
+  const showEmptyState = !apiTasks || apiTasks.length === 0;
+
   return (
     <div className="space-y-6 page-animate">
       <TaskToolbar
@@ -1171,7 +1251,11 @@ export function TaskWorkspace() {
       <TaskStats />
 
       <div className="space-y-4">
-        {renderView()}
+        {showEmptyState && tasks.length === 0 ? (
+          <TaskEmptyState onCreate={() => setIsCreateOpen(true)} />
+        ) : (
+          renderView()
+        )}
       </div>
 
       {selectedTask ? (

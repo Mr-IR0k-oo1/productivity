@@ -157,6 +157,72 @@ const initialIdeas: IdeaRecord[] = [
   },
 ];
 
+function IdeaLoadingSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-6">
+        <div className="space-y-4">
+          <div className="h-8 w-32 rounded bg-zinc-800" />
+          <div className="h-4 w-48 rounded bg-zinc-800" />
+          <div className="flex gap-2">
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-zinc-800" />
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="rounded-xl border border-zinc-900 bg-zinc-950/50 p-6">
+            <div className="h-4 w-20 rounded bg-zinc-800" />
+            <div className="mt-3 h-8 w-16 rounded bg-zinc-800" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-4">
+        {["Draft", "Validated", "Archived", "Converted"].map((col) => (
+          <div key={col} className="space-y-3 rounded-xl border border-zinc-900 bg-zinc-950/40 p-3">
+            <div className="h-5 w-16 rounded bg-zinc-800" />
+            {[1, 2].map((i) => (
+              <div key={i} className="h-40 rounded-lg border border-zinc-900 bg-zinc-900/50" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function IdeaEmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/20 py-16 text-center">
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <div className="rounded-full bg-zinc-900 p-4">
+            <svg className="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3 3 0 1014 13h3m-10 0a3 3 0 11-.707-5.657l.707-.707" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-zinc-200">No ideas yet</h3>
+          <p className="mt-1 text-sm text-zinc-500">Capture your first idea</p>
+        </div>
+        <button
+          onClick={onCreate}
+          type="button"
+          className="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Create Idea
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function toIdeaRecord(idea: IdeaDTO, previous?: IdeaRecord): IdeaRecord {
   const parsedDate = new Date(idea.createdAt);
   const createdAt = Number.isNaN(parsedDate.getTime())
@@ -981,6 +1047,9 @@ export function IdeaWorkspace() {
   const deleteIdeaMutation = useDeleteIdeaMutation();
   const voteIdeaMutation = useVoteIdeaMutation();
   const apiEnabled = ideasQuery.isSuccess;
+  const isLoading = ideasQuery.isLoading;
+  const isError = ideasQuery.isError;
+  const showEmptyState = ideasQuery.isSuccess && ideasQuery.data?.length === 0;
 
   useEffect(() => {
     if (!ideasQuery.data) return;
@@ -1280,7 +1349,11 @@ export function IdeaWorkspace() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-4">
-          {viewMode === "board" ? (
+          {isLoading ? (
+            <IdeaLoadingSkeleton />
+          ) : showEmptyState && ideas.length === 0 ? (
+            <IdeaEmptyState onCreate={() => setCreateOpen(true)} />
+          ) : viewMode === "board" ? (
             <BoardView
               ideas={filteredIdeas}
               onOpen={(ideaId) => {

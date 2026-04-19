@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import Sidebar from "@/components/layout/Sidebar";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 type AppShellProps = {
   children: ReactNode;
@@ -13,6 +14,8 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isTaskFocusRoute = pathname === "/tasks" && searchParams.has("taskId");
+
+  useKeyboardShortcuts(true);
 
   if (
     pathname === "/" ||
