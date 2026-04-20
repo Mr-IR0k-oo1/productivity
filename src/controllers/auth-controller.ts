@@ -1,9 +1,15 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/src/db";
 import { users, workspaceMembers, workspaces } from "@/src/db/schema";
 import { supabaseAnon } from "@/src/lib/supabase";
 import { createUniqueWorkspaceSlug } from "@/src/lib/workspace-slug";
+
+type DatabaseError = {
+  code?: string;
+  constraint?: string;
+  message?: string;
+};
 
 type SignUpInput = {
   email: string;
@@ -13,9 +19,39 @@ type SignUpInput = {
   jobTitle?: string;
 };
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function isDatabaseUniqueViolation(error: unknown) {
+  return (error as DatabaseError | undefined)?.code === "23505";
+}
+
+function isAuthUserUniqueViolation(error: unknown) {
+  const constraint = (error as DatabaseError | undefined)?.constraint;
+  return constraint === "users_auth_user_id_unique";
+}
+
+function isEmailUniqueViolation(error: unknown) {
+  const constraint = (error as DatabaseError | undefined)?.constraint;
+  return constraint === "users_email_unique";
+}
+
 export async function signUpWithWorkspace(input: SignUpInput) {
+  const email = normalizeEmail(input.email);
+
+  const [existingUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`lower(${users.email}) = ${email}`)
+    .limit(1);
+
+  if (existingUser) {
+    throw new Error("An account with this email already exists. Please sign in instead.");
+  }
+
   const { data, error } = await supabaseAnon.auth.signUp({
-    email: input.email,
+    email,
     password: input.password,
     options: {
       data: {
@@ -29,43 +65,60 @@ export async function signUpWithWorkspace(input: SignUpInput) {
     throw new Error(error?.message ?? "Failed to sign up");
   }
 
-  const [user] = await db
-    .insert(users)
-    .values({
-      authUserId: data.user.id,
-      email: input.email,
-      fullName: input.fullName,
-      jobTitle: input.jobTitle,
-    })
-    .returning({ id: users.id });
+  let userId = "";
+  let workspaceId = "";
 
-  const slug = await createUniqueWorkspaceSlug(input.workspaceName);
+  try {
+    await db.transaction(async (tx) => {
+      const [user] = await tx
+        .insert(users)
+        .values({
+          authUserId: data.user.id,
+          email,
+          fullName: input.fullName,
+          jobTitle: input.jobTitle,
+        })
+        .returning({ id: users.id });
 
-  const [workspace] = await db
-    .insert(workspaces)
-    .values({
-      name: input.workspaceName,
-      slug,
-      ownerId: user.id,
-    })
-    .returning({ id: workspaces.id });
+      const slug = await createUniqueWorkspaceSlug(input.workspaceName);
 
-  await db.insert(workspaceMembers).values({
-    workspaceId: workspace.id,
-    userId: user.id,
-    role: "owner",
-  });
+      const [workspace] = await tx
+        .insert(workspaces)
+        .values({
+          name: input.workspaceName,
+          slug,
+          ownerId: user.id,
+        })
+        .returning({ id: workspaces.id });
+
+      await tx.insert(workspaceMembers).values({
+        workspaceId: workspace.id,
+        userId: user.id,
+        role: "owner",
+      });
+
+      userId = user.id;
+      workspaceId = workspace.id;
+    });
+  } catch (error) {
+    if (isDatabaseUniqueViolation(error) && (isEmailUniqueViolation(error) || isAuthUserUniqueViolation(error))) {
+      throw new Error("An account with this email already exists. Please sign in instead.");
+    }
+
+    throw error;
+  }
 
   return {
-    userId: user.id,
-    workspaceId: workspace.id,
+    userId,
+    workspaceId,
     authUserId: data.user.id,
     session: data.session ?? null,
   };
 }
 
 export async function loginWithPassword(email: string, password: string) {
-  const { data, error } = await supabaseAnon.auth.signInWithPassword({ email, password });
+  const normalizedEmail = normalizeEmail(email);
+  const { data, error } = await supabaseAnon.auth.signInWithPassword({ email: normalizedEmail, password });
 
   if (error || !data.session) {
     throw new Error(error?.message ?? "Invalid credentials");

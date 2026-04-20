@@ -28,6 +28,14 @@ const resetPasswordSchema = z.object({
   email: z.string().email(),
 });
 
+function getRegisterErrorStatus(message: string) {
+  if (message.includes("already exists") || message.includes("already registered")) {
+    return 409;
+  }
+
+  return 400;
+}
+
 const auth = new Hono<AuthBindings>();
 
 auth.post("/signup", zValidator("json", signupSchema), async (c) => {
@@ -47,7 +55,8 @@ auth.post("/signup", zValidator("json", signupSchema), async (c) => {
 
     return c.json({ data: result }, 201);
   } catch (error) {
-    return c.json({ error: (error as Error).message }, 400);
+    const message = (error as Error).message;
+    return c.json({ error: message }, getRegisterErrorStatus(message));
   }
 });
 
@@ -88,7 +97,8 @@ auth.post("/register", zValidator("json", signupSchema), async (c) => {
 
     return c.json({ data: result }, 201);
   } catch (error) {
-    return c.json({ error: (error as Error).message }, 400);
+    const message = (error as Error).message;
+    return c.json({ error: message }, getRegisterErrorStatus(message));
   }
 });
 
