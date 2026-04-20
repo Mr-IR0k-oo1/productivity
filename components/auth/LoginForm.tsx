@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { fetchApiJson } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -20,19 +21,14 @@ export default function LoginForm() {
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      await fetchApiJson("/api/auth/login", {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
         body: JSON.stringify({ email, password }),
+        session: {},
       });
-
-      const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to sign in");
-      }
 
       // Cookie is set by the server
 

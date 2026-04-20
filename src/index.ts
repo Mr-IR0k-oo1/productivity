@@ -16,6 +16,13 @@ const app = new Hono();
 
 app.use("*", cors());
 
+app.onError((error, c) => {
+  console.error(error);
+  return c.json({ error: "Internal server error" }, 500);
+});
+
+app.notFound((c) => c.json({ error: "Not found" }, 404));
+
 app.get("/", (c) => c.json({ ok: true, service: "PulseForge API" }));
 app.get("/health", (c) => c.json({ ok: true }));
 

@@ -3,6 +3,7 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
+import { fetchApiJson } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -55,7 +56,7 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/register", {
+      await fetchApiJson("/api/auth/register", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -66,17 +67,8 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
           fullName: fullName.trim(),
           workspaceName: workspaceName.trim(),
         }),
+        session: {},
       });
-
-      const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to create account");
-      }
-
-      if (payload.data?.session) {
-        // Cookie is set by the server
-      }
 
       if (onRegistered) {
         onRegistered();
