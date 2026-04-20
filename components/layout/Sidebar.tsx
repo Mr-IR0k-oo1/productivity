@@ -104,7 +104,7 @@ export default function Sidebar() {
           </div>
           {!isCollapsed && (
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">PulseForge</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">Orbit</h1>
             </div>
           )}
         </div>

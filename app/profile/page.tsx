@@ -352,7 +352,7 @@ export default function UserProfilePage() {
     setTwoFAData({
       enabled: true,
       secret,
-      qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=otpauth://totp/PulseForge:you@example.com?secret=${secret}`,
+      qrCode: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=otpauth://totp/Orbit:you@example.com?secret=${secret}`,
       verificationCode: "",
       recoveryCodes: codes,
     });
@@ -364,7 +364,7 @@ export default function UserProfilePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "pulseforge-recovery-codes.txt";
+    a.download = "orbit-recovery-codes.txt";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -950,7 +950,7 @@ export default function UserProfilePage() {
                       />
                       <div>
                         <p className="font-medium text-[var(--foreground)]">Analytics Tracking</p>
-                        <p className="text-xs text-[var(--muted)]">Help us improve PulseForge with usage data</p>
+                        <p className="text-xs text-[var(--muted)]">Help us improve Orbit with usage data</p>
                       </div>
                     </label>
 

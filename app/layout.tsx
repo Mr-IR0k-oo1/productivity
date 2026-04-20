@@ -6,14 +6,14 @@ import AppShell from "@/components/layout/AppShell";
 import "./globals.css";
 import { Providers } from "./providers";
 export const metadata: Metadata = {
-  title: "PulseForge",
+  title: "Orbit",
   description: "Modern productivity stack for startup teams",
 };
 
 const themeBootstrapScript = `
 (function() {
   try {
-    var storage = localStorage.getItem('pulseforge-ui');
+    var storage = localStorage.getItem('orbit-ui');
     var theme = 'dark';
 
     if (storage) {

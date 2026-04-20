@@ -7,7 +7,7 @@ const result = spawnSync(npmCommand, ["run", "build"], {
   stdio: "inherit",
   env: {
     ...process.env,
-    PULSEFORGE_DESKTOP_EXPORT: "true",
+    ORBIT_DESKTOP_EXPORT: "true",
   },
 });
 

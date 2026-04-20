@@ -231,7 +231,7 @@ function ReportHeader({
           onChange={(e) => setWorkspace(e.target.value)}
           className="h-9 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
         >
-          <option value="PulseForge Core">PulseForge Core</option>
+          <option value="Orbit Core">Orbit Core</option>
           <option value="Growth Lab">Growth Lab</option>
           <option value="Ops Team">Ops Team</option>
         </select>
@@ -401,7 +401,7 @@ function WorkloadHeatmap() {
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState<DateRange>("30d");
   const [exportType, setExportType] = useState<"PDF" | "Excel" | "CSV">("PDF");
-  const [workspace, setWorkspace] = useState("PulseForge Core");
+  const [workspace, setWorkspace] = useState("Orbit Core");
   const [memberFilter, setMemberFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
   const [tab, setTab] = useState<ReportTab>("productivity");

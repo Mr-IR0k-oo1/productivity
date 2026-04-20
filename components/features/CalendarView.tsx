@@ -164,7 +164,7 @@ const sampleEvents: CalendarEvent[] = [
     start: new Date("2026-04-14T09:00:00"),
     end: new Date("2026-04-14T09:30:00"),
     kind: "meeting",
-    project: "PulseForge Core",
+    project: "Orbit Core",
     owner: "Alice",
     location: "Zoom",
     notes: "Review blockers, calendar sync, and support queue for the week.",
@@ -400,7 +400,7 @@ function EventModal({ event, onClose, onEdit, onDelete, onExport }: { event: Cal
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Source</span>
-                  <span className="text-zinc-200">PulseForge</span>
+                  <span className="text-zinc-200">Orbit</span>
                 </div>
               </CardContent>
             </Card>
@@ -612,7 +612,7 @@ END:VEVENT`;
 
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//PulseForge//Productivity//EN
+PRODID:-//Orbit//Productivity//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 ${icsEvents}
@@ -641,7 +641,7 @@ END:VCALENDAR`;
     const uid = `${event.id}@productivity`;
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//PulseForge//Productivity//EN
+PRODID:-//Orbit//Productivity//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 BEGIN:VEVENT

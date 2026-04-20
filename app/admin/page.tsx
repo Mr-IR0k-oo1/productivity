@@ -405,7 +405,7 @@ export default function AdminPanel() {
         <Card>
           <CardHeader>
             <CardTitle>Add Member</CardTitle>
-            <CardDescription>Add an existing PulseForge user to this workspace by email.</CardDescription>
+            <CardDescription>Add an existing Orbit user to this workspace by email.</CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={addMember}>

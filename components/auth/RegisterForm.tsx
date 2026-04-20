@@ -125,7 +125,7 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
           name="workspaceName"
           value={formData.workspaceName}
           onChange={handleChange}
-          placeholder="PulseForge Team"
+          placeholder="Orbit Team"
           autoComplete="organization"
           minLength={2}
           required

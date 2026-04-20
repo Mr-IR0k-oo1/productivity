@@ -17,7 +17,7 @@ export type WorkspaceSettingsSectionKey = (typeof workspaceSettingsSectionKeys)[
 const connectionStateSchema = z.enum(["connected", "disconnected"]);
 
 const generalSettingsSchema = z.object({
-  workspaceName: z.string().min(2).default("PulseForge"),
+  workspaceName: z.string().min(2).default("Orbit"),
   workspaceDescription: z.string().default("Execution stack for startup teams."),
   timezone: z.string().default("Asia/Kolkata"),
   dateFormat: z.enum(["12h", "24h"]).default("24h"),
@@ -108,7 +108,7 @@ const appearanceSettingsSchema = z.object({
 
 const advancedSettingsSchema = z.object({
   apiKey: z.string().default("pf_api_live_xxxxxxxxxxxxx"),
-  webhookUrl: z.string().default("https://hooks.example.com/pulseforge"),
+  webhookUrl: z.string().default("https://hooks.example.com/orbit"),
   webhookSecret: z.string().default("whsec_xxxxxx"),
   auditLog: z.string().default("Arun changed role from Member to Manager\nBala updated webhook settings"),
 });

@@ -25,7 +25,7 @@ app.onError((error, c) => {
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 
-app.get("/", (c) => c.json({ ok: true, service: "PulseForge API" }));
+app.get("/", (c) => c.json({ ok: true, service: "Orbit API" }));
 app.get("/health", (c) => c.json({ ok: true }));
 
 app.route("/api/auth", authRoute);
@@ -47,7 +47,7 @@ if (process.env.NODE_ENV !== "production") {
       port: 8787,
     },
     (info) => {
-      console.log(`PulseForge API running on http://localhost:${info.port}`);
+      console.log(`Orbit API running on http://localhost:${info.port}`);
     },
   );
 }

@@ -633,7 +633,7 @@ export default function SettingsPageClient() {
       return;
     }
 
-    downloadJson(`pulseforge-${currentWorkspace.slug}-workspace.json`, {
+    downloadJson(`orbit-${currentWorkspace.slug}-workspace.json`, {
       workspace: currentWorkspace,
       members: data?.members ?? [],
       settings: currentSettings,
@@ -648,7 +648,7 @@ export default function SettingsPageClient() {
       return;
     }
 
-    downloadJson(`pulseforge-${currentWorkspace.slug}-settings-schema.json`, {
+    downloadJson(`orbit-${currentWorkspace.slug}-settings-schema.json`, {
       workspaceId: currentWorkspace.id,
       workspaceSlug: currentWorkspace.slug,
       sectionKeys: settingSectionKeys,
@@ -889,7 +889,7 @@ export default function SettingsPageClient() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-[var(--foreground)]">Invite Member</p>
-              <p className="text-xs text-[var(--muted)]">Add an existing PulseForge account to this workspace.</p>
+              <p className="text-xs text-[var(--muted)]">Add an existing Orbit account to this workspace.</p>
             </div>
             <Badge variant={canManageTeam ? "success" : "warning"}>{canManageTeam ? "Editable" : "Read only"}</Badge>
           </div>
@@ -1382,7 +1382,7 @@ export default function SettingsPageClient() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => window.location.assign("mailto:billing@pulseforge.app?subject=PulseForge%20billing")}
+              onClick={() => window.location.assign("mailto:billing@orbit.app?subject=Orbit%20billing")}
             >
               Billing & Plans
             </Button>

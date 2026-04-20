@@ -26,7 +26,7 @@ export default function TopNav() {
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-100 text-zinc-900">
               <Flame className="h-4 w-4" />
             </span>
-            <span className="text-lg font-bold tracking-tight text-zinc-100">PulseForge</span>
+            <span className="text-lg font-bold tracking-tight text-zinc-100">Orbit</span>
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">

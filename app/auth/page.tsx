@@ -36,7 +36,7 @@ function AuthContent() {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent)]">
               <span className="text-3xl font-bold text-white">P</span>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">PulseForge</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">Orbit</h1>
           </div>
         </div>
 

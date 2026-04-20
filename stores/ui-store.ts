@@ -31,7 +31,7 @@ export const useUIStore = create<UIState>()(
       setTheme: (value) => set({ theme: value }),
     }),
     {
-      name: "pulseforge-ui",
+      name: "orbit-ui",
       partialize: (state) => ({
         sidebarCollapsed: state.sidebarCollapsed,
         theme: state.theme,
