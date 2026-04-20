@@ -15,7 +15,13 @@ type RegisterResponse = {
   };
 };
 
-export default function RegisterForm({ onRegistered }: { onRegistered?: () => void }) {
+type RegisterFormProps = {
+  onRegistered?: () => void;
+  showLoginPrompt?: boolean;
+  onLoginRequested?: () => void;
+};
+
+export default function RegisterForm({ onRegistered, showLoginPrompt = true, onLoginRequested }: RegisterFormProps) {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -26,6 +32,15 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleLoginClick = () => {
+    if (onLoginRequested) {
+      onLoginRequested();
+      return;
+    }
+
+    router.push("/login");
+  };
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -179,16 +194,14 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
         {loading ? "Creating account..." : "Create Account & Workspace"}
       </Button>
 
-      <p className="text-center text-sm text-[var(--muted)]">
-        Already have an account?{" "}
-        <button
-          type="button"
-          onClick={() => router.push("/login")}
-          className="text-[var(--accent)] transition-colors hover:opacity-80"
-        >
-          Sign in
-        </button>
-      </p>
+      {showLoginPrompt && (
+        <p className="text-center text-sm text-[var(--muted)]">
+          Already have an account?{" "}
+          <button type="button" onClick={handleLoginClick} className="text-[var(--accent)] transition-colors hover:opacity-80">
+            Sign in
+          </button>
+        </p>
+      )}
     </form>
   );
 }

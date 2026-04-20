@@ -7,6 +7,9 @@ import type { Session } from "@supabase/supabase-js";
 import { fetchApiJson } from "@/lib/api/client";
 import { supabase } from "@/lib/supabase";
 
+const SESSION_RETRY_COUNT = 5;
+const SESSION_RETRY_DELAY_MS = 250;
+
 type OAuthBootstrapResponse = {
   data: {
     userId: string;
@@ -38,6 +41,36 @@ function toCookieSessionPayload(session: Session): OAuthSessionCookiePayload {
   };
 }
 
+function wait(delayMs: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, delayMs);
+  });
+}
+
+async function resolveSessionWithRetry() {
+  if (!supabase) {
+    return null;
+  }
+
+  for (let attempt = 0; attempt < SESSION_RETRY_COUNT; attempt += 1) {
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error) {
+      throw error;
+    }
+
+    if (data.session) {
+      return data.session;
+    }
+
+    if (attempt < SESSION_RETRY_COUNT - 1) {
+      await wait(SESSION_RETRY_DELAY_MS);
+    }
+  }
+
+  return null;
+}
+
 export default function AuthCallbackPage() {
   const router = useRouter();
 
@@ -65,10 +98,18 @@ export default function AuthCallbackPage() {
         }
       }
 
-      const { data, error } = await supabase.auth.getSession();
-      const session = data.session;
+      let session: Session | null = null;
 
-      if (error || !session) {
+      try {
+        session = await resolveSessionWithRetry();
+      } catch {
+        if (isActive) {
+          router.replace("/auth?error=oauth_failed");
+        }
+        return;
+      }
+
+      if (!session) {
         if (isActive) {
           router.replace("/auth?error=oauth_failed");
         }

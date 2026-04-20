@@ -49,6 +49,7 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
   const router = useRouter();
   const copy = copyByMode[mode];
   const isLogin = mode === "login";
+  const tabbedAuthHref = mode === "register" ? "/auth?tab=register" : "/auth";
 
   useEffect(() => {
     if (isReady && userId) {
@@ -75,7 +76,7 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
             <p className="text-sm text-[var(--muted)]">{copy.description}</p>
           </div>
 
-          <div className="mt-8">{isLogin ? <LoginForm /> : <RegisterForm />}</div>
+          <div className="mt-8">{isLogin ? <LoginForm showRegisterPrompt={false} /> : <RegisterForm showLoginPrompt={false} />}</div>
 
           <div className="mt-6 flex items-center justify-between gap-4 border-t border-[color:var(--card-border)] pt-6 text-sm">
             <p className="text-[var(--muted)]">{copy.alternatePrompt}</p>
@@ -85,7 +86,7 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
           </div>
 
           <div className="mt-4 text-center">
-            <Link href="/auth" className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
+            <Link href={tabbedAuthHref} className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
               Open tabbed auth
             </Link>
           </div>

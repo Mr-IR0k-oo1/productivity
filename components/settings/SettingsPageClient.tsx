@@ -32,9 +32,9 @@ import { Input } from "@/components/ui/input";
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { useUpdateWorkspaceSettingsMutation, useWorkspaceSettingsQuery, type WorkspaceMemberSummary } from "@/hooks/useWorkspaceSettings";
 import { fetchApiJson } from "@/lib/api/client";
+import { REMEMBER_ME_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
 import { supabaseClient as supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
 import { useUIStore } from "@/stores/ui-store";
 import type { WorkspaceRole } from "@/src/lib/workspace-access";
 import type { WorkspaceSettingsDocument, WorkspaceSettingsSectionKey } from "@/src/lib/workspace-settings";
@@ -593,6 +593,7 @@ export default function SettingsPageClient() {
     }
 
     if (typeof window !== "undefined") {
+      window.localStorage.removeItem(REMEMBER_ME_STORAGE_KEY);
       window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
     }
 

@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui-store";
 import { fetchApiJson } from "@/lib/api/client";
 import { supabaseClient as supabase } from "@/lib/supabase/client";
-import { WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
+import { REMEMBER_ME_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
 
 const sampleNotifications = [
   { id: 1, title: "New task assigned", message: "You have been assigned to 'Design landing page'", time: "2 min ago", unread: true },
@@ -83,6 +83,7 @@ export default function Sidebar() {
     }
 
     if (typeof window !== "undefined") {
+      window.localStorage.removeItem(REMEMBER_ME_STORAGE_KEY);
       window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
     }
 
