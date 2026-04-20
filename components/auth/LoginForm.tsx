@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
+import { Github } from "lucide-react";
 
 import { fetchApiJson } from "@/lib/api/client";
 import { supabaseClient } from "@/lib/supabase/client";
@@ -20,8 +21,32 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleGitHubLogin = async () => {
+    setErrorMessage(null);
+
+    if (!supabaseClient) {
+      setErrorMessage("Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      return;
+    }
+
+    setOauthLoading(true);
+
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+      setOauthLoading(false);
+    }
+  };
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -59,6 +84,22 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleLogin} className="space-y-6">
+      <button
+        type="button"
+        onClick={handleGitHubLogin}
+        disabled={loading || oauthLoading}
+        className="flex w-full items-center justify-center gap-3 rounded-2xl border border-zinc-700 bg-zinc-900 py-4 font-medium text-zinc-100 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <Github className="h-5 w-5" />
+        {oauthLoading ? "Redirecting..." : "Continue with GitHub"}
+      </button>
+
+      <div className="flex items-center gap-4">
+        <div className="h-px flex-1 bg-zinc-800" />
+        <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">OR</span>
+        <div className="h-px flex-1 bg-zinc-800" />
+      </div>
+
       <div className="space-y-2">
         <label className="text-sm text-zinc-400">Email</label>
         <Input
