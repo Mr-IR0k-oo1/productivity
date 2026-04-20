@@ -752,7 +752,7 @@ END:VCALENDAR`;
       <div className="space-y-6">
         {isLoading ? (
           <CalendarLoadingSkeleton />
-        ) : showEmptyState && calendarEvents.length === 0 ? (
+        ) : showEmptyState && visibleEvents.length === 0 ? (
           <CalendarEmptyState onCreate={() => setIsCreateOpen(true)} />
         ) : (
           <>
