@@ -65,6 +65,8 @@ export async function signUpWithWorkspace(input: SignUpInput) {
     throw new Error(error?.message ?? "Failed to sign up");
   }
 
+  const authUserId = data.user.id;
+
   let userId = "";
   let workspaceId = "";
 
@@ -73,7 +75,7 @@ export async function signUpWithWorkspace(input: SignUpInput) {
       const [user] = await tx
         .insert(users)
         .values({
-          authUserId: data.user.id,
+          authUserId,
           email,
           fullName: input.fullName,
           jobTitle: input.jobTitle,
@@ -111,7 +113,7 @@ export async function signUpWithWorkspace(input: SignUpInput) {
   return {
     userId,
     workspaceId,
-    authUserId: data.user.id,
+    authUserId,
     session: data.session ?? null,
   };
 }
