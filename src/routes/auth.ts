@@ -3,10 +3,10 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { authMiddleware } from "@/src/middleware/auth";
-import { loginWithPassword, signUpWithWorkspace } from "@/src/controllers/auth-controller";
+import { ensureOAuthUserWorkspace, loginWithPassword, signUpWithWorkspace } from "@/src/controllers/auth-controller";
 import type { AuthBindings } from "@/src/types/bindings";
 import { AUTH_COOKIE_MAX_AGE_SECONDS, AUTH_SESSION_STORAGE_KEY } from "@/lib/auth/session";
-import { supabaseAnon } from "@/src/lib/supabase";
+import { supabaseAdmin, supabaseAnon } from "@/src/lib/supabase";
 import { env } from "@/src/types/env";
 import { setCookie } from "hono/cookie";
 
@@ -26,6 +26,20 @@ const loginSchema = z.object({
 
 const resetPasswordSchema = z.object({
   email: z.string().email(),
+});
+
+const oauthBootstrapSchema = z.object({
+  session: z
+    .object({
+      access_token: z.string().min(1),
+      refresh_token: z.string().min(1).optional(),
+      token_type: z.string().optional(),
+      expires_in: z.number().int().optional(),
+      expires_at: z.number().int().optional(),
+      provider_token: z.string().nullable().optional(),
+      provider_refresh_token: z.string().nullable().optional(),
+    })
+    .optional(),
 });
 
 function getRegisterErrorStatus(message: string) {
@@ -96,6 +110,62 @@ auth.post("/register", zValidator("json", signupSchema), async (c) => {
     }
 
     return c.json({ data: result }, 201);
+  } catch (error) {
+    const message = (error as Error).message;
+    return c.json({ error: message }, getRegisterErrorStatus(message));
+  }
+});
+
+auth.post("/oauth/bootstrap", authMiddleware, zValidator("json", oauthBootstrapSchema), async (c) => {
+  const authUserId = c.get("authUserId");
+  const authToken = c.get("authToken");
+  const payload = c.req.valid("json");
+
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(authUserId);
+
+    if (error || !data.user) {
+      return c.json({ error: "Unable to load OAuth user profile" }, 401);
+    }
+
+    const email = data.user.email?.trim();
+
+    if (!email) {
+      return c.json({ error: "OAuth account did not provide an email address" }, 400);
+    }
+
+    const metadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+    const fullName =
+      typeof metadata.full_name === "string"
+        ? metadata.full_name
+        : typeof metadata.name === "string"
+          ? metadata.name
+          : null;
+    const preferredWorkspaceName = typeof metadata.workspace_name === "string" ? metadata.workspace_name : null;
+
+    const result = await ensureOAuthUserWorkspace({
+      authUserId,
+      email,
+      fullName,
+      workspaceName: preferredWorkspaceName,
+    });
+
+    const sessionForCookie =
+      payload.session && payload.session.access_token === authToken
+        ? payload.session
+        : {
+            access_token: authToken,
+          };
+
+    setCookie(c, AUTH_SESSION_STORAGE_KEY, JSON.stringify(sessionForCookie), {
+      path: "/",
+      sameSite: "Lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: AUTH_COOKIE_MAX_AGE_SECONDS,
+    });
+
+    return c.json({ data: result }, 200);
   } catch (error) {
     const message = (error as Error).message;
     return c.json({ error: message }, getRegisterErrorStatus(message));

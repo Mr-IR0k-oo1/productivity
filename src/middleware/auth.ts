@@ -34,5 +34,6 @@ export const authMiddleware = createMiddleware<AuthBindings>(async (c, next) => 
   }
 
   c.set("authUserId", data.user.id);
+  c.set("authToken", token);
   await next();
 });

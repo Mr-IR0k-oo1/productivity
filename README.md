@@ -71,6 +71,18 @@ Copy `.env.example` to `.env.local` and fill:
 
 The browser reads the active Supabase session directly, keeps the current workspace id in local storage under `pf-workspace-id`, and falls back to the first accessible workspace when needed.
 
+## OAuth Setup (Supabase)
+
+1. Open Supabase Dashboard for your project.
+2. Go to Authentication > Providers.
+3. Enable Google, GitHub, and Microsoft providers (Microsoft maps to provider key `azure` in Supabase JS).
+4. Add redirect URLs for each enabled provider:
+
+- `http://localhost:3000/auth/callback`
+- `https://your-domain.com/auth/callback`
+
+Orbit uses `/auth` as an OAuth-first sign-in page and `/auth/callback` to complete session bootstrap and first-workspace provisioning.
+
 ## Local Development
 
 ```bash

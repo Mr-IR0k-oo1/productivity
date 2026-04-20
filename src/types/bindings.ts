@@ -3,6 +3,7 @@ import type { WorkspaceRole } from "@/src/lib/workspace-access";
 export type AuthBindings = {
   Variables: {
     authUserId: string;
+    authToken: string;
   };
 };
 

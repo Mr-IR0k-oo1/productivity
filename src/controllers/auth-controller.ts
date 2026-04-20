@@ -19,8 +19,27 @@ type SignUpInput = {
   jobTitle?: string;
 };
 
+type EnsureOAuthUserWorkspaceInput = {
+  authUserId: string;
+  email: string;
+  fullName?: string | null;
+  workspaceName?: string | null;
+};
+
+type EnsureOAuthUserWorkspaceResult = {
+  userId: string;
+  workspaceId: string;
+  createdUser: boolean;
+  createdWorkspace: boolean;
+};
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+function buildDefaultWorkspaceName(fullName?: string | null) {
+  const ownerName = fullName?.trim() || "My";
+  return `${ownerName} Workspace`.slice(0, 120);
 }
 
 function isDatabaseUniqueViolation(error: unknown) {
@@ -35,6 +54,42 @@ function isAuthUserUniqueViolation(error: unknown) {
 function isEmailUniqueViolation(error: unknown) {
   const constraint = (error as DatabaseError | undefined)?.constraint;
   return constraint === "users_email_unique";
+}
+
+async function ensureWorkspaceForUser(userId: string, preferredWorkspaceName: string) {
+  const [membership] = await db
+    .select({ workspaceId: workspaceMembers.workspaceId })
+    .from(workspaceMembers)
+    .where(eq(workspaceMembers.userId, userId))
+    .limit(1);
+
+  if (membership) {
+    return { workspaceId: membership.workspaceId, createdWorkspace: false };
+  }
+
+  const workspaceName = preferredWorkspaceName.trim() || "My Workspace";
+  const slug = await createUniqueWorkspaceSlug(workspaceName);
+
+  const workspace = await db.transaction(async (tx) => {
+    const [createdWorkspace] = await tx
+      .insert(workspaces)
+      .values({
+        name: workspaceName,
+        slug,
+        ownerId: userId,
+      })
+      .returning({ id: workspaces.id });
+
+    await tx.insert(workspaceMembers).values({
+      workspaceId: createdWorkspace.id,
+      userId,
+      role: "owner",
+    });
+
+    return createdWorkspace;
+  });
+
+  return { workspaceId: workspace.id, createdWorkspace: true };
 }
 
 export async function signUpWithWorkspace(input: SignUpInput) {
@@ -135,5 +190,88 @@ export async function loginWithPassword(email: string, password: string) {
   return {
     session: data.session,
     user,
+  };
+}
+
+export async function ensureOAuthUserWorkspace(
+  input: EnsureOAuthUserWorkspaceInput,
+): Promise<EnsureOAuthUserWorkspaceResult> {
+  const normalizedEmail = normalizeEmail(input.email);
+  const workspaceName = (input.workspaceName?.trim() || buildDefaultWorkspaceName(input.fullName)).slice(0, 120);
+
+  const [existingByAuthUserId] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.authUserId, input.authUserId))
+    .limit(1);
+
+  if (existingByAuthUserId) {
+    const workspace = await ensureWorkspaceForUser(existingByAuthUserId.id, workspaceName);
+    return {
+      userId: existingByAuthUserId.id,
+      workspaceId: workspace.workspaceId,
+      createdUser: false,
+      createdWorkspace: workspace.createdWorkspace,
+    };
+  }
+
+  const [existingByEmail] = await db
+    .select({ id: users.id, authUserId: users.authUserId })
+    .from(users)
+    .where(sql`lower(${users.email}) = ${normalizedEmail}`)
+    .limit(1);
+
+  if (existingByEmail && existingByEmail.authUserId !== input.authUserId) {
+    throw new Error("An account with this email already exists. Please sign in with email/password.");
+  }
+
+  let userId = "";
+  let createdUser = false;
+
+  try {
+    const [createdUserRow] = await db
+      .insert(users)
+      .values({
+        authUserId: input.authUserId,
+        email: normalizedEmail,
+        fullName: input.fullName?.trim() || null,
+      })
+      .returning({ id: users.id });
+
+    userId = createdUserRow.id;
+    createdUser = true;
+  } catch (error) {
+    if (isDatabaseUniqueViolation(error) && isEmailUniqueViolation(error)) {
+      throw new Error("An account with this email already exists. Please sign in with email/password.");
+    }
+
+    if (isDatabaseUniqueViolation(error) && isAuthUserUniqueViolation(error)) {
+      const [existingUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.authUserId, input.authUserId))
+        .limit(1);
+
+      if (!existingUser) {
+        throw error;
+      }
+
+      userId = existingUser.id;
+    } else {
+      throw error;
+    }
+  }
+
+  if (!userId) {
+    throw new Error("Failed to provision OAuth account.");
+  }
+
+  const workspace = await ensureWorkspaceForUser(userId, workspaceName);
+
+  return {
+    userId,
+    workspaceId: workspace.workspaceId,
+    createdUser,
+    createdWorkspace: workspace.createdWorkspace,
   };
 }

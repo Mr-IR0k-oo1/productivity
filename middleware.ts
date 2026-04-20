@@ -25,16 +25,17 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const protectedRoutes = ["/dashboard", "/ideas", "/tasks", "/calendar", "/time", "/reports", "/admin", "/flowcharts"];
-  const authRoutes = ["/login", "/register"];
+  const authRoutes = ["/auth", "/login", "/register"];
 
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
   const isAuthRoute = authRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  const isOAuthCallbackRoute = pathname === "/auth/callback" || pathname.startsWith("/auth/callback/");
 
   if (isProtectedRoute && !session) {
     return redirectWithCookies(response, new URL("/login", request.url));
   }
 
-  if (isAuthRoute && session) {
+  if (isAuthRoute && !isOAuthCallbackRoute && session) {
     return redirectWithCookies(response, new URL("/dashboard", request.url));
   }
 
@@ -51,6 +52,8 @@ export const config = {
     "/reports/:path*",
     "/admin/:path*",
     "/flowcharts/:path*",
+    "/auth",
+    "/auth/:path*",
     "/login",
     "/login/:path*",
     "/register",
