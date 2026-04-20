@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export default function RegisterForm() {
+export default function RegisterForm({ onRegistered }: { onRegistered?: () => void }) {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -77,8 +77,12 @@ export default function RegisterForm() {
 
       document.cookie = `session_token=${payload.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
 
-      router.replace("/dashboard");
-      router.refresh();
+      if (onRegistered) {
+        onRegistered();
+      } else {
+        router.replace("/dashboard");
+        router.refresh();
+      }
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to create account");
     } finally {
