@@ -274,7 +274,7 @@ function getTaskWindow(task: TaskRecord) {
   };
 }
 
-const TaskStats = memo(() => {
+const TaskStats = memo(function TaskStats() {
   const stats = [
     { title: "Open Tasks", value: "18", trend: "+3 this week" },
     { title: "Overdue", value: "2", trend: "Needs attention", positive: false },
@@ -299,7 +299,9 @@ const TaskStats = memo(() => {
   );
 });
 
-const TaskToolbar = memo(({
+TaskStats.displayName = "TaskStats";
+
+const TaskToolbar = memo(function TaskToolbar({
   viewMode,
   setViewMode,
   search,
@@ -337,9 +339,9 @@ const TaskToolbar = memo(({
   onBulkDelete: () => void;
   activeFilterCount: number;
   clearAllFilters: () => void;
-}) => {
+}) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  return memo((
+  return (
     <Card className="border-zinc-900 bg-zinc-950/60">
       <CardContent className="space-y-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -487,8 +489,10 @@ const TaskToolbar = memo(({
         ) : null}
       </CardContent>
     </Card>
-  ));
+  );
 });
+
+TaskToolbar.displayName = "TaskToolbar";
 
 function TaskDetailPanel({
   task,
@@ -713,7 +717,7 @@ function TaskCreateModal({
   );
 }
 
-const ListView = memo(({
+const ListView = memo(function ListView({
   tasks,
   selectedTaskIds,
   onToggleSelect,
@@ -723,7 +727,7 @@ const ListView = memo(({
   selectedTaskIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onOpenTask: (task: TaskRecord) => void;
-}) => {
+}) {
   return (
     <Card className="border-zinc-900 bg-zinc-950/60">
       <CardHeader className="border-b border-zinc-900 pb-4">
@@ -808,6 +812,8 @@ const ListView = memo(({
     </Card>
   );
 });
+
+ListView.displayName = "ListView";
 
 function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (task: TaskRecord) => void }) {
   const monthDate = referenceDate;
