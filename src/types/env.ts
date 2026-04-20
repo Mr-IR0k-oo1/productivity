@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  APP_URL: z.string().url().default("http://localhost:3000"),
-  SUPABASE_URL: z.string().url().default("http://localhost:54321"),
+  DATABASE_URL: z.string().default(""),
+  APP_URL: z.string().default("http://localhost:3000"),
+  SUPABASE_URL: z.string().default("http://localhost:54321"),
   SUPABASE_ANON_KEY: z.string().default(""),
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),
 });
