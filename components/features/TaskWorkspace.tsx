@@ -487,7 +487,7 @@ const TaskToolbar = memo(({
         ) : null}
       </CardContent>
     </Card>
-  );
+  ));
 });
 
 function TaskDetailPanel({
