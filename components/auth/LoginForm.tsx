@@ -3,10 +3,18 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
 
 import { fetchApiJson } from "@/lib/api/client";
+import { supabaseClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+type LoginResponse = {
+  data: {
+    session: Session;
+  };
+};
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -21,7 +29,7 @@ export default function LoginForm() {
     setErrorMessage(null);
 
     try {
-      await fetchApiJson("/api/auth/login", {
+      const payload = await fetchApiJson<LoginResponse>("/api/auth/login", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -29,6 +37,14 @@ export default function LoginForm() {
         body: JSON.stringify({ email, password }),
         session: {},
       });
+
+      if (supabaseClient) {
+        const { error } = await supabaseClient.auth.setSession(payload.data.session);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+      }
 
       // Cookie is set by the server
 

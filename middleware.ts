@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { AUTH_SESSION_STORAGE_KEY } from "@/lib/auth/session";
 import { validateSession } from "@/src/lib/auth";
-
-const SESSION_COOKIE_NAME = "session_token";
 
 function redirectWithCookies(response: NextResponse, destination: URL) {
   const redirectResponse = NextResponse.redirect(destination);
@@ -17,7 +16,7 @@ function redirectWithCookies(response: NextResponse, destination: URL) {
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
-  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const sessionToken = request.cookies.get(AUTH_SESSION_STORAGE_KEY)?.value;
   let session = null;
 
   if (sessionToken) {

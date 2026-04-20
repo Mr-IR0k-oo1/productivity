@@ -2,10 +2,18 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
 
 import { fetchApiJson } from "@/lib/api/client";
+import { supabaseClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+type RegisterResponse = {
+  data: {
+    session: Session | null;
+  };
+};
 
 export default function RegisterForm({ onRegistered }: { onRegistered?: () => void }) {
   const [formData, setFormData] = useState({
@@ -56,7 +64,7 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
     setLoading(true);
 
     try {
-      await fetchApiJson("/api/auth/register", {
+      const payload = await fetchApiJson<RegisterResponse>("/api/auth/register", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -70,10 +78,21 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
         session: {},
       });
 
+      if (payload.data.session && supabaseClient) {
+        const { error } = await supabaseClient.auth.setSession(payload.data.session);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+      }
+
       if (onRegistered) {
         onRegistered();
-      } else {
+      } else if (payload.data.session) {
         router.replace("/dashboard");
+        router.refresh();
+      } else {
+        router.replace("/login");
         router.refresh();
       }
     } catch (err) {
