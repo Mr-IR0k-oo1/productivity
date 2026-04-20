@@ -340,6 +340,33 @@ const TaskToolbar = memo(({
 }) => {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   return memo((
+    <Card className="border-zinc-900 bg-zinc-950/60">
+      <CardContent className="space-y-4 p-4 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Tasks</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-100">Task workspace</h1>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+              Manage tasks across Kanban, list, calendar, and gantt views from one workspace.
+            </p>
+          </div>
+          <Button onClick={onOpenCreate}>
+            <Plus className="h-4 w-4" />
+            New Task
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { id: "kanban", label: "Kanban", icon: SquareCheckBig },
+            { id: "list", label: "List", icon: Table2 },
+            { id: "calendar", label: "Calendar", icon: CalendarDays },
+            { id: "gantt", label: "Gantt", icon: GanttChartSquare },
+          ].map((item) => {
+            const Icon = item.icon;
+            const active = viewMode === item.id;
+
+            return (
               <button
                 key={item.id}
                 type="button"
@@ -355,28 +382,28 @@ const TaskToolbar = memo(({
                 {item.label}
               </button>
             );
-          })}
+})}
+        </div>
 
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[220px] flex-1 md:min-w-[320px]">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search tasks, labels, assignees"
-                className="pl-9"
-              />
-            </div>
-            <Button variant="secondary" onClick={activeFilterCount > 0 ? clearAllFilters : undefined}>
-              <Filter className="h-4 w-4" />
-              Filters
-              {activeFilterCount > 0 && (
-                <span className="ml-1.5 rounded-full bg-zinc-700 px-1.5 py-0.5 text-xs">
-                  {activeFilterCount}
-                </span>
-              )}
-            </Button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[220px] flex-1 md:min-w-[320px]">
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search tasks, labels, assignees"
+              className="pl-9"
+            />
           </div>
+          <Button variant="secondary" onClick={activeFilterCount > 0 ? clearAllFilters : undefined}>
+            <Filter className="h-4 w-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-1.5 rounded-full bg-zinc-700 px-1.5 py-0.5 text-xs">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_repeat(4,minmax(0,170px))]">
@@ -457,10 +484,10 @@ const TaskToolbar = memo(({
               </Button>
             </div>
           </div>
-) : null}
-       </CardContent>
-     </Card>
-   );
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 });
 
 function TaskDetailPanel({
