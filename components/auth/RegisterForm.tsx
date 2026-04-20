@@ -55,13 +55,12 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth", {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          action: "register",
           email: email.trim(),
           password,
           fullName: fullName.trim(),
@@ -75,7 +74,9 @@ export default function RegisterForm({ onRegistered }: { onRegistered?: () => vo
         throw new Error(payload.error ?? "Failed to create account");
       }
 
-      document.cookie = `session_token=${payload.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+      if (payload.data?.session) {
+        // Cookie is set by the server
+      }
 
       if (onRegistered) {
         onRegistered();

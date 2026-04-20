@@ -20,12 +20,12 @@ export default function LoginForm() {
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/api/auth", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ action: "login", email, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       const payload = await response.json();
@@ -34,7 +34,7 @@ export default function LoginForm() {
         throw new Error(payload.error ?? "Failed to sign in");
       }
 
-      document.cookie = `session_token=${payload.data.token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+      // Cookie is set by the server
 
       router.replace("/dashboard");
       router.refresh();
