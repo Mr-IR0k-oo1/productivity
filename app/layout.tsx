@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import AppShell from "@/components/layout/AppShell";
 
@@ -32,13 +33,26 @@ const themeBootstrapScript = `
 })();
 `;
 
+function LoadingShell() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-[var(--background)]">
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 w-32 rounded bg-zinc-800" />
+        <div className="h-64 w-48 rounded bg-zinc-800" />
+      </div>
+    </div>
+  );
+}
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className="dark" data-theme="dark" suppressHydrationWarning>
       <body className="bg-[var(--background)] text-[var(--foreground)] antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
         <Providers>
-          <AppShell>{children}</AppShell>
+          <Suspense fallback={<LoadingShell />}>
+            <AppShell>{children}</AppShell>
+          </Suspense>
         </Providers>
       </body>
     </html>
