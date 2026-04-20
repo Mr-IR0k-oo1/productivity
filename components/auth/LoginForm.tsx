@@ -25,6 +25,20 @@ type LoginFormProps = {
   onSignedIn?: () => void;
 };
 
+function normalizeLoginError(message: string) {
+  const lowered = message.toLowerCase();
+
+  if (lowered.includes("invalid login credentials") || lowered.includes("invalid credentials")) {
+    return "Invalid email or password.";
+  }
+
+  if (lowered.includes("email not confirmed")) {
+    return "Please confirm your email before signing in.";
+  }
+
+  return message;
+}
+
 export default function LoginForm({ showSocialLogin = true, showRegisterPrompt = true, onRegisterRequested, onSignedIn }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -67,7 +81,7 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
     });
 
     if (error) {
-      setErrorMessage(error.message);
+      setErrorMessage(normalizeLoginError(error.message));
       setOauthLoading(false);
     }
   };
@@ -83,7 +97,7 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ email, password, rememberMe }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password, rememberMe }),
         session: {},
       });
 
@@ -108,7 +122,8 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
         router.refresh();
       }
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to sign in");
+      const fallbackMessage = err instanceof Error ? err.message : "Failed to sign in";
+      setErrorMessage(normalizeLoginError(fallbackMessage));
     } finally {
       setLoading(false);
     }
@@ -136,6 +151,12 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
         </>
       )}
 
+      {errorMessage && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          {errorMessage}
+        </div>
+      )}
+
       <div className="space-y-2">
         <label className="text-sm text-zinc-400">Email</label>
         <Input
@@ -143,6 +164,7 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="you@example.com"
+          autoComplete="email"
           required
         />
       </div>
@@ -174,8 +196,6 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
           Forgot password?
         </Link>
       </div>
-
-      {errorMessage && <p className="text-sm text-rose-400">{errorMessage}</p>}
 
       <Button type="submit" className="w-full" disabled={loading || oauthLoading}>
         {loading ? "Signing in..." : "Sign In"}

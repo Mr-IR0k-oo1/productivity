@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, Chrome, Github, Mail } from "lucide-react";
+import { Chrome, Github, Mail } from "lucide-react";
 
 import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
@@ -11,7 +11,7 @@ import { REMEMBER_ME_STORAGE_KEY } from "@/lib/auth/session";
 import { supabase } from "@/lib/supabase";
 
 type AuthTab = "login" | "register";
-type OAuthProvider = "google" | "github" | "azure";
+type OAuthProvider = "google" | "github";
 
 type ProviderConfig = {
   provider: OAuthProvider;
@@ -33,18 +33,16 @@ const providers: ProviderConfig[] = [
     icon: Github,
     className: "border border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
   },
-  {
-    provider: "azure",
-    label: "Continue with Microsoft",
-    icon: Building2,
-    className: "border border-cyan-500/40 bg-cyan-500/10 text-cyan-100 hover:bg-cyan-500/20",
-  },
 ];
 
 const callbackErrorMessages: Record<string, string> = {
   oauth_failed: "OAuth sign-in failed. Please try again.",
   oauth_bootstrap_failed: "Sign-in succeeded, but workspace setup failed. Please contact support.",
   oauth_unavailable: "OAuth is not available right now. Check your Supabase client configuration.",
+};
+
+const queryNoticeMessages: Record<string, string> = {
+  check_email: "Account created. Check your inbox to confirm your email before signing in.",
 };
 
 function resolveTab(tabValue: string | null): AuthTab {
@@ -63,10 +61,23 @@ export default function AuthPage() {
 
   const callbackError = searchParams.get("error");
   const tabParam = searchParams.get("tab");
+  const noticeParam = searchParams.get("notice");
 
   useEffect(() => {
     setActiveTab(resolveTab(tabParam));
   }, [tabParam]);
+
+  useEffect(() => {
+    if (!noticeParam) {
+      return;
+    }
+
+    const message = queryNoticeMessages[noticeParam];
+
+    if (message) {
+      setInlineNotice(message);
+    }
+  }, [noticeParam]);
 
   const errorMessage = useMemo(() => {
     if (inlineError) {
@@ -116,6 +127,7 @@ export default function AuthPage() {
     }
 
     nextParams.delete("error");
+    nextParams.delete("notice");
     const query = nextParams.toString();
     router.replace(query ? `/auth?${query}` : "/auth", { scroll: false });
   };

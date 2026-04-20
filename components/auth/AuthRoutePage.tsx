@@ -65,7 +65,7 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent)]">
               <span className="text-3xl font-bold text-white">P</span>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">Orbit</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">PulseForge</h1>
           </div>
         </div>
 
@@ -76,7 +76,7 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
             <p className="text-sm text-[var(--muted)]">{copy.description}</p>
           </div>
 
-          <div className="mt-8">{isLogin ? <LoginForm showRegisterPrompt={false} /> : <RegisterForm showLoginPrompt={false} />}</div>
+          <div className="mt-8">{isLogin ? <LoginForm showSocialLogin={false} showRegisterPrompt={false} /> : <RegisterForm showLoginPrompt={false} />}</div>
 
           <div className="mt-6 flex items-center justify-between gap-4 border-t border-[color:var(--card-border)] pt-6 text-sm">
             <p className="text-[var(--muted)]">{copy.alternatePrompt}</p>

@@ -15,8 +15,12 @@ type RegisterResponse = {
   };
 };
 
+type RegisterResult = {
+  requiresEmailConfirmation: boolean;
+};
+
 type RegisterFormProps = {
-  onRegistered?: () => void;
+  onRegistered?: (result?: RegisterResult) => void;
   showLoginPrompt?: boolean;
   onLoginRequested?: () => void;
 };
@@ -28,9 +32,11 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
     password: "",
     confirmPassword: "",
     workspaceName: "",
+    jobTitle: "",
   });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
 
   const handleLoginClick = () => {
@@ -53,8 +59,9 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
   const handleRegister = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage(null);
+    setSuccessMessage(null);
 
-    const { fullName, email, password, confirmPassword, workspaceName } = formData;
+    const { fullName, email, password, confirmPassword, workspaceName, jobTitle } = formData;
 
     if (fullName.trim().length < 2) {
       setErrorMessage("Full name must be at least 2 characters.");
@@ -63,6 +70,11 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
 
     if (workspaceName.trim().length < 2) {
       setErrorMessage("Workspace name must be at least 2 characters.");
+      return;
+    }
+
+    if (jobTitle.trim().length > 0 && jobTitle.trim().length < 2) {
+      setErrorMessage("Job title must be at least 2 characters when provided.");
       return;
     }
 
@@ -85,10 +97,11 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          email: email.trim(),
+          email: email.trim().toLowerCase(),
           password,
           fullName: fullName.trim(),
           workspaceName: workspaceName.trim(),
+          jobTitle: jobTitle.trim() || undefined,
         }),
         session: {},
       });
@@ -101,16 +114,26 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
         }
       }
 
+      const result: RegisterResult = {
+        requiresEmailConfirmation: !payload.data.session,
+      };
+
       if (onRegistered) {
-        onRegistered();
-      } else if (payload.data.session) {
+        onRegistered(result);
+        return;
+      }
+
+      if (!result.requiresEmailConfirmation) {
         router.replace("/dashboard");
         router.refresh();
-      } else {
-        router.replace("/login");
-        router.refresh();
+        return;
       }
+
+      setSuccessMessage("Account created. Please check your email to confirm your account.");
+      router.replace("/auth?tab=login&notice=check_email");
+      router.refresh();
     } catch (err) {
+      setSuccessMessage(null);
       setErrorMessage(err instanceof Error ? err.message : "Failed to create account");
     } finally {
       setLoading(false);
@@ -119,6 +142,18 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
 
   return (
     <form onSubmit={handleRegister} className="space-y-6">
+      {errorMessage && (
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          {errorMessage}
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          {successMessage}
+        </div>
+      )}
+
       <div className="space-y-2">
         <label className="text-sm text-[var(--muted)]">Full Name</label>
         <Input
@@ -140,7 +175,7 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
           name="workspaceName"
           value={formData.workspaceName}
           onChange={handleChange}
-          placeholder="Orbit Team"
+          placeholder="My Startup Team"
           autoComplete="organization"
           minLength={2}
           required
@@ -157,6 +192,18 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
           placeholder="you@example.com"
           autoComplete="email"
           required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm text-[var(--muted)]">Job Title (Optional)</label>
+        <Input
+          type="text"
+          name="jobTitle"
+          value={formData.jobTitle}
+          onChange={handleChange}
+          placeholder="Founder / Product Manager"
+          autoComplete="organization-title"
         />
       </div>
 
@@ -187,8 +234,6 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
           required
         />
       </div>
-
-      {errorMessage && <p className="text-sm text-rose-400">{errorMessage}</p>}
 
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Creating account..." : "Create Account & Workspace"}
