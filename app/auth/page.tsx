@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import LoginForm from "@/components/auth/LoginForm";
@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 type AuthTab = "login" | "register";
 
-export default function AuthPage() {
+function AuthContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<AuthTab>(() => (searchParams.get("tab") === "register" ? "register" : "login"));
   const { isReady, userId } = useSessionContext();
@@ -78,5 +78,24 @@ export default function AuthPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+function AuthLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-6">
+      <div className="animate-pulse space-y-4">
+        <div className="h-12 w-48 rounded bg-zinc-800" />
+        <div className="h-96 w-80 rounded bg-zinc-800" />
+      </div>
+    </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={<AuthLoading />}>
+      <AuthContent />
+    </Suspense>
   );
 }
