@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently -k -n web,api -c cyan,magenta \"next dev\" \"tsx --tsconfig tsconfig.api.json src/index.ts\"",
+    "dev:web": "next dev",
+    "dev:api": "tsx --tsconfig tsconfig.api.json src/index.ts",
     "build": "next build",
     "build:desktop": "node scripts/build-desktop.mjs",
     "start": "next start",

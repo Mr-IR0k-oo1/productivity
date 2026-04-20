@@ -78,6 +78,8 @@ npm install
 npm run dev
 ```
 
+- `npm run dev` starts both the Next frontend and the Hono API server.
+- If `API_URL` is omitted in local development, the Next app falls back to `http://localhost:8787`.
 - Frontend: [http://localhost:3000](http://localhost:3000)
 - API: [http://localhost:8787](http://localhost:8787)
 
