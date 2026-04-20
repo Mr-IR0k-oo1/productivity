@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
@@ -25,46 +25,44 @@ export function LandingPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden">
       <div className="absolute inset-0 -z-10">
-        <div className="absolute left-1/3 top-1/4 h-[400px] w-[400px] rounded-full bg-[var(--accent)]/8 blur-[100px]" />
-        <div className="absolute right-1/3 bottom-1/4 h-[300px] w-[300px] rounded-full bg-violet-500/8 blur-[80px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-950 via-zinc-900 to-black" />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-[var(--accent)]/5 blur-[120px]" />
+        <div className="absolute left-1/3 top-1/3 h-[1px] w-full bg-gradient-to-r from-transparent via-zinc-700/30 to-transparent" />
+        <div className="absolute left-1/3 top-2/3 h-[1px] w-full bg-gradient-to-r from-transparent via-zinc-700/20 to-transparent" />
+        <div className="absolute left-[20%] top-1/2 h-full w-[1px] bg-gradient-to-b from-transparent via-zinc-700/20 to-transparent" />
+        <div className="absolute left-[80%] top-1/2 h-full w-[1px] bg-gradient-to-b from-transparent via-zinc-700/20 to-transparent" />
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute h-0.5 w-0.5 rounded-full bg-white/30"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              opacity: Math.random() * 0.5 + 0.3,
+            }}
+          />
+        ))}
       </div>
 
-      <div className="w-full max-w-2xl px-8 text-center">
-        <div className="mb-8 flex justify-center">
-          <div className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/50 px-4 py-2 text-sm text-zinc-400">
-            <Sparkles className="h-4 w-4 text-[var(--accent)]" />
-            <span>Private launchpad</span>
-          </div>
-        </div>
-
-        <h1 className="mb-6 text-4xl font-bold tracking-tight text-zinc-100 sm:text-5xl lg:text-6xl">
-          <span className="bg-gradient-to-r from-zinc-100 via-zinc-200 to-zinc-400 bg-clip-text text-transparent">
-            Give your work
-          </span>
-          <br />
-          <span className="bg-gradient-to-r from-[var(--accent)] to-violet-400 bg-clip-text text-transparent">
-            a place to orbit.
+      <div className="w-full max-w-xl px-6 text-center">
+        <h1 className="mb-8 text-5xl font-semibold tracking-tight text-zinc-100 sm:text-6xl">
+          <span className="bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">
+            Orbit.
           </span>
         </h1>
 
-        <p className="mb-10 text-lg text-zinc-400 sm:text-xl">
-          Small launches compound faster than perfect plans. Keep your ideas, tasks, and flowcharts in one calm place.
+        <p className="mb-12 text-zinc-500">
+          Your ideas, tasks, and flowcharts in one quiet place.
         </p>
 
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <Button className="h-11 px-8 text-base" asChild>
-            <Link href="/auth">
-              Get started
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Link href="/auth?tab=login" className="text-sm text-zinc-500 transition-colors hover:text-zinc-300">
-            Already have an account?
+        <Button className="h-10 px-6" asChild>
+          <Link href="/auth">
+            Enter
+            <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
-        </div>
+        </Button>
       </div>
     </main>
   );
