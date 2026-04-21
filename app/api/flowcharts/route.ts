@@ -4,46 +4,9 @@ import { db } from "@/src/db";
 import { flowcharts, users, workspaceMembers } from "@/src/db/schema";
 import { eq, and } from "drizzle-orm";
 
-function readJwtSubject(token: string | null): string | null {
-  if (!token) {
-    return null;
-  }
-
-  try {
-    const payload = token.split(".")[1];
-
-    if (!payload) {
-      return null;
-    }
-
-    const decodedPayload = Buffer.from(payload.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
-    const parsed = JSON.parse(decodedPayload) as { sub?: string } | null;
-
-    return typeof parsed?.sub === "string" ? parsed.sub : null;
-  } catch {
-    return null;
-  }
-}
-
 async function getAuthUserId(request: NextRequest): Promise<string | null> {
   const authUserIdFromHeader = request.headers.get("x-auth-user-id")?.trim();
-
-  if (authUserIdFromHeader) {
-    return authUserIdFromHeader;
-  }
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.slice(7).trim();
-    return readJwtSubject(token);
-  }
-
-  const [defaultUser] = await db
-    .select({ authUserId: users.authUserId })
-    .from(users)
-    .limit(1);
-
-  return defaultUser?.authUserId ?? null;
+  return authUserIdFromHeader || null;
 }
 
 export async function GET(request: NextRequest) {
