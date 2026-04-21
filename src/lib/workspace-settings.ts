@@ -127,7 +127,17 @@ export const workspaceSettingsSchema = z.object({
 
 export type WorkspaceSettingsDocument = z.infer<typeof workspaceSettingsSchema>;
 
-export const defaultWorkspaceSettings: WorkspaceSettingsDocument = workspaceSettingsSchema.parse({});
+export const defaultWorkspaceSettings: WorkspaceSettingsDocument = workspaceSettingsSchema.parse({
+  general: {},
+  notifications: {},
+  tasks: {},
+  calendar: {},
+  reports: {},
+  integrations: {},
+  security: {},
+  appearance: {},
+  advanced: {},
+});
 
 export const workspaceSettingsPatchSchema = z.discriminatedUnion("section", [
   z.object({ section: z.literal("general"), data: generalSettingsSchema }),
