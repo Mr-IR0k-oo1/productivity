@@ -1,7 +1,6 @@
 type ApiSessionContext = {
   workspaceId?: string;
   authToken?: string | null;
-  authUserId?: string | null;
 };
 
 function readErrorMessage(response: Response) {
@@ -24,34 +23,13 @@ function readErrorMessage(response: Response) {
 
 export function buildApiHeaders(session: ApiSessionContext, headers: HeadersInit = {}) {
   const requestHeaders = new Headers(headers);
-  const authToken = session.authToken?.trim() || null;
-
-  let authUserId = session.authUserId?.trim() || null;
-
-  if (!authUserId && authToken) {
-    try {
-      const payload = authToken.split(".")[1];
-
-      if (payload) {
-        const decodedPayload = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-        const parsed = JSON.parse(decodedPayload) as { sub?: string } | null;
-        authUserId = typeof parsed?.sub === "string" ? parsed.sub : null;
-      }
-    } catch {
-      authUserId = null;
-    }
-  }
 
   if (session.workspaceId) {
     requestHeaders.set("x-workspace-id", session.workspaceId);
   }
 
-  if (authToken) {
-    requestHeaders.set("authorization", `Bearer ${authToken}`);
-  }
-
-  if (authUserId) {
-    requestHeaders.set("x-auth-user-id", authUserId);
+  if (session.authToken) {
+    requestHeaders.set("authorization", `Bearer ${session.authToken}`);
   }
 
   return requestHeaders;

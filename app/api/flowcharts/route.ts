@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { db } from "@/src/db";
 import { flowcharts, users, workspaceMembers } from "@/src/db/schema";
+import { supabaseAdmin } from "@/src/lib/supabase";
 import { eq, and } from "drizzle-orm";
 
 async function getAuthUserId(request: NextRequest): Promise<string | null> {
-  const authUserIdFromHeader = request.headers.get("x-auth-user-id")?.trim();
-  return authUserIdFromHeader || null;
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7).trim();
+    const { data } = await supabaseAdmin.auth.getUser(token);
+    return data.user?.id ?? null;
+  }
+  return null;
 }
 
 export async function GET(request: NextRequest) {
