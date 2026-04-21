@@ -80,7 +80,7 @@ export default function AuthCallbackPage() {
     const completeOAuth = async () => {
       if (!supabase) {
         if (isActive) {
-          router.replace("/auth?error=oauth_unavailable");
+          router.replace("/login?error=oauth_unavailable");
         }
         return;
       }
@@ -92,7 +92,7 @@ export default function AuthCallbackPage() {
 
         if (error) {
           if (isActive) {
-            router.replace("/auth?error=oauth_failed");
+            router.replace("/login?error=oauth_failed");
           }
           return;
         }
@@ -104,14 +104,14 @@ export default function AuthCallbackPage() {
         session = await resolveSessionWithRetry();
       } catch {
         if (isActive) {
-          router.replace("/auth?error=oauth_failed");
+          router.replace("/login?error=oauth_failed");
         }
         return;
       }
 
       if (!session) {
         if (isActive) {
-          router.replace("/auth?error=oauth_failed");
+          router.replace("/login?error=oauth_failed");
         }
         return;
       }
@@ -136,7 +136,7 @@ export default function AuthCallbackPage() {
         }
       } catch {
         if (isActive) {
-          router.replace("/auth?error=oauth_bootstrap_failed");
+          router.replace("/login?error=oauth_bootstrap_failed");
         }
       }
     };

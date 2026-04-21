@@ -68,8 +68,12 @@ Copy `.env.example` to `.env.local` and fill:
 - `APP_URL`
 - `API_URL`
 - `NEXT_PUBLIC_DEFAULT_WORKSPACE_ID` (optional; if omitted, the app resolves the first accessible workspace from the API)
+- `ORBIT_DISABLE_AUTH` (optional; local development auth bypass)
+- `NEXT_PUBLIC_ORBIT_DISABLE_AUTH` (optional; local development auth bypass)
 
 The browser reads the active Supabase session directly, keeps the current workspace id in local storage under `pf-workspace-id`, and falls back to the first accessible workspace when needed.
+
+For local testing without login, set both `ORBIT_DISABLE_AUTH=true` and `NEXT_PUBLIC_ORBIT_DISABLE_AUTH=true`. Keep them `false` in production.
 
 ## OAuth Setup (Supabase)
 
@@ -81,7 +85,17 @@ The browser reads the active Supabase session directly, keeps the current worksp
 - `http://localhost:3000/auth/callback`
 - `https://your-domain.com/auth/callback`
 
-Orbit uses `/auth` as an OAuth-first sign-in page and `/auth/callback` to complete session bootstrap and first-workspace provisioning.
+Orbit uses `/login` and `/register` as canonical auth entrypoints, with `/auth/callback` for OAuth completion and bootstrap.
+
+## Supabase Auth Hardening Scripts
+
+Run the SQL scripts in order from Supabase SQL Editor:
+
+1. `scripts/supabase/01_auth_sync_and_indexes.sql`
+2. `scripts/supabase/02_auth_backfill.sql`
+3. `scripts/supabase/03_workspace_backfill.sql`
+
+Detailed guide: [`docs/supabase-auth-setup.md`](docs/supabase-auth-setup.md)
 
 ## Local Development
 

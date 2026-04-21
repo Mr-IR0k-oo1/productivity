@@ -5,6 +5,7 @@ import { cors } from "hono/cors";
 import { Hono } from "hono";
 
 import workspaceRoute from "@/src/routes/workspace";
+import authRoute from "@/src/routes/auth";
 import settingsRoute from "@/src/routes/settings";
 import ideasRoute from "@/src/routes/ideas";
 import tasksRoute from "@/src/routes/tasks";
@@ -27,6 +28,7 @@ app.notFound((c) => c.json({ error: "Not found" }, 404));
 app.get("/", (c) => c.json({ ok: true, service: "Orbit API" }));
 app.get("/health", (c) => c.json({ ok: true }));
 
+app.route("/api/auth", authRoute);
 app.route("/api/workspace", workspaceRoute);
 app.route("/api/settings", settingsRoute);
 app.route("/api/ideas", ideasRoute);

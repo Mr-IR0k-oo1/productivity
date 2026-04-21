@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import LoginForm from "@/components/auth/LoginForm";
 import RegisterForm from "@/components/auth/RegisterForm";
@@ -13,6 +13,16 @@ type AuthMode = "login" | "register";
 
 type AuthRoutePageProps = {
   mode: AuthMode;
+};
+
+const callbackErrorMessages: Record<string, string> = {
+  oauth_failed: "OAuth sign-in failed. Please try again.",
+  oauth_bootstrap_failed: "Sign-in succeeded, but workspace setup failed. Please contact support.",
+  oauth_unavailable: "OAuth is not available right now. Check your Supabase client configuration.",
+};
+
+const queryNoticeMessages: Record<string, string> = {
+  check_email: "Account created. Check your inbox to confirm your email before signing in.",
 };
 
 const copyByMode: Record<
@@ -47,9 +57,13 @@ const copyByMode: Record<
 export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
   const { isReady, userId } = useSessionContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const copy = copyByMode[mode];
   const isLogin = mode === "login";
-  const tabbedAuthHref = mode === "register" ? "/auth?tab=register" : "/auth";
+  const queryError = searchParams.get("error");
+  const queryNotice = searchParams.get("notice");
+  const errorMessage = queryError ? callbackErrorMessages[queryError] ?? "Unable to complete sign in." : null;
+  const noticeMessage = queryNotice ? queryNoticeMessages[queryNotice] ?? null : null;
 
   useEffect(() => {
     if (isReady && userId) {
@@ -63,9 +77,9 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
         <div className="mb-10 flex justify-center">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent)]">
-              <span className="text-3xl font-bold text-white">P</span>
+              <span className="text-3xl font-bold text-white">O</span>
             </div>
-            <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">PulseForge</h1>
+            <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">Orbit</h1>
           </div>
         </div>
 
@@ -76,19 +90,21 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
             <p className="text-sm text-[var(--muted)]">{copy.description}</p>
           </div>
 
-          <div className="mt-8">{isLogin ? <LoginForm showSocialLogin={false} showRegisterPrompt={false} /> : <RegisterForm showLoginPrompt={false} />}</div>
+          {errorMessage ? (
+            <p className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{errorMessage}</p>
+          ) : null}
+
+          {noticeMessage ? (
+            <p className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">{noticeMessage}</p>
+          ) : null}
+
+          <div className="mt-8">{isLogin ? <LoginForm showSocialLogin showRegisterPrompt={false} /> : <RegisterForm showLoginPrompt={false} />}</div>
 
           <div className="mt-6 flex items-center justify-between gap-4 border-t border-[color:var(--card-border)] pt-6 text-sm">
             <p className="text-[var(--muted)]">{copy.alternatePrompt}</p>
             <Button asChild variant="secondary" size="sm">
               <Link href={copy.alternateHref}>{copy.alternateLabel}</Link>
             </Button>
-          </div>
-
-          <div className="mt-4 text-center">
-            <Link href={tabbedAuthHref} className="text-sm text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
-              Open tabbed auth
-            </Link>
           </div>
         </div>
       </div>

@@ -8,6 +8,8 @@ import { supabaseClient } from "@/lib/supabase/client";
 import type { WorkspaceRole } from "@/src/lib/workspace-access";
 
 const defaultWorkspaceId = process.env.NEXT_PUBLIC_DEFAULT_WORKSPACE_ID?.trim() || "";
+const isAuthBypassEnabled = process.env.NEXT_PUBLIC_ORBIT_DISABLE_AUTH === "true";
+const authBypassToken = "dev-auth-bypass";
 
 type WorkspaceListResponse = {
   data: Array<{
@@ -29,6 +31,12 @@ type WorkspaceProfileResponse = {
       role: WorkspaceRole;
       isActive: boolean;
     };
+  };
+};
+
+type AuthSessionResponse = {
+  data: {
+    authUserId: string;
   };
 };
 
@@ -57,47 +65,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [hasResolvedInitialAuth, setHasResolvedInitialAuth] = useState(!isAuthBypassEnabled);
 
   useEffect(() => {
     const storedWorkspaceId = readWorkspaceId();
+    let isActive = true;
 
     if (storedWorkspaceId) {
       setWorkspaceIdState(storedWorkspaceId);
     }
-
-    if (!supabaseClient) {
-      setWorkspaceRole(null);
-      setIsReady(true);
-      return;
-    }
-
-    let isActive = true;
-
-    void supabaseClient.auth
-      .getSession()
-      .then(({ data }) => {
-        if (!isActive) {
-          return;
-        }
-
-        setAuthToken(data.session?.access_token ?? null);
-        setUserId(data.session?.user.id ?? null);
-
-        if (!data.session) {
-          setWorkspaceRole(null);
-          setIsReady(true);
-        }
-      })
-      .catch(() => {
-        if (isActive) {
-          setIsReady(true);
-        }
-      });
-
-    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-      setAuthToken(session?.access_token ?? null);
-      setUserId(session?.user.id ?? null);
-    });
 
     const onStorage = (event: StorageEvent) => {
       if (event.key !== WORKSPACE_STORAGE_KEY) {
@@ -109,6 +85,81 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener("storage", onStorage);
 
+    if (isAuthBypassEnabled) {
+      setIsReady(false);
+
+      void fetchApiJson<AuthSessionResponse>("/api/auth/session", {
+        session: { authToken: authBypassToken },
+      })
+        .then((payload) => {
+          if (!isActive) {
+            return;
+          }
+
+          const resolvedUserId = payload.data.authUserId?.trim() || null;
+          setAuthToken(resolvedUserId ? authBypassToken : null);
+          setUserId(resolvedUserId);
+        })
+        .catch(() => {
+          if (!isActive) {
+            return;
+          }
+
+          setAuthToken(null);
+          setUserId(null);
+        })
+        .finally(() => {
+          if (!isActive) {
+            return;
+          }
+
+          setHasResolvedInitialAuth(true);
+        });
+
+      return () => {
+        isActive = false;
+        window.removeEventListener("storage", onStorage);
+      };
+    }
+
+    if (!supabaseClient) {
+      setWorkspaceRole(null);
+      setHasResolvedInitialAuth(true);
+      setIsReady(true);
+      return () => {
+        isActive = false;
+        window.removeEventListener("storage", onStorage);
+      };
+    }
+
+    void supabaseClient.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!isActive) {
+          return;
+        }
+
+        setAuthToken(data.session?.access_token ?? null);
+        setUserId(data.session?.user.id ?? null);
+        setHasResolvedInitialAuth(true);
+
+        if (!data.session) {
+          setWorkspaceRole(null);
+          setIsReady(true);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setHasResolvedInitialAuth(true);
+          setIsReady(true);
+        }
+      });
+
+    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      setAuthToken(session?.access_token ?? null);
+      setUserId(session?.user.id ?? null);
+    });
+
     return () => {
       isActive = false;
       data.subscription.unsubscribe();
@@ -117,6 +168,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!hasResolvedInitialAuth) {
+      return;
+    }
+
     if (!authToken || !userId) {
       setWorkspaceRole(null);
       setIsReady(true);
@@ -234,7 +289,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [authToken, userId, workspaceId]);
+  }, [authToken, hasResolvedInitialAuth, userId, workspaceId]);
 
   useEffect(() => {
     if (!isReady || typeof window === "undefined") {

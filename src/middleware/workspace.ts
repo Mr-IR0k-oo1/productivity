@@ -5,12 +5,28 @@ import { db } from "@/src/db";
 import { users, workspaceMembers } from "@/src/db/schema";
 import type { WorkspaceBindings } from "@/src/types/bindings";
 
+const isAuthBypassEnabled =
+  process.env.ORBIT_DISABLE_AUTH === "true" || process.env.NEXT_PUBLIC_ORBIT_DISABLE_AUTH === "true";
+
+async function resolveFirstActiveMembership(userId: string) {
+  const [member] = await db
+    .select({
+      workspaceId: workspaceMembers.workspaceId,
+      role: workspaceMembers.role,
+    })
+    .from(workspaceMembers)
+    .where(and(eq(workspaceMembers.userId, userId), eq(workspaceMembers.isActive, true)))
+    .limit(1);
+
+  return member ?? null;
+}
+
 export const workspaceMiddleware = createMiddleware<WorkspaceBindings>(async (c, next) => {
   const authUserId = c.get("authUserId");
-  const workspaceId = c.req.header("x-workspace-id");
+  const requestedWorkspaceId = c.req.header("x-workspace-id")?.trim() ?? "";
 
-  if (!authUserId || !workspaceId) {
-    return c.json({ error: "Missing auth or workspace context" }, 400);
+  if (!authUserId) {
+    return c.json({ error: "Missing auth context" }, 400);
   }
 
   const [user] = await db
@@ -23,20 +39,43 @@ export const workspaceMiddleware = createMiddleware<WorkspaceBindings>(async (c,
     return c.json({ error: "User not found" }, 404);
   }
 
+  const resolveAndSetContext = async () => {
+    const fallbackMembership = await resolveFirstActiveMembership(user.id);
+
+    if (!fallbackMembership) {
+      return c.json({ error: "Workspace membership required" }, 403);
+    }
+
+    c.set("userId", user.id);
+    c.set("workspaceId", fallbackMembership.workspaceId);
+    c.set("workspaceRole", fallbackMembership.role);
+    await next();
+  };
+
+  if (!requestedWorkspaceId) {
+    if (!isAuthBypassEnabled) {
+      return c.json({ error: "Missing workspace context" }, 400);
+    }
+
+    return resolveAndSetContext();
+  }
+
   const [member] = await db
     .select({ workspaceId: workspaceMembers.workspaceId, role: workspaceMembers.role, isActive: workspaceMembers.isActive })
     .from(workspaceMembers)
-    .where(
-      and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, user.id)),
-    )
+    .where(and(eq(workspaceMembers.workspaceId, requestedWorkspaceId), eq(workspaceMembers.userId, user.id)))
     .limit(1);
 
   if (!member || !member.isActive) {
-    return c.json({ error: "Workspace membership required" }, 403);
+    if (!isAuthBypassEnabled) {
+      return c.json({ error: "Workspace membership required" }, 403);
+    }
+
+    return resolveAndSetContext();
   }
 
   c.set("userId", user.id);
-  c.set("workspaceId", workspaceId);
+  c.set("workspaceId", requestedWorkspaceId);
   c.set("workspaceRole", member.role);
   await next();
 });

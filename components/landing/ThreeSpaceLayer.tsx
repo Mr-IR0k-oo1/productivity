@@ -12,6 +12,9 @@ export function ThreeSpaceLayer() {
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    const root = document.documentElement;
+    const getThemeColor = () => getComputedStyle(root).getPropertyValue('--foreground').trim() || '#f5f5f5';
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(44, 1, 0.1, 100);
     camera.position.set(0, 0, 8);
@@ -39,7 +42,7 @@ export function ThreeSpaceLayer() {
     farStarGeometry.setAttribute("position", new THREE.BufferAttribute(farStarPositions, 3));
 
     const farStarMaterial = new THREE.PointsMaterial({
-      color: new THREE.Color("#dce7ff"),
+      color: new THREE.Color(getThemeColor()),
       size: 0.028,
       transparent: true,
       opacity: 0.16,
@@ -66,7 +69,7 @@ export function ThreeSpaceLayer() {
     nearStarGeometry.setAttribute("position", new THREE.BufferAttribute(nearStarPositions, 3));
 
     const nearStarMaterial = new THREE.PointsMaterial({
-      color: new THREE.Color("#f2f6ff"),
+      color: new THREE.Color(getThemeColor()),
       size: 0.04,
       transparent: true,
       opacity: 0.18,
@@ -78,6 +81,13 @@ export function ThreeSpaceLayer() {
     const nearStars = new THREE.Points(nearStarGeometry, nearStarMaterial);
     nearStars.position.z = -1.2;
     scene.add(nearStars);
+
+    const observer = new MutationObserver(() => {
+      const color = getThemeColor();
+      farStarMaterial.color.set(color);
+      nearStarMaterial.color.set(color);
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ['data-theme', 'class'] });
 
     const setSize = () => {
       const width = mountNode.clientWidth || window.innerWidth;
@@ -116,6 +126,7 @@ export function ThreeSpaceLayer() {
     return () => {
       window.removeEventListener("resize", setSize);
       window.cancelAnimationFrame(animationFrame);
+      observer.disconnect();
 
       farStarGeometry.dispose();
       farStarMaterial.dispose();

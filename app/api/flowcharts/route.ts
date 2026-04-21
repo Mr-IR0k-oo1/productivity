@@ -5,7 +5,31 @@ import { flowcharts, users, workspaceMembers } from "@/src/db/schema";
 import { supabaseAdmin } from "@/src/lib/supabase";
 import { eq, and } from "drizzle-orm";
 
+const isAuthBypassEnabled =
+  process.env.ORBIT_DISABLE_AUTH === "true" || process.env.NEXT_PUBLIC_ORBIT_DISABLE_AUTH === "true";
+let cachedBypassAuthUserId: string | null = null;
+
 async function getAuthUserId(request: NextRequest): Promise<string | null> {
+  if (isAuthBypassEnabled) {
+    const headerAuthUserId = request.headers.get("x-dev-auth-user-id")?.trim();
+
+    if (headerAuthUserId) {
+      return headerAuthUserId;
+    }
+
+    if (cachedBypassAuthUserId) {
+      return cachedBypassAuthUserId;
+    }
+
+    const [user] = await db
+      .select({ authUserId: users.authUserId })
+      .from(users)
+      .limit(1);
+
+    cachedBypassAuthUserId = user?.authUserId ?? null;
+    return cachedBypassAuthUserId;
+  }
+
   const authHeader = request.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7).trim();
