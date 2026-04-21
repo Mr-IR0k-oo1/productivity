@@ -1032,7 +1032,7 @@ export function IdeaWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const ideaIdFromQuery = searchParams.get("ideaId");
-  const [ideas, setIdeas] = useState<IdeaRecord[]>(initialIdeas);
+  const [ideas, setIdeas] = useState<IdeaRecord[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | IdeaStatus>("all");
