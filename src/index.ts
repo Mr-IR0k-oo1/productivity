@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { Hono } from "hono";
+import { sql } from "drizzle-orm";
 
 import workspaceRoute from "@/src/routes/workspace";
 import authRoute from "@/src/routes/auth";
@@ -11,6 +12,7 @@ import flowchartsRoute from "@/src/routes/flowcharts";
 import calendarRoute from "@/src/routes/calendar";
 import timeRoute from "@/src/routes/time";
 import reportsRoute from "@/src/routes/reports";
+import { db } from "@/src/db";
 
 const app = new Hono();
 
@@ -25,6 +27,15 @@ app.notFound((c) => c.json({ error: "Not found" }, 404));
 
 app.get("/", (c) => c.json({ ok: true, service: "Orbit API" }));
 app.get("/health", (c) => c.json({ ok: true }));
+app.get("/api/health/db", async (c) => {
+  try {
+    await db.execute(sql`select 1`);
+    return c.json({ ok: true, database: "reachable", timestamp: new Date().toISOString() }, 200);
+  } catch (error) {
+    console.error("Database health check failed", error);
+    return c.json({ ok: false, database: "unreachable" }, 503);
+  }
+});
 
 app.route("/api/auth", authRoute);
 app.route("/api/workspace", workspaceRoute);

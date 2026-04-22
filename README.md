@@ -75,6 +75,19 @@ The browser reads the active Supabase session directly, keeps the current worksp
 
 For local testing without login, set both `ORBIT_DISABLE_AUTH=true` and `NEXT_PUBLIC_ORBIT_DISABLE_AUTH=true`. Keep them `false` in production.
 
+### `DATABASE_URL` for Vercel
+
+Set only the connection URL value (no `DATABASE_URL=` prefix and no wrapping quotes).
+
+- Correct:
+  - `postgresql://postgres:your%40encoded%23password@db.<project-ref>.supabase.co:5432/postgres`
+- Incorrect:
+  - `"postgresql://..."`
+  - `'postgresql://...'`
+  - `DATABASE_URL=postgresql://...`
+
+If your password contains reserved URL characters, URL-encode them (`@` -> `%40`, `#` -> `%23`, `%` -> `%25`, `?` -> `%3F`, `/` -> `%2F`).
+
 ## OAuth Setup (Supabase)
 
 1. Open Supabase Dashboard for your project.
@@ -87,13 +100,13 @@ For local testing without login, set both `ORBIT_DISABLE_AUTH=true` and `NEXT_PU
 
 Orbit uses `/login` and `/register` as canonical auth entrypoints, with `/auth/callback` for OAuth completion and bootstrap.
 
-## Supabase Auth Hardening Scripts
+## Supabase Canonical SQL Setup
 
-Run the SQL scripts in order from Supabase SQL Editor:
+Run this script in Supabase SQL Editor:
 
-1. `scripts/supabase/01_auth_sync_and_indexes.sql`
-2. `scripts/supabase/02_auth_backfill.sql`
-3. `scripts/supabase/03_workspace_backfill.sql`
+1. `scripts/supabase/orbit_canonical_setup.sql`
+
+It creates/aligns Orbit schema objects, configures auth sync trigger behavior, backfills users/workspace membership, seeds starter tasks, and includes verification queries at the end.
 
 Detailed guide: [`docs/supabase-auth-setup.md`](docs/supabase-auth-setup.md)
 
@@ -129,6 +142,12 @@ npm run db:push
 1. Import this repository into Vercel.
 2. Framework preset: Next.js.
 3. Set all environment variables from `.env.example`.
-4. Deploy.
+4. Set `DATABASE_URL` in Production, Preview, and Development scopes.
+5. Deploy.
 
 The Next.js app serves UI and the Hono API through `api/[[...route]].ts` serverless handlers.
+
+Runtime health checks:
+
+- API liveness: `/health`
+- DB-aware health check: `/api/health/db`

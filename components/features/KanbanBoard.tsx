@@ -48,7 +48,12 @@ const statusColumns: Array<{ id: TaskStatus; title: string }> = [
 ];
 
 function isOverdue(dueDate: string) {
-  return new Date(dueDate) < new Date("2026-04-14T09:00:00");
+  const parsed = new Date(dueDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  return parsed < new Date();
 }
 
 function DroppableColumn({

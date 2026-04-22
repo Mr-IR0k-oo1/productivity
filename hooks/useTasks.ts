@@ -6,6 +6,7 @@ import { useSessionContext } from "@/components/providers/SessionProvider";
 import { fetchApiJson } from "@/lib/api/client";
 import { supabaseClient } from "@/lib/supabase/client";
 import type { TaskStatus } from "@/types/task-status";
+import { normalizeTaskViewMetadata, type TaskViewMetadata } from "@/types/task-view-metadata";
 
 export type TaskDTO = {
   id: string;
@@ -15,7 +16,7 @@ export type TaskDTO = {
   status: TaskStatus;
   priority: number;
   dueDate: string | null;
-  metadata: Record<string, unknown>;
+  metadata: TaskViewMetadata;
   createdAt: string;
   updatedAt: string;
 };
@@ -36,7 +37,7 @@ export type UpdateTaskPayload = {
   status?: TaskStatus;
   priority?: number;
   dueDate?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: Partial<TaskViewMetadata>;
 };
 
 export const tasksQueryKey = (workspaceId: string) => ["tasks", workspaceId] as const;
@@ -98,7 +99,7 @@ export function useCreateTaskMutation() {
       status?: TaskStatus;
       priority?: number;
       dueDate?: string;
-      metadata?: Record<string, unknown>;
+      metadata?: Partial<TaskViewMetadata>;
     }) => {
       if (!isReady || !userId || !authToken) {
         throw new Error("Authentication is required");
@@ -125,7 +126,7 @@ export function useCreateTaskMutation() {
         status: payload.status ?? "todo",
         priority: payload.priority ?? 2,
         dueDate: payload.dueDate ?? null,
-        metadata: payload.metadata ?? {},
+        metadata: normalizeTaskViewMetadata(payload.metadata),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -234,6 +235,35 @@ export function useUpdateTaskStatusMutation() {
       if (context?.previous) {
         queryClient.setQueriesData({ queryKey: queryPrefix }, context.previous);
       }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryPrefix });
+    },
+  });
+}
+
+export function useAddTaskDependencyMutation() {
+  const { workspaceId, authToken, userId, isReady } = useSessionContext();
+  const queryClient = useQueryClient();
+  const queryPrefix = [...tasksQueryKey(workspaceId), userId ?? "anonymous"];
+
+  return useMutation({
+    mutationFn: async (payload: { taskId: string; dependsOnTaskId: string }) => {
+      if (!isReady || !userId || !authToken) {
+        throw new Error("Authentication is required");
+      }
+
+      return fetchApiJson<{ data: { taskId: string; dependsOnTaskId: string } }>(
+        `/api/tasks/${payload.taskId}/dependencies`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          session: { workspaceId, authToken },
+          body: JSON.stringify({ dependsOnTaskId: payload.dependsOnTaskId }),
+        },
+      );
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryPrefix });

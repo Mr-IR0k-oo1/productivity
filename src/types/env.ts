@@ -8,26 +8,26 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 function normalizeDatabaseUrl(value: string) {
-  const trimmed = value.trim();
-
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return trimmed.slice(1, -1).trim();
-  }
-
-  return trimmed;
+  return value.trim();
 }
 
 const postgresUrlSchema = z
   .string()
   .min(1, "DATABASE_URL is required")
   .transform(normalizeDatabaseUrl)
+  .refine((value) => !/^database_url=/i.test(value), "DATABASE_URL must be value-only (remove the DATABASE_URL= prefix)")
+  .refine(
+    (value) =>
+      !(
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ),
+    "DATABASE_URL must not be wrapped in quotes",
+  )
   .refine((value) => {
     try {
-      new URL(value.replace(/^postgresql:\/\//, "postgres://"));
-      return true;
+      const parsed = new URL(value.replace(/^postgresql:\/\//, "postgres://"));
+      return (parsed.protocol === "postgres:" || parsed.protocol === "postgresql:") && Boolean(parsed.username) && Boolean(parsed.hostname);
     } catch {
       return false;
     }

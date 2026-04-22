@@ -7,7 +7,6 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isAfter,
   isSameDay,
   isSameMonth,
   isToday,
@@ -25,22 +24,22 @@ import {
   Flag,
   GanttChartSquare,
   Link2,
-  ListFilter,
   Plus,
   Search,
   SquareCheckBig,
   Table2,
   Trash2,
-  UserPlus,
 } from "lucide-react";
 
 import { KanbanBoard } from "@/components/features/KanbanBoard";
+import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  useAddTaskDependencyMutation,
   useTasksQuery,
   useUpdateTaskStatusMutation,
   useUpdateTaskMutation,
@@ -48,10 +47,12 @@ import {
   useDeleteTaskMutation,
   type TaskDTO,
 } from "@/hooks/useTasks";
+import { useWorkspaceMembersQuery, type WorkspaceMemberDTO } from "@/hooks/useWorkspaceMembers";
 import { cn } from "@/lib/utils";
+import type { TaskStatus } from "@/types/task-status";
+import { normalizeTaskViewMetadata, type TaskViewMetadata } from "@/types/task-view-metadata";
 
 type ViewMode = "kanban" | "list" | "calendar" | "gantt";
-type TaskStatus = "todo" | "in_progress" | "review" | "done";
 type TaskPriority = "High" | "Medium" | "Low";
 type DueFilter = "all" | "mine" | "overdue" | "this-week";
 
@@ -59,6 +60,7 @@ type TaskRecord = {
   id: string;
   title: string;
   description: string;
+  assigneeId: string | null;
   assignee: string;
   initials: string;
   dueDate: string;
@@ -72,43 +74,73 @@ type TaskRecord = {
   progress: number;
   recurring?: boolean;
   dependency?: string;
+  isMilestone: boolean;
   startDate: string;
   endDate: string;
+  metadata: TaskViewMetadata;
 };
 
-const referenceDate = new Date("2026-04-14T09:00:00");
+const priorityOptions = ["All", "High", "Medium", "Low"] as const;
 
-function mapTaskDTOToRecord(task: TaskDTO): TaskRecord {
+function resolveMemberDisplayName(member: WorkspaceMemberDTO | undefined) {
+  if (!member) {
+    return null;
+  }
+
+  const fullName = member.user.fullName?.trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  return member.user.email;
+}
+
+function mapTaskDTOToRecord(
+  task: TaskDTO,
+  memberMap: Map<string, WorkspaceMemberDTO>,
+  currentUserId: string | null,
+): TaskRecord {
   const priorityMap: Record<number, TaskPriority> = { 1: "High", 2: "Medium", 3: "Low" };
-  const metadata = task.metadata as Record<string, unknown> || {};
+  const metadata = normalizeTaskViewMetadata(task.metadata, { startDate: task.createdAt });
+  const member = task.assigneeId ? memberMap.get(task.assigneeId) : undefined;
+  const assigneeName = metadata.assigneeName ?? (task.assigneeId === currentUserId ? "You" : resolveMemberDisplayName(member)) ?? "Unassigned";
+
   return {
     id: task.id,
     title: task.title,
     description: task.description || "",
-    assignee: (metadata.assigneeName as string) || "Unassigned",
-    initials: ((metadata.assigneeName as string) || "U").slice(0, 2).toUpperCase(),
-    dueDate: task.dueDate || new Date().toISOString(),
+    assigneeId: task.assigneeId,
+    assignee: assigneeName,
+    initials: assigneeName.slice(0, 2).toUpperCase(),
+    dueDate: task.dueDate || task.createdAt,
     priority: priorityMap[task.priority] || "Medium",
-    labels: (metadata.labels as string[]) || [],
+    labels: metadata.labels,
     status: task.status,
-    subtasksDone: (metadata.subtasksDone as number) || 0,
-    subtasksTotal: (metadata.subtasksTotal as number) || 0,
-    comments: (metadata.comments as number) || 0,
-    estimateHours: (metadata.estimateHours as number) || 0,
-    progress: (metadata.progress as number) || 0,
-    recurring: metadata.recurring as boolean,
-    dependency: metadata.dependency as string,
-    startDate: (metadata.startDate as string) || new Date().toISOString(),
-    endDate: task.dueDate || new Date().toISOString(),
+    subtasksDone: metadata.subtasksDone,
+    subtasksTotal: metadata.subtasksTotal,
+    comments: metadata.comments,
+    estimateHours: metadata.estimateHours,
+    progress: metadata.progress,
+    recurring: metadata.recurring,
+    dependency: metadata.dependency ?? undefined,
+    isMilestone: metadata.isMilestone,
+    startDate: metadata.startDate,
+    endDate: task.dueDate || metadata.startDate,
+    metadata,
   };
 }
 
-const assigneeOptions = ["All", "Arun", "Bala", "Chitra", "Dev"] as const;
-const priorityOptions = ["All", "High", "Medium", "Low"] as const;
-
 function formatDueDate(value: string) {
+  const now = new Date();
   const dueDate = parseISO(value);
-  const overdue = dueDate < referenceDate && !isToday(dueDate);
+  if (Number.isNaN(dueDate.getTime())) {
+    return {
+      label: "No due date",
+      overdue: false,
+    };
+  }
+
+  const overdue = dueDate < now && !isToday(dueDate);
 
   return {
     label: format(dueDate, "MMM d, h:mm a"),
@@ -117,18 +149,32 @@ function formatDueDate(value: string) {
 }
 
 function getTaskWindow(task: TaskRecord) {
+  const parsedStart = parseISO(task.startDate);
+  const start = Number.isNaN(parsedStart.getTime()) ? new Date() : parsedStart;
+  const parsedEnd = parseISO(task.endDate);
+  const end = Number.isNaN(parsedEnd.getTime()) ? start : parsedEnd;
+
   return {
-    start: parseISO(task.startDate),
-    end: parseISO(task.endDate),
+    start,
+    end,
   };
 }
 
-const TaskStats = memo(function TaskStats() {
+const TaskStats = memo(function TaskStats({ tasks }: { tasks: TaskRecord[] }) {
+  const now = new Date();
+  const openCount = tasks.filter((task) => task.status !== "done").length;
+  const overdueCount = tasks.filter((task) => {
+    const due = parseISO(task.dueDate);
+    return due < now && task.status !== "done";
+  }).length;
+  const inProgressCount = tasks.filter((task) => task.status === "in_progress").length;
+  const doneCount = tasks.filter((task) => task.status === "done").length;
+
   const stats = [
-    { title: "Open Tasks", value: "18", trend: "+3 this week" },
-    { title: "Overdue", value: "2", trend: "Needs attention", positive: false },
-    { title: "In Progress", value: "7", trend: "Balanced across owners" },
-    { title: "Completed", value: "12", trend: "67% this sprint" },
+    { title: "Open Tasks", value: String(openCount), trend: `${openCount} active now` },
+    { title: "Overdue", value: String(overdueCount), trend: overdueCount > 0 ? "Needs attention" : "All clear", positive: overdueCount === 0 },
+    { title: "In Progress", value: String(inProgressCount), trend: `${inProgressCount} being worked on` },
+    { title: "Completed", value: String(doneCount), trend: `${doneCount} completed` },
   ];
 
   return (
@@ -167,6 +213,7 @@ const TaskToolbar = memo(function TaskToolbar({
   onOpenCreate,
   onBulkStatusChange,
   onBulkDelete,
+  assigneeOptions,
   activeFilterCount,
   clearAllFilters,
 }: {
@@ -186,6 +233,7 @@ const TaskToolbar = memo(function TaskToolbar({
   onOpenCreate: () => void;
   onBulkStatusChange: (status: TaskStatus) => void;
   onBulkDelete: () => void;
+  assigneeOptions: Array<{ value: string; label: string }>;
   activeFilterCount: number;
   clearAllFilters: () => void;
 }) {
@@ -283,8 +331,8 @@ const TaskToolbar = memo(function TaskToolbar({
             className="h-10 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
           >
             {assigneeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option === "All" ? "All Assignees" : option}
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -425,9 +473,8 @@ function TaskDetailPanel({
               <CardContent className="space-y-3 p-4">
                 <p className="text-sm font-medium text-zinc-200">Comments + Activity</p>
                 <div className="space-y-2 text-sm text-zinc-400">
-                  <p>Arun: Needs review on the dependency blocker.</p>
-                  <p>Bala: Updated the filter logic and rechecked the due date state.</p>
-                  <p>Dev: Waiting on the API update before final handoff.</p>
+                  <p>Activity syncs from live task updates and collaboration actions.</p>
+                  <p>Use Focus Mode for deep work and return here to manage dependencies.</p>
                 </div>
               </CardContent>
             </Card>
@@ -441,7 +488,7 @@ function TaskDetailPanel({
               <CardContent className="space-y-2">
                 <Button className="w-full justify-start" variant="secondary" onClick={onStartTimer}>
                   <Clock3 className="h-4 w-4" />
-                  Start timer
+                  Open focus mode
                 </Button>
                 <Button className="w-full justify-start" variant="secondary" onClick={onConvertToMilestone}>
                   <Flag className="h-4 w-4" />
@@ -474,6 +521,10 @@ function TaskDetailPanel({
                 <div className="flex items-center justify-between">
                   <span>Dependency</span>
                   <span className="text-zinc-100">{task.dependency ?? "None"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Milestone</span>
+                  <span className="text-zinc-100">{task.isMilestone ? "Yes" : "No"}</span>
                 </div>
               </CardContent>
             </Card>
@@ -612,7 +663,7 @@ const ListView = memo(function ListView({
                   <td className="px-4 py-3">
                     <button type="button" onClick={() => onOpenTask(task)} className="text-left hover:text-zinc-100">
                       <p className="font-medium">{task.title}</p>
-                      <p className="text-xs text-zinc-500">{task.labels.join(" · ")}</p>
+                      <p className="text-xs text-zinc-500">{task.labels.join(" - ")}</p>
                     </button>
                   </td>
                   <td className="px-4 py-3">
@@ -665,7 +716,7 @@ const ListView = memo(function ListView({
 ListView.displayName = "ListView";
 
 function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (task: TaskRecord) => void }) {
-  const monthDate = referenceDate;
+  const monthDate = new Date();
   const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
   const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
   const days: Date[] = [];
@@ -734,12 +785,13 @@ function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: 
 }
 
 function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (task: TaskRecord) => void }) {
+  const now = new Date();
   const windows = tasks.map((task) => {
     const { start, end } = getTaskWindow(task);
     return { task, start, end };
   });
-  const minStart = windows.reduce((min, item) => (item.start < min ? item.start : min), windows[0]?.start ?? referenceDate);
-  const maxEnd = windows.reduce((max, item) => (item.end > max ? item.end : max), windows[0]?.end ?? referenceDate);
+  const minStart = windows.reduce((min, item) => (item.start < min ? item.start : min), windows[0]?.start ?? now);
+  const maxEnd = windows.reduce((max, item) => (item.end > max ? item.end : max), windows[0]?.end ?? now);
   const totalDays = Math.max(1, differenceInCalendarDays(maxEnd, minStart) + 1);
 
   return (
@@ -768,7 +820,7 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
             <div key={task.id} className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-4 rounded-xl border border-zinc-900 bg-zinc-950/40 p-3">
               <button type="button" onClick={() => onOpenTask(task)} className="text-left">
                 <p className="text-sm font-medium text-zinc-100">{task.title}</p>
-                <p className="text-xs text-zinc-500">{task.assignee} · {task.priority} · {due.label}</p>
+                <p className="text-xs text-zinc-500">{task.assignee} - {task.priority} - {due.label}</p>
               </button>
               <div className="relative h-10 rounded-lg border border-zinc-900 bg-zinc-950/50">
                 <div
@@ -893,13 +945,15 @@ function TaskErrorState({ message, onRetry }: { message: string; onRetry: () => 
 export function TaskWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { userId } = useSessionContext();
   const taskIdFromQuery = searchParams.get("taskId");
   const { data: apiTasks, isLoading, isError, error, refetch } = useTasksQuery();
+  const { data: workspaceMembers } = useWorkspaceMembersQuery();
   const updateTaskStatus = useUpdateTaskStatusMutation();
   const updateTask = useUpdateTaskMutation();
+  const addTaskDependency = useAddTaskDependencyMutation();
   const createTask = useCreateTaskMutation();
   const deleteTask = useDeleteTaskMutation();
-  const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("All");
@@ -907,10 +961,70 @@ export function TaskWorkspace() {
   const [dueFilter, setDueFilter] = useState<DueFilter>("all");
   const [myTasksOnly, setMyTasksOnly] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-  const [selectedTask, setSelectedTask] = useState<TaskRecord | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+
+  const memberMap = useMemo(() => {
+    const map = new Map<string, WorkspaceMemberDTO>();
+    for (const member of workspaceMembers ?? []) {
+      map.set(member.user.id, member);
+    }
+    return map;
+  }, [workspaceMembers]);
+
+  const tasks = useMemo(
+    () => (apiTasks ?? []).map((task) => mapTaskDTOToRecord(task, memberMap, userId)),
+    [apiTasks, memberMap, userId],
+  );
+
+  const selectedTask = useMemo(() => {
+    if (!taskIdFromQuery) {
+      return null;
+    }
+
+    return tasks.find((task) => task.id === taskIdFromQuery) ?? null;
+  }, [taskIdFromQuery, tasks]);
+
+  useEffect(() => {
+    const currentTaskIds = new Set(tasks.map((task) => task.id));
+    setSelectedTaskIds((current) => current.filter((taskId) => currentTaskIds.has(taskId)));
+  }, [tasks]);
+
+  const assigneeOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string }> = [{ value: "All", label: "All Assignees" }];
+    const seen = new Set<string>();
+
+    for (const member of workspaceMembers ?? []) {
+      if (!member.isActive) {
+        continue;
+      }
+
+      const label = resolveMemberDisplayName(member);
+      if (!label) {
+        continue;
+      }
+
+      options.push({
+        value: member.user.id,
+        label: member.user.id === userId ? `${label} (You)` : label,
+      });
+      seen.add(member.user.id);
+    }
+
+    for (const task of tasks) {
+      if (!task.assigneeId || seen.has(task.assigneeId)) {
+        continue;
+      }
+
+      options.push({
+        value: task.assigneeId,
+        label: task.assignee,
+      });
+      seen.add(task.assigneeId);
+    }
+
+    return options;
+  }, [tasks, userId, workspaceMembers]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -930,23 +1044,11 @@ export function TaskWorkspace() {
     setMyTasksOnly(false);
   };
 
-  useEffect(() => {
-    if (apiTasks && apiTasks.length > 0) {
-      setTasks(apiTasks.map(mapTaskDTOToRecord));
-    }
-  }, [apiTasks]);
-
-  useEffect(() => {
-    if (!taskIdFromQuery) {
-      setSelectedTask(null);
-      return;
-    }
-
-    const nextTask = tasks.find((task) => task.id === taskIdFromQuery) ?? null;
-    setSelectedTask(nextTask);
-  }, [taskIdFromQuery, tasks]);
-
   const filteredTasks = useMemo(() => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
     return tasks.filter((task) => {
       const matchesSearch =
         search.trim().length === 0 ||
@@ -954,38 +1056,31 @@ export function TaskWorkspace() {
           value.toLowerCase().includes(search.toLowerCase()),
         );
       const matchesPriority = priorityFilter === "All" || task.priority === priorityFilter;
-      const matchesAssignee = assigneeFilter === "All" || task.assignee === assigneeFilter;
+      const matchesAssignee = assigneeFilter === "All" || task.assigneeId === assigneeFilter;
       const dueDate = parseISO(task.dueDate);
+      const hasValidDueDate = !Number.isNaN(dueDate.getTime());
+      const isMine = Boolean(userId) && task.assigneeId === userId;
       const matchesDue =
         dueFilter === "all"
           ? true
           : dueFilter === "mine"
-            ? task.assignee === "Arun"
+            ? isMine
             : dueFilter === "overdue"
-              ? dueDate < referenceDate
-              : isWithinInterval(dueDate, {
-                  start: startOfWeek(referenceDate, { weekStartsOn: 1 }),
-                  end: endOfWeek(referenceDate, { weekStartsOn: 1 }),
+              ? hasValidDueDate && dueDate < now
+              : hasValidDueDate &&
+                isWithinInterval(dueDate, {
+                  start: weekStart,
+                  end: weekEnd,
                 });
-      const matchesMyTasks = !myTasksOnly || task.assignee === "Arun";
+      const matchesMyTasks = !myTasksOnly || isMine;
 
       return matchesSearch && matchesPriority && matchesAssignee && matchesDue && matchesMyTasks;
     });
-  }, [assigneeFilter, dueFilter, myTasksOnly, priorityFilter, search, tasks]);
+  }, [assigneeFilter, dueFilter, myTasksOnly, priorityFilter, search, tasks, userId]);
 
   const selectedCount = selectedTaskIds.length;
 
-  const selectedTasks = useMemo(
-    () => filteredTasks.filter((task) => selectedTaskIds.includes(task.id)),
-    [filteredTasks, selectedTaskIds],
-  );
-
-  const visibleTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
-
   function moveTask(taskId: string, status: TaskStatus) {
-    setTasks((current) =>
-      current.map((task) => (task.id === taskId ? { ...task, status, progress: status === "done" ? 100 : task.progress } : task)),
-    );
     updateTaskStatus.mutate({ taskId, status });
   }
 
@@ -995,36 +1090,35 @@ export function TaskWorkspace() {
     );
   }
 
-  function openTask(task: TaskRecord) {
-    setSelectedTask(task);
+  function openTask(task: { id: string }) {
     router.push(`/tasks?taskId=${encodeURIComponent(task.id)}`);
   }
 
   function closeTask() {
-    setSelectedTask(null);
     router.replace("/tasks");
   }
 
   function handleCreateTask(data: { title: string; description: string; priority: TaskPriority; dueDate: string }) {
     const priorityMap: Record<TaskPriority, number> = { High: 1, Medium: 2, Low: 3 };
+    const dueDate = data.dueDate ? new Date(data.dueDate).toISOString() : undefined;
+
     createTask.mutate({
       title: data.title,
       description: data.description,
       priority: priorityMap[data.priority],
-      dueDate: data.dueDate || undefined,
+      dueDate,
       status: "todo",
+      metadata: {
+        startDate: new Date().toISOString(),
+      },
     });
   }
 
   function handleBulkStatusChange(status: TaskStatus) {
     selectedTaskIds.forEach((id) => {
       updateTaskStatus.mutate({ taskId: id, status });
-      setTasks((current) =>
-        current.map((task) => (task.id === id ? { ...task, status, progress: status === "done" ? 100 : task.progress } : task))
-      );
     });
     setSelectedTaskIds([]);
-    setBulkStatusOpen(false);
   }
 
   function handleBulkDelete() {
@@ -1032,7 +1126,6 @@ export function TaskWorkspace() {
     if (confirm(`Delete ${selectedCount} task${selectedCount === 1 ? "" : "s"}?`)) {
       selectedTaskIds.forEach((id) => {
         deleteTask.mutate(id);
-        setTasks((current) => current.filter((task) => task.id !== id));
       });
       setSelectedTaskIds([]);
     }
@@ -1040,34 +1133,56 @@ export function TaskWorkspace() {
 
   function handleStartTimer() {
     if (selectedTask) {
-      router.push(`/time?taskId=${selectedTask.id}`);
+      router.push(`/tasks/${selectedTask.id}/focus`);
     }
   }
 
-  function handleConvertToMilestone() {
-    if (selectedTask) {
-      updateTask.mutate({
+  async function handleConvertToMilestone() {
+    if (!selectedTask) {
+      return;
+    }
+
+    try {
+      await updateTask.mutateAsync({
         id: selectedTask.id,
-        metadata: { ...selectedTask, isMilestone: true },
+        metadata: { isMilestone: true },
       });
+      closeTask();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unable to update milestone");
     }
-    setSelectedTask(null);
   }
 
-  function handleAddDependency() {
-    if (selectedTask) {
-      const dependency = prompt("Enter task ID to link as dependency:");
-      if (dependency) {
-        updateTask.mutate({
-          id: selectedTask.id,
-          metadata: { ...selectedTask, dependency },
-        });
-        setTasks((current) =>
-          current.map((task) => (task.id === selectedTask.id ? { ...task, dependency } : task))
-        );
-      }
+  async function handleAddDependency() {
+    if (!selectedTask) {
+      return;
     }
-    setSelectedTask(null);
+
+    const dependency = prompt("Enter task ID to link as dependency:")?.trim();
+    if (!dependency) {
+      return;
+    }
+
+    if (dependency === selectedTask.id) {
+      alert("A task cannot depend on itself.");
+      return;
+    }
+
+    try {
+      await addTaskDependency.mutateAsync({
+        taskId: selectedTask.id,
+        dependsOnTaskId: dependency,
+      });
+
+      await updateTask.mutateAsync({
+        id: selectedTask.id,
+        metadata: { dependency },
+      });
+
+      closeTask();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unable to add dependency");
+    }
   }
 
   function renderView() {
@@ -1105,7 +1220,7 @@ export function TaskWorkspace() {
     return <TaskErrorState message={error?.message || "Failed to load tasks"} onRetry={() => refetch()} />;
   }
 
-  const showEmptyState = !apiTasks || apiTasks.length === 0;
+  const showEmptyState = tasks.length === 0;
 
   return (
     <div className="space-y-6 page-animate">
@@ -1126,14 +1241,15 @@ export function TaskWorkspace() {
         onOpenCreate={() => setIsCreateOpen(true)}
         onBulkStatusChange={handleBulkStatusChange}
         onBulkDelete={handleBulkDelete}
+        assigneeOptions={assigneeOptions}
         activeFilterCount={activeFilterCount}
         clearAllFilters={clearAllFilters}
       />
 
-      <TaskStats />
+      <TaskStats tasks={tasks} />
 
       <div className="space-y-4">
-        {showEmptyState && tasks.length === 0 ? (
+        {showEmptyState ? (
           <TaskEmptyState onCreate={() => setIsCreateOpen(true)} />
         ) : (
           renderView()

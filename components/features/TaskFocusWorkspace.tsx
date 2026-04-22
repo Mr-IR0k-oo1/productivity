@@ -24,6 +24,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { useTaskDetailQuery, useUpdateTaskMutation } from "@/hooks/useTasks";
 import { useStartTimerMutation, useStopTimerMutation, useTimeEntriesQuery } from "@/hooks/useTimeEntries";
 import { cn } from "@/lib/utils";
+import { normalizeTaskViewMetadata } from "@/types/task-view-metadata";
 
 const FOCUS_SECONDS = 25 * 60;
 const BREAK_SECONDS = 5 * 60;
@@ -55,7 +56,6 @@ function priorityClass(priority: number) {
 
 function statusClass(status: string) {
   if (status === "done") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
-  if (status === "blocked") return "border-rose-500/30 bg-rose-500/10 text-rose-200";
   if (status === "review") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
   if (status === "in_progress") return "border-blue-500/30 bg-blue-500/10 text-blue-200";
   return "border-zinc-500/30 bg-zinc-500/10 text-zinc-200";
@@ -148,13 +148,13 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        router.push("/tasks");
+        router.push(`/tasks?taskId=${taskId}`);
       }
     };
 
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  }, [router]);
+  }, [router, taskId]);
 
   const startSession = async () => {
     setStatusMessage(null);
@@ -212,20 +212,20 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
         <EmptyState
           title="Task not available"
           description={taskQuery.error instanceof Error ? taskQuery.error.message : "The requested task could not be found."}
-          action={{ label: "Back to tasks", onClick: () => router.push("/tasks") }}
+          action={{ label: "Back to tasks", onClick: () => router.push(`/tasks?taskId=${taskId}`) }}
           minHeight="min-h-[calc(100vh-3rem)]"
         />
       </div>
     );
   }
 
-  const metadata = (task.metadata ?? {}) as Record<string, unknown>;
-  const estimateHours = typeof metadata.estimateHours === "number" ? metadata.estimateHours : 0;
+  const metadata = normalizeTaskViewMetadata(task.metadata, { startDate: task.createdAt });
+  const estimateHours = metadata.estimateHours;
   const dueDate = task.dueDate ? parseISO(task.dueDate) : null;
   const dueLabel = dueDate
     ? `${isPast(dueDate) ? "Overdue" : "Due"} ${formatDistanceToNow(dueDate, { addSuffix: true })}`
     : "No due date set";
-  const dueDateLabel = dueDate ? format(dueDate, "EEE, MMM d • p") : null;
+  const dueDateLabel = dueDate ? format(dueDate, "EEE, MMM d - p") : null;
   const isDone = task.status === "done";
 
   return (
@@ -234,7 +234,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
         <div className="flex items-center justify-between gap-3">
-          <Button variant="secondary" size="sm" onClick={() => router.push("/tasks")}>
+          <Button variant="secondary" size="sm" onClick={() => router.push(`/tasks?taskId=${taskId}`)}>
             <ArrowLeft className="h-4 w-4" />
             Back to tasks
           </Button>
@@ -291,7 +291,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                     <dl className="mt-3 space-y-3 text-sm text-zinc-300">
                       <div className="flex items-center justify-between gap-4">
                         <dt className="text-zinc-500">Task ID</dt>
-                        <dd className="font-mono text-xs text-zinc-200">{task.id.slice(0, 8)}…</dd>
+                        <dd className="font-mono text-xs text-zinc-200">{task.id.slice(0, 8)}...</dd>
                       </div>
                       <div className="flex items-center justify-between gap-4">
                         <dt className="text-zinc-500">Estimate</dt>
@@ -388,7 +388,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Navigation</p>
                   <div className="mt-3 flex flex-col gap-2">
-                    <Link href="/tasks" className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-zinc-100 transition-colors hover:bg-white/10">
+                    <Link href={`/tasks?taskId=${taskId}`} className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-zinc-100 transition-colors hover:bg-white/10">
                       <span className="flex items-center gap-2">
                         <ArrowLeft className="h-4 w-4" />
                         Back to task list
@@ -475,3 +475,4 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
 }
 
 export default TaskFocusWorkspace;
+
