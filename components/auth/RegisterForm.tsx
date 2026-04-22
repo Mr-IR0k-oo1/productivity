@@ -101,7 +101,7 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
           password,
           fullName: fullName.trim(),
           workspaceName: workspaceName.trim(),
-          jobTitle: jobTitle.trim() || undefined,
+          jobTitle: jobTitle.trim() ? jobTitle.trim() : undefined,
         }),
         session: {},
       });

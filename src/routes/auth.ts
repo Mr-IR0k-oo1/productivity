@@ -15,7 +15,11 @@ const signupSchema = z.object({
   password: z.string().min(8),
   fullName: z.string().min(2),
   workspaceName: z.string().min(2),
-  jobTitle: z.string().min(2).optional(),
+  jobTitle: z
+    .string()
+    .min(2)
+    .optional()
+    .transform((val) => (val === "" ? undefined : val)),
 });
 
 const loginSchema = z.object({
