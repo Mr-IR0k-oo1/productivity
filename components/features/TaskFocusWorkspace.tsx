@@ -148,7 +148,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
   useEffect(() => {
     const handleKeydown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        router.push(`/tasks?taskId=${taskId}`);
+        router.replace("/tasks");
       }
     };
 
@@ -212,7 +212,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
         <EmptyState
           title="Task not available"
           description={taskQuery.error instanceof Error ? taskQuery.error.message : "The requested task could not be found."}
-          action={{ label: "Back to tasks", onClick: () => router.push(`/tasks?taskId=${taskId}`) }}
+          action={{ label: "Back to tasks", onClick: () => router.replace("/tasks") }}
           minHeight="min-h-[calc(100vh-3rem)]"
         />
       </div>
@@ -234,7 +234,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
 
       <div className="relative mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-8 md:py-6">
         <div className="flex items-center justify-between gap-3">
-          <Button variant="secondary" size="sm" onClick={() => router.push(`/tasks?taskId=${taskId}`)}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => router.replace("/tasks")}>
             <ArrowLeft className="h-4 w-4" />
             Back to tasks
           </Button>
@@ -311,7 +311,12 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                   <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Quick actions</p>
                     <div className="mt-3 space-y-2">
-                      <Button className="w-full justify-between" onClick={isRunning ? pauseSession : startSession} disabled={startTimerMutation.isPending || stopTimerMutation.isPending || updateTaskMutation.isPending}>
+                      <Button
+                        type="button"
+                        className="w-full justify-between"
+                        onClick={isRunning ? pauseSession : startSession}
+                        disabled={startTimerMutation.isPending || stopTimerMutation.isPending || updateTaskMutation.isPending}
+                      >
                         <span className="flex items-center gap-2">
                           {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                           {mode === "focus" ? (isRunning ? "Pause focus" : timerEntryId ? "Resume focus" : "Start focus") : isRunning ? "Pause break" : "Start break"}
@@ -319,7 +324,13 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                         <span className="text-xs text-[var(--background)]/70">{formatRemaining(remainingSeconds)}</span>
                       </Button>
 
-                      <Button variant="secondary" className="w-full justify-between" onClick={resetSession} disabled={startTimerMutation.isPending || stopTimerMutation.isPending}>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="w-full justify-between"
+                        onClick={resetSession}
+                        disabled={startTimerMutation.isPending || stopTimerMutation.isPending}
+                      >
                         <span className="flex items-center gap-2">
                           <RotateCcw className="h-4 w-4" />
                           Reset timer
@@ -328,7 +339,13 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                       </Button>
 
                       {!isDone ? (
-                        <Button variant="secondary" className="w-full justify-between" onClick={markDone} disabled={updateTaskMutation.isPending}>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="w-full justify-between"
+                          onClick={markDone}
+                          disabled={updateTaskMutation.isPending}
+                        >
                           <span className="flex items-center gap-2">
                             <SquareCheckBig className="h-4 w-4" />
                             Mark done
@@ -388,7 +405,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Navigation</p>
                   <div className="mt-3 flex flex-col gap-2">
-                    <Link href={`/tasks?taskId=${taskId}`} className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-zinc-100 transition-colors hover:bg-white/10">
+                    <Link href="/tasks" className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-zinc-100 transition-colors hover:bg-white/10">
                       <span className="flex items-center gap-2">
                         <ArrowLeft className="h-4 w-4" />
                         Back to task list
@@ -456,12 +473,23 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
               </div>
 
               <div className="space-y-2">
-                <Button className="w-full" onClick={isRunning ? pauseSession : startSession} disabled={startTimerMutation.isPending || stopTimerMutation.isPending}>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={isRunning ? pauseSession : startSession}
+                  disabled={startTimerMutation.isPending || stopTimerMutation.isPending}
+                >
                   {isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                   {isRunning ? "Pause timer" : mode === "focus" ? "Start focus" : "Start break"}
                 </Button>
 
-                <Button variant="secondary" className="w-full" onClick={resetSession} disabled={startTimerMutation.isPending || stopTimerMutation.isPending}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={resetSession}
+                  disabled={startTimerMutation.isPending || stopTimerMutation.isPending}
+                >
                   <RotateCcw className="h-4 w-4" />
                   Reset {mode === "focus" ? "focus" : "break"}
                 </Button>

@@ -249,7 +249,7 @@ const TaskToolbar = memo(function TaskToolbar({
               Manage tasks across Kanban, list, calendar, and gantt views from one workspace.
             </p>
           </div>
-          <Button onClick={onOpenCreate}>
+          <Button type="button" onClick={onOpenCreate}>
             <Plus className="h-4 w-4" />
             New Task
           </Button>
@@ -294,7 +294,11 @@ const TaskToolbar = memo(function TaskToolbar({
               className="pl-9"
             />
           </div>
-          <Button variant="secondary" onClick={activeFilterCount > 0 ? clearAllFilters : undefined}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={activeFilterCount > 0 ? clearAllFilters : undefined}
+          >
             <Filter className="h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
@@ -355,7 +359,12 @@ const TaskToolbar = memo(function TaskToolbar({
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <Button variant="secondary" size="sm" onClick={() => setShowStatusDropdown(!showStatusDropdown)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                >
                   <Check className="h-4 w-4" />
                   Bulk Status
                 </Button>
@@ -377,7 +386,13 @@ const TaskToolbar = memo(function TaskToolbar({
                   </div>
                 )}
               </div>
-              <Button variant="secondary" size="sm" className="border-red-900 text-red-200" onClick={onBulkDelete}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="border-red-900 text-red-200"
+                onClick={onBulkDelete}
+              >
                 <Trash2 className="h-4 w-4" />
                 Delete
               </Button>
@@ -486,15 +501,20 @@ function TaskDetailPanel({
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full justify-start" variant="secondary" onClick={onStartTimer}>
+                <Button type="button" className="w-full justify-start" variant="secondary" onClick={onStartTimer}>
                   <Clock3 className="h-4 w-4" />
                   Open focus mode
                 </Button>
-                <Button className="w-full justify-start" variant="secondary" onClick={onConvertToMilestone}>
+                <Button
+                  type="button"
+                  className="w-full justify-start"
+                  variant="secondary"
+                  onClick={onConvertToMilestone}
+                >
                   <Flag className="h-4 w-4" />
                   Convert to milestone
                 </Button>
-                <Button className="w-full justify-start" variant="secondary" onClick={onAddDependency}>
+                <Button type="button" className="w-full justify-start" variant="secondary" onClick={onAddDependency}>
                   <Link2 className="h-4 w-4" />
                   Add dependency
                 </Button>
@@ -540,32 +560,42 @@ function TaskCreateModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (data: { title: string; description: string; priority: TaskPriority; dueDate: string }) => void;
+  onCreate: (data: { title: string; description: string; priority: TaskPriority; dueDate: string }) => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("Medium");
   const [dueDate, setDueDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = () => {
-    if (!title.trim()) return;
-    onCreate({ title: title.trim(), description, priority, dueDate });
-    onClose();
+  const handleSubmit = async () => {
+    if (!title.trim() || isSubmitting) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      await onCreate({ title: title.trim(), description, priority, dueDate });
+      onClose();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to create task. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
         <div className="flex items-start justify-between gap-4 border-b border-zinc-900 p-6">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Create</p>
             <h2 className="mt-1 text-2xl font-semibold text-zinc-100">New task</h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
-          >
+          <button type="button" onClick={onClose} className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900">
             Close
           </button>
         </div>
@@ -575,13 +605,19 @@ function TaskCreateModal({
             <Input
               placeholder="Task title *"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setErrorMessage(null);
+              }}
               className="w-full"
             />
           </div>
           <select
             value={priority}
-            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            onChange={(e) => {
+              setPriority(e.target.value as TaskPriority);
+              setErrorMessage(null);
+            }}
             className="h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100"
           >
             <option value="High">High Priority</option>
@@ -591,7 +627,10 @@ function TaskCreateModal({
           <Input
             type="datetime-local"
             value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
+            onChange={(e) => {
+              setDueDate(e.target.value);
+              setErrorMessage(null);
+            }}
             className="w-full"
           />
           <div className="md:col-span-2">
@@ -599,17 +638,28 @@ function TaskCreateModal({
               className="min-h-[120px] w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-zinc-600"
               placeholder="Description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setErrorMessage(null);
+              }}
             />
           </div>
         </div>
 
+        {errorMessage ? (
+          <div className="px-6 pb-2">
+            <div className="rounded-lg border border-rose-900/60 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+              {errorMessage}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-end gap-2 border-t border-zinc-900 p-6">
-          <Button variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!title.trim()}>
-            Create Task
+          <Button type="button" onClick={handleSubmit} disabled={!title.trim() || isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Task"}
           </Button>
         </div>
       </div>
@@ -695,10 +745,10 @@ const ListView = memo(function ListView({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
                         View
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
                         Edit
                       </Button>
                     </div>
@@ -1098,11 +1148,11 @@ export function TaskWorkspace() {
     router.replace("/tasks");
   }
 
-  function handleCreateTask(data: { title: string; description: string; priority: TaskPriority; dueDate: string }) {
+  async function handleCreateTask(data: { title: string; description: string; priority: TaskPriority; dueDate: string }): Promise<void> {
     const priorityMap: Record<TaskPriority, number> = { High: 1, Medium: 2, Low: 3 };
     const dueDate = data.dueDate ? new Date(data.dueDate).toISOString() : undefined;
 
-    createTask.mutate({
+    await createTask.mutateAsync({
       title: data.title,
       description: data.description,
       priority: priorityMap[data.priority],
