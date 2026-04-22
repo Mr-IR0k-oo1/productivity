@@ -46,6 +46,30 @@ const oauthBootstrapSchema = z.object({
     .optional(),
 });
 
+function resolveOAuthEmail(user: {
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+  identities?: Array<{ identity_data?: Record<string, unknown> | null }> | null;
+}) {
+  const directEmail = user.email?.trim();
+
+  if (directEmail) {
+    return directEmail;
+  }
+
+  const metadataEmail = typeof user.user_metadata?.email === "string" ? user.user_metadata.email.trim() : "";
+
+  if (metadataEmail) {
+    return metadataEmail;
+  }
+
+  const identityEmail = user.identities
+    ?.map((identity) => (typeof identity.identity_data?.email === "string" ? identity.identity_data.email.trim() : ""))
+    .find((value) => Boolean(value));
+
+  return identityEmail || null;
+}
+
 function getRegisterErrorStatus(message: string) {
   if (message.includes("already exists") || message.includes("already registered")) {
     return 409;
@@ -132,10 +156,20 @@ auth.post("/oauth/bootstrap", authMiddleware, zValidator("json", oauthBootstrapS
       return c.json({ error: "Unable to load OAuth user profile" }, 401);
     }
 
-    const email = data.user.email?.trim();
+    const email = resolveOAuthEmail({
+      email: data.user.email,
+      user_metadata: data.user.user_metadata as Record<string, unknown> | null,
+      identities: (data.user.identities ?? []) as Array<{ identity_data?: Record<string, unknown> | null }>,
+    });
 
     if (!email) {
-      return c.json({ error: "OAuth account did not provide an email address" }, 400);
+      return c.json(
+        {
+          error:
+            "OAuth account did not provide an email address. For GitHub, enable an email in GitHub Settings > Emails and retry.",
+        },
+        400,
+      );
     }
 
     const metadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;

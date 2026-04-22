@@ -3,19 +3,19 @@
 export function AsciiBackground() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(125%_95%_at_50%_-10%,var(--accent-soft)_0%,transparent_68%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(125%_95%_at_50%_-10%,rgba(124,58,237,0.22)_0%,rgba(6,182,212,0.12)_35%,transparent_68%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,var(--background)_100%)] opacity-80" />
 
-      <div className="star-far absolute inset-0 bg-[radial-gradient(circle,var(--foreground)_0.48px,transparent_0.92px)] [background-size:250px_250px] opacity-20" />
-      <div className="star-near absolute inset-0 bg-[radial-gradient(circle_at_15%_26%,var(--foreground)_0.62px,transparent_1.04px),radial-gradient(circle_at_74%_70%,var(--foreground)_0.58px,transparent_1.03px),radial-gradient(circle_at_48%_56%,var(--foreground)_0.5px,transparent_0.95px)] [background-size:160px_160px,230px_230px,310px_310px] opacity-30" />
+      <div className="star-far absolute inset-0 bg-[radial-gradient(circle,rgba(216,180,254,0.8)_0.48px,transparent_0.92px)] [background-size:250px_250px] opacity-25" />
+      <div className="star-near absolute inset-0 bg-[radial-gradient(circle_at_15%_26%,rgba(165,243,252,0.9)_0.62px,transparent_1.04px),radial-gradient(circle_at_74%_70%,rgba(165,243,252,0.8)_0.58px,transparent_1.03px),radial-gradient(circle_at_48%_56%,rgba(165,243,252,0.8)_0.5px,transparent_0.95px)] [background-size:160px_160px,230px_230px,310px_310px] opacity-40" />
 
-      <div className="event-horizon absolute right-[-16vw] bottom-[-26vh] h-[88vh] w-[88vh] rounded-full border border-[var(--accent)] opacity-20 bg-[radial-gradient(circle_at_34%_40%,var(--accent-soft)_0%,var(--background)_72%,var(--background)_100%)] shadow-[0_0_120px_var(--accent-soft)]" />
-      <div className="event-horizon-rim absolute right-[-18vw] bottom-[-28vh] h-[92vh] w-[92vh] rounded-full border border-[var(--accent)] opacity-30 blur-[1px]" />
+      <div className="event-horizon absolute right-[-16vw] bottom-[-26vh] h-[88vh] w-[88vh] rounded-full border border-[rgba(139,92,246,0.3)] opacity-30 bg-[radial-gradient(circle_at_34%_40%,rgba(124,58,237,0.12)_0%,var(--background)_72%,var(--background)_100%)] shadow-[0_0_80px_rgba(139,92,246,0.25),0_0_160px_rgba(6,182,212,0.15)]" />
+      <div className="event-horizon-rim absolute right-[-18vw] bottom-[-28vh] h-[92vh] w-[92vh] rounded-full border border-[rgba(6,182,212,0.25)] opacity-40 blur-[1px]" />
 
-      <div className="orbit-line orbit-line-main absolute left-[19%] bottom-[9%] h-[27vh] w-[118vw] rounded-[100%] border border-[var(--accent)] opacity-40" />
-      <div className="orbit-line orbit-line-wide absolute left-[11%] bottom-[4%] h-[35vh] w-[132vw] rounded-[100%] border border-[var(--accent)] opacity-50" />
-      <div className="orbit-line orbit-line-inner absolute left-[24%] bottom-[14%] h-[20vh] w-[102vw] rounded-[100%] border border-[var(--accent)] opacity-30" />
-      <div className="orbit-glow absolute bottom-[16%] left-[42%] h-3 w-3 rounded-full bg-[var(--accent)] shadow-[0_0_16px_var(--accent),0_0_48px_var(--accent-strong)]" />
+      <div className="orbit-line orbit-line-main absolute left-[19%] bottom-[9%] h-[27vh] w-[118vw] rounded-[100%] border border-[rgba(139,92,246,0.4)] opacity-40" />
+      <div className="orbit-line orbit-line-wide absolute left-[11%] bottom-[4%] h-[35vh] w-[132vw] rounded-[100%] border border-[rgba(6,182,212,0.3)] opacity-40" />
+      <div className="orbit-line orbit-line-inner absolute left-[24%] bottom-[14%] h-[20vh] w-[102vw] rounded-[100%] border border-[rgba(236,72,153,0.25)] opacity-30" />
+      <div className="orbit-glow absolute bottom-[16%] left-[42%] h-3 w-3 rounded-full bg-[#22d3ee] shadow-[0_0_16px_#22d3ee,0_0_48px_#8b5cf6,0_0_96px_#d946ef]" />
 
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_60%,transparent_36%,var(--background)_100%)] opacity-50" />
 

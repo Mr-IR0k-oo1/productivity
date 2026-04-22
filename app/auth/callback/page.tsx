@@ -134,9 +134,17 @@ export default function AuthCallbackPage() {
           router.replace("/dashboard");
           router.refresh();
         }
-      } catch {
+      } catch (error) {
         if (isActive) {
-          router.replace("/login?error=oauth_bootstrap_failed");
+          const reason =
+            error instanceof Error && error.message.trim()
+              ? error.message.trim()
+              : "Workspace setup failed during OAuth bootstrap.";
+          const nextParams = new URLSearchParams({
+            error: "oauth_bootstrap_failed",
+            reason,
+          });
+          router.replace(`/login?${nextParams.toString()}`);
         }
       }
     };

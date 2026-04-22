@@ -37,6 +37,7 @@ type OAuthProviderConfig = {
   label: string;
   icon: typeof Chrome;
   className: string;
+  scopes?: string;
 };
 
 const oauthProviders: OAuthProviderConfig[] = [
@@ -51,6 +52,7 @@ const oauthProviders: OAuthProviderConfig[] = [
     label: "Continue with GitHub",
     icon: Github,
     className: "border border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
+    scopes: "read:user user:email",
   },
   {
     provider: "azure",
@@ -113,10 +115,13 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
 
     setLoadingProvider(provider);
 
+    const providerConfig = oauthProviders.find((entry) => entry.provider === provider);
+
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
+        ...(providerConfig?.scopes ? { scopes: providerConfig.scopes } : {}),
       },
     });
 

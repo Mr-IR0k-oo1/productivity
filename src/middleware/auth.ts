@@ -44,6 +44,18 @@ export const authMiddleware = createMiddleware<AuthBindings>(async (c, next) => 
   const token = headerToken || cookieToken;
 
   if (isAuthBypassEnabled) {
+    // Allow real OAuth tokens to keep working even when local bypass is enabled.
+    if (token && token !== "dev-auth-bypass") {
+      const { data, error } = await supabaseAdmin.auth.getUser(token);
+
+      if (!error && data.user) {
+        c.set("authUserId", data.user.id);
+        c.set("authToken", token);
+        await next();
+        return;
+      }
+    }
+
     const headerAuthUserId = c.req.header("x-dev-auth-user-id")?.trim();
     const fallbackAuthUserId = await resolveBypassAuthUserId();
     const authUserId = headerAuthUserId || fallbackAuthUserId;

@@ -62,7 +62,15 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
   const isLogin = mode === "login";
   const queryError = searchParams.get("error");
   const queryNotice = searchParams.get("notice");
-  const errorMessage = queryError ? callbackErrorMessages[queryError] ?? "Unable to complete sign in." : null;
+  const queryReason = searchParams.get("reason")?.trim() || null;
+  const errorMessage =
+    queryError === "oauth_bootstrap_failed" && queryReason
+      ? queryReason.toLowerCase().includes("did not provide an email")
+        ? "GitHub did not provide an email address. In GitHub Settings > Emails, add/verify an email and allow it for sign-in, then try again."
+        : queryReason
+      : queryError
+        ? callbackErrorMessages[queryError] ?? "Unable to complete sign in."
+        : null;
   const noticeMessage = queryNotice ? queryNoticeMessages[queryNotice] ?? null : null;
 
   useEffect(() => {
