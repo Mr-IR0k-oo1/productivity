@@ -4,13 +4,26 @@ import { z } from "zod";
 if (process.env.NODE_ENV !== "production") {
   // Mirror Next.js local precedence for API/server runtime.
   loadDotEnv({ path: ".env.local", override: false });
+  loadDotEnv({ path: ".env", override: false });
 }
 
-loadDotEnv({ path: ".env", override: false });
+function normalizeDatabaseUrl(value: string) {
+  const trimmed = value.trim();
+
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+
+  return trimmed;
+}
 
 const postgresUrlSchema = z
   .string()
   .min(1, "DATABASE_URL is required")
+  .transform(normalizeDatabaseUrl)
   .refine((value) => {
     try {
       new URL(value.replace(/^postgresql:\/\//, "postgres://"));
@@ -18,7 +31,7 @@ const postgresUrlSchema = z
     } catch {
       return false;
     }
-  }, "DATABASE_URL must be a valid postgres connection URL");
+  }, "DATABASE_URL must be a valid postgres connection URL (check quotes and URL-encoding)");
 
 const envSchema = z.object({
   DATABASE_URL: postgresUrlSchema,
