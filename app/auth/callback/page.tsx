@@ -47,6 +47,32 @@ function wait(delayMs: number) {
   });
 }
 
+function buildLoginRedirect(error: string, reason?: string | null) {
+  const params = new URLSearchParams({ error });
+
+  if (reason?.trim()) {
+    params.set("reason", reason.trim());
+  }
+
+  return `/login?${params.toString()}`;
+}
+
+function readOAuthCallbackError(searchParams: URLSearchParams) {
+  const error = searchParams.get("error")?.trim() || null;
+
+  if (!error) {
+    return null;
+  }
+
+  const errorDescription = searchParams.get("error_description")?.trim() || null;
+  const errorCode = searchParams.get("error_code")?.trim() || null;
+
+  return {
+    error,
+    reason: errorDescription || errorCode || error,
+  };
+}
+
 async function resolveSessionWithRetry() {
   if (!supabase) {
     return null;
@@ -80,19 +106,36 @@ export default function AuthCallbackPage() {
     const completeOAuth = async () => {
       if (!supabase) {
         if (isActive) {
-          router.replace("/login?error=oauth_unavailable");
+          router.replace(buildLoginRedirect("oauth_unavailable"));
         }
         return;
       }
 
-      const code = new URLSearchParams(window.location.search).get("code");
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      const callbackError = readOAuthCallbackError(searchParams);
+
+      if (callbackError && !code) {
+        if (isActive) {
+          router.replace(buildLoginRedirect("oauth_failed", callbackError.reason));
+        }
+        return;
+      }
 
       if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        try {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (error) {
+          if (error) {
+            if (isActive) {
+              router.replace(buildLoginRedirect("oauth_failed", error.message));
+            }
+            return;
+          }
+        } catch (error) {
           if (isActive) {
-            router.replace("/login?error=oauth_failed");
+            const reason = error instanceof Error && error.message.trim() ? error.message.trim() : "OAuth session exchange failed.";
+            router.replace(buildLoginRedirect("oauth_failed", reason));
           }
           return;
         }
@@ -104,14 +147,14 @@ export default function AuthCallbackPage() {
         session = await resolveSessionWithRetry();
       } catch {
         if (isActive) {
-          router.replace("/login?error=oauth_failed");
+          router.replace(buildLoginRedirect("oauth_failed", "Unable to resolve the OAuth session."));
         }
         return;
       }
 
       if (!session) {
         if (isActive) {
-          router.replace("/login?error=oauth_failed");
+          router.replace(buildLoginRedirect("oauth_failed", "No OAuth session was found after sign-in."));
         }
         return;
       }
@@ -140,11 +183,7 @@ export default function AuthCallbackPage() {
             error instanceof Error && error.message.trim()
               ? error.message.trim()
               : "Workspace setup failed during OAuth bootstrap.";
-          const nextParams = new URLSearchParams({
-            error: "oauth_bootstrap_failed",
-            reason,
-          });
-          router.replace(`/login?${nextParams.toString()}`);
+          router.replace(buildLoginRedirect("oauth_bootstrap_failed", reason));
         }
       }
     };

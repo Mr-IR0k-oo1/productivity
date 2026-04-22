@@ -25,6 +25,28 @@ const queryNoticeMessages: Record<string, string> = {
   check_email: "Account created. Check your inbox to confirm your email before signing in.",
 };
 
+function normalizeOAuthReason(error: string, reason: string | null) {
+  if (!reason) {
+    return null;
+  }
+
+  const lowered = reason.toLowerCase();
+
+  if (error === "oauth_bootstrap_failed" && lowered.includes("did not provide an email")) {
+    return "GitHub did not provide an email address. In GitHub Settings > Emails, add or verify an email and allow it for sign-in, then try again.";
+  }
+
+  if (lowered.includes("access denied") || lowered.includes("canceled")) {
+    return "OAuth sign-in was canceled. Please try again.";
+  }
+
+  if (lowered.includes("invalid flow state") || lowered.includes("code verifier") || lowered.includes("session")) {
+    return "OAuth session expired. Please try signing in again.";
+  }
+
+  return reason;
+}
+
 const copyByMode: Record<
   AuthMode,
   {
@@ -63,14 +85,9 @@ export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
   const queryError = searchParams.get("error");
   const queryNotice = searchParams.get("notice");
   const queryReason = searchParams.get("reason")?.trim() || null;
-  const errorMessage =
-    queryError === "oauth_bootstrap_failed" && queryReason
-      ? queryReason.toLowerCase().includes("did not provide an email")
-        ? "GitHub did not provide an email address. In GitHub Settings > Emails, add/verify an email and allow it for sign-in, then try again."
-        : queryReason
-      : queryError
-        ? callbackErrorMessages[queryError] ?? "Unable to complete sign in."
-        : null;
+  const errorMessage = queryError
+    ? normalizeOAuthReason(queryError, queryReason) ?? callbackErrorMessages[queryError] ?? "Unable to complete sign in."
+    : null;
   const noticeMessage = queryNotice ? queryNoticeMessages[queryNotice] ?? null : null;
 
   useEffect(() => {

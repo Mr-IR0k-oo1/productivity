@@ -76,6 +76,24 @@ function normalizeLoginError(message: string) {
   return message;
 }
 
+function normalizeOAuthLoginError(message: string) {
+  const lowered = message.toLowerCase();
+
+  if (lowered.includes("access denied") || lowered.includes("canceled")) {
+    return "OAuth sign-in was canceled. Please try again.";
+  }
+
+  if (lowered.includes("invalid flow state") || lowered.includes("code verifier")) {
+    return "OAuth session expired. Please try signing in again.";
+  }
+
+  if (lowered.includes("provider not found") || lowered.includes("unsupported provider")) {
+    return "OAuth is not configured for this provider in Supabase yet.";
+  }
+
+  return normalizeLoginError(message);
+}
+
 export default function LoginForm({ showSocialLogin = true, showRegisterPrompt = true, onRegisterRequested, onSignedIn }: LoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -115,18 +133,24 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
 
     setLoadingProvider(provider);
 
-    const providerConfig = oauthProviders.find((entry) => entry.provider === provider);
+    try {
+      const providerConfig = oauthProviders.find((entry) => entry.provider === provider);
 
-    const { error } = await supabaseClient.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        ...(providerConfig?.scopes ? { scopes: providerConfig.scopes } : {}),
-      },
-    });
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          ...(providerConfig?.scopes ? { scopes: providerConfig.scopes } : {}),
+        },
+      });
 
-    if (error) {
-      setErrorMessage(normalizeLoginError(error.message));
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      const fallbackMessage = error instanceof Error ? error.message : "Failed to start OAuth sign-in";
+      setErrorMessage(normalizeOAuthLoginError(fallbackMessage));
+    } finally {
       setLoadingProvider(null);
     }
   };

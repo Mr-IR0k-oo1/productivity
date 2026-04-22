@@ -69,6 +69,8 @@ Then enable providers in `Authentication -> Providers`:
 - GitHub
 - Microsoft (provider key: `azure`)
 
+GitHub sign-in works best when the account exposes a verified email address. If GitHub hides the email, Orbit will stop at the callback step and show a clear recovery message on `/login`.
+
 ## 3) Canonical SQL Setup (single script)
 
 Run this script in Supabase SQL Editor:
