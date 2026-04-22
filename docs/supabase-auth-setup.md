@@ -8,6 +8,7 @@ Set these in local `.env` and in your deployed environment:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_APP_URL`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
@@ -70,6 +71,8 @@ Then enable providers in `Authentication -> Providers`:
 - Microsoft (provider key: `azure`)
 
 GitHub sign-in works best when the account exposes a verified email address. If GitHub hides the email, Orbit will stop at the callback step and show a clear recovery message on `/login`.
+
+For OAuth redirects, Orbit uses `NEXT_PUBLIC_APP_URL` on the client when it is available, and falls back to the current browser origin. In production, set `NEXT_PUBLIC_APP_URL` and `APP_URL` to the same live domain so both GitHub sign-in and server-side auth links point to the real site.
 
 ## 3) Canonical SQL Setup (single script)
 

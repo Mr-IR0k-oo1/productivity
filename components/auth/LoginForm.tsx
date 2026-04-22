@@ -7,7 +7,7 @@ import type { Session } from "@supabase/supabase-js";
 import { Building2, Chrome, Github, Mail } from "lucide-react";
 
 import { fetchApiJson } from "@/lib/api/client";
-import { REMEMBER_ME_STORAGE_KEY } from "@/lib/auth/session";
+import { getPublicAppUrl, REMEMBER_ME_STORAGE_KEY } from "@/lib/auth/session";
 import { supabaseClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,11 +135,12 @@ export default function LoginForm({ showSocialLogin = true, showRegisterPrompt =
 
     try {
       const providerConfig = oauthProviders.find((entry) => entry.provider === provider);
+      const redirectTo = `${getPublicAppUrl()}/auth/callback`;
 
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
           ...(providerConfig?.scopes ? { scopes: providerConfig.scopes } : {}),
         },
       });

@@ -7,6 +7,14 @@ if (process.env.NODE_ENV !== "production") {
   loadDotEnv({ path: ".env", override: false });
 }
 
+function resolveAppUrl() {
+  return (
+    process.env.APP_URL?.trim() ||
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    "http://localhost:3000"
+  );
+}
+
 function normalizeDatabaseUrl(value: string) {
   return value.trim();
 }
@@ -35,7 +43,7 @@ const postgresUrlSchema = z
 
 const envSchema = z.object({
   DATABASE_URL: postgresUrlSchema,
-  APP_URL: z.string().default("http://localhost:3000"),
+  APP_URL: z.string().default(resolveAppUrl()),
   SUPABASE_URL: z.string().default("http://localhost:54321"),
   SUPABASE_ANON_KEY: z.string().default(""),
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),

@@ -65,6 +65,7 @@ Copy `.env.example` to `.env.local` and fill:
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `DATABASE_URL`
+- `NEXT_PUBLIC_APP_URL` (public app URL used by OAuth redirects; set to the live domain in production)
 - `APP_URL`
 - `API_URL`
 - `NEXT_PUBLIC_DEFAULT_WORKSPACE_ID` (optional; if omitted, the app resolves the first accessible workspace from the API)
@@ -143,6 +144,7 @@ npm run db:push
 2. Framework preset: Next.js.
 3. Set all environment variables from `.env.example`.
 4. Set `DATABASE_URL` in Production, Preview, and Development scopes.
+5. Set `NEXT_PUBLIC_APP_URL` and `APP_URL` to your live domain in production, and to `http://localhost:3000` for local development.
 5. Deploy.
 
 The Next.js app serves UI and the Hono API through `api/[[...route]].ts` serverless handlers.
