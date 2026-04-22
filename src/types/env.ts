@@ -8,11 +8,27 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 function resolveAppUrl() {
-  return (
-    process.env.APP_URL?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    "http://localhost:3000"
-  );
+  const appUrl = process.env.APP_URL?.trim() || "";
+  const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "";
+
+  const isLocalhostUrl = (value: string) => {
+    try {
+      const parsed = new URL(value);
+      return ["localhost", "127.0.0.1", "0.0.0.0"].includes(parsed.hostname);
+    } catch {
+      return false;
+    }
+  };
+
+  if (appUrl && publicAppUrl) {
+    if (isLocalhostUrl(appUrl) && !isLocalhostUrl(publicAppUrl)) {
+      return publicAppUrl;
+    }
+
+    return appUrl;
+  }
+
+  return publicAppUrl || appUrl || "http://localhost:3000";
 }
 
 function normalizeDatabaseUrl(value: string) {

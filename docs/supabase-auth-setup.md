@@ -74,6 +74,8 @@ GitHub sign-in works best when the account exposes a verified email address. If 
 
 For OAuth redirects, Orbit uses `NEXT_PUBLIC_APP_URL` on the client when it is available, and falls back to the current browser origin. In production, set `NEXT_PUBLIC_APP_URL` and `APP_URL` to the same live domain so both GitHub sign-in and server-side auth links point to the real site.
 
+If a stale localhost URL was deployed by mistake, the GitHub login button will now prefer the current live browser origin over `NEXT_PUBLIC_APP_URL` when the stored value still points at localhost.
+
 ## 3) Canonical SQL Setup (single script)
 
 Run this script in Supabase SQL Editor:
