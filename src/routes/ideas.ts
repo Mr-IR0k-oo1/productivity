@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { db } from "@/src/db";
-import { ideas, tasks } from "@/src/db/schema";
+import { ideaVotes, ideas, tasks } from "@/src/db/schema";
 import { authMiddleware } from "@/src/middleware/auth";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
@@ -153,6 +153,106 @@ ideasRoute.post("/:id/convert", zValidator("json", ideaToTaskSchema), async (c) 
     .where(eq(ideas.id, idea.id));
 
   return c.json({ data: task }, 201);
+});
+
+ideasRoute.post("/:id/vote", async (c) => {
+  const ideaId = c.req.param("id");
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+
+  // Check if idea exists
+  const [idea] = await db
+    .select()
+    .from(ideas)
+    .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!idea) return c.json({ error: "Idea not found" }, 404);
+
+  // Check if user already voted
+  const [existingVote] = await db
+    .select()
+    .from(ideaVotes)
+    .where(and(eq(ideaVotes.ideaId, ideaId), eq(ideaVotes.userId, userId)))
+    .limit(1);
+
+  if (existingVote) {
+    return c.json({ error: "You have already voted on this idea. Use DELETE to remove vote first." }, 409);
+  }
+
+  // Create vote
+  const [created] = await db
+    .insert(ideaVotes)
+    .values({
+      ideaId,
+      userId,
+      vote: 1, // upvote
+    })
+    .returning();
+
+  // Get updated vote count
+  const voteCount = await db
+    .select({ count: ideaVotes.vote })
+    .from(ideaVotes)
+    .where(eq(ideaVotes.ideaId, ideaId));
+
+  return c.json({ data: created, voteCount: voteCount.length }, 201);
+});
+
+ideasRoute.delete("/:id/vote", async (c) => {
+  const ideaId = c.req.param("id");
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+
+  // Verify idea belongs to workspace
+  const [idea] = await db
+    .select()
+    .from(ideas)
+    .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!idea) return c.json({ error: "Idea not found" }, 404);
+
+  const [deleted] = await db
+    .delete(ideaVotes)
+    .where(and(eq(ideaVotes.ideaId, ideaId), eq(ideaVotes.userId, userId)))
+    .returning({ ideaId: ideaVotes.ideaId });
+
+  if (!deleted) {
+    return c.json({ error: "Vote not found" }, 404);
+  }
+
+  return c.body(null, 204);
+});
+
+// Get vote count for an idea
+ideasRoute.get("/:id/votes", async (c) => {
+  const ideaId = c.req.param("id");
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+
+  const [idea] = await db
+    .select()
+    .from(ideas)
+    .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!idea) return c.json({ error: "Idea not found" }, 404);
+
+  const votes = await db
+    .select()
+    .from(ideaVotes)
+    .where(eq(ideaVotes.ideaId, ideaId));
+
+  const userVote = votes.find(v => v.userId === userId);
+
+  return c.json({
+    data: {
+      total: votes.length,
+      userVoted: !!userVote,
+      vote: userVote?.vote ?? null,
+    }
+  }, 200);
 });
 
 export default ideasRoute;

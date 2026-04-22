@@ -12,6 +12,11 @@ import flowchartsRoute from "@/src/routes/flowcharts";
 import calendarRoute from "@/src/routes/calendar";
 import timeRoute from "@/src/routes/time";
 import reportsRoute from "@/src/routes/reports";
+import projectsRoute from "@/src/routes/projects";
+import tagsRoute from "@/src/routes/tags";
+import subtasksRoute from "@/src/routes/subtasks";
+import commentsRoute from "@/src/routes/comments";
+import attachmentsRoute from "@/src/routes/attachments";
 import { db } from "@/src/db";
 
 const app = new Hono();
@@ -46,6 +51,11 @@ app.route("/api/flowcharts", flowchartsRoute);
 app.route("/api/calendar", calendarRoute);
 app.route("/api/time", timeRoute);
 app.route("/api/reports", reportsRoute);
+app.route("/api/projects", projectsRoute);
+app.route("/api/tags", tagsRoute);
+app.route("/api/subtasks", subtasksRoute);
+app.route("/api/comments", commentsRoute);
+app.route("/api/attachments", attachmentsRoute);
 
 export default app;
 

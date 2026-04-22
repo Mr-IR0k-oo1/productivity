@@ -178,14 +178,23 @@ export function useVoteIdeaMutation() {
         throw new Error("Authentication is required");
       }
 
-      return fetchApiJson<{ data: { votes: number } }>(`/api/ideas/${payload.ideaId}/vote`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-        session: { workspaceId, authToken },
-        body: JSON.stringify({ vote: payload.vote }),
-      });
+      if (payload.vote) {
+        // Add vote - POST without body (always upvote)
+        return fetchApiJson<{ data: { id: string }; voteCount: number }>(`/api/ideas/${payload.ideaId}/vote`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          session: { workspaceId, authToken },
+          body: JSON.stringify({}),
+        });
+      } else {
+        // Remove vote - DELETE
+        return fetchApiJson<undefined>(`/api/ideas/${payload.ideaId}/vote`, {
+          method: "DELETE",
+          session: { workspaceId, authToken },
+        });
+      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryPrefix });

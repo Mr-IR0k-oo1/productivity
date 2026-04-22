@@ -18,6 +18,27 @@ const stopTimerSchema = z.object({
   entryId: z.string().uuid(),
 });
 
+const createTimeEntrySchema = z.object({
+  taskId: z.string().uuid().optional(),
+  description: z.string().optional(),
+  startedAt: z.string().datetime(),
+  endedAt: z.string().datetime().optional(),
+  durationMinutes: z.number().int().positive().optional(),
+});
+
+const updateTimeEntrySchema = z
+  .object({
+    taskId: z.string().uuid().optional().nullable(),
+    description: z.string().optional().nullable(),
+    startedAt: z.string().datetime().optional(),
+    endedAt: z.string().datetime().optional().nullable(),
+    durationMinutes: z.number().int().positive().optional().nullable(),
+    isRunning: z.boolean().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one field is required",
+  });
+
 const createTimesheetSchema = z.object({
   periodStart: z.string().datetime(),
   periodEnd: z.string().datetime(),
@@ -131,6 +152,117 @@ timeRoute.post("/timesheets", zValidator("json", createTimesheetSchema), async (
     );
 
   return c.json({ data: created }, 201);
+});
+
+// Create a time entry manually
+timeRoute.post("/entries", zValidator("json", createTimeEntrySchema), async (c) => {
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+  const payload = c.req.valid("json");
+
+  const [created] = await db
+    .insert(timeEntries)
+    .values({
+      workspaceId,
+      userId,
+      taskId: payload.taskId,
+      description: payload.description,
+      startedAt: new Date(payload.startedAt),
+      endedAt: payload.endedAt ? new Date(payload.endedAt) : null,
+      durationMinutes: payload.durationMinutes,
+      isRunning: false,
+    })
+    .returning();
+
+  return c.json({ data: created }, 201);
+});
+
+// Update a time entry
+timeRoute.patch("/entries/:id", zValidator("json", updateTimeEntrySchema), async (c) => {
+  const entryId = c.req.param("id");
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+  const payload = c.req.valid("json");
+
+  const [existing] = await db
+    .select()
+    .from(timeEntries)
+    .where(
+      and(
+        eq(timeEntries.id, entryId),
+        eq(timeEntries.workspaceId, workspaceId),
+        eq(timeEntries.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    return c.json({ error: "Time entry not found" }, 404);
+  }
+
+  const [updated] = await db
+    .update(timeEntries)
+    .set({
+      taskId: payload.taskId,
+      description: payload.description,
+      startedAt: payload.startedAt ? new Date(payload.startedAt) : undefined,
+      endedAt: payload.endedAt !== undefined ? (payload.endedAt ? new Date(payload.endedAt) : null) : undefined,
+      durationMinutes: payload.durationMinutes,
+      isRunning: payload.isRunning,
+    })
+    .where(eq(timeEntries.id, entryId))
+    .returning();
+
+  return c.json({ data: updated }, 200);
+});
+
+// Delete a time entry
+timeRoute.delete("/entries/:id", async (c) => {
+  const entryId = c.req.param("id");
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+
+  const [deleted] = await db
+    .delete(timeEntries)
+    .where(
+      and(
+        eq(timeEntries.id, entryId),
+        eq(timeEntries.workspaceId, workspaceId),
+        eq(timeEntries.userId, userId),
+      ),
+    )
+    .returning({ id: timeEntries.id });
+
+  if (!deleted) {
+    return c.json({ error: "Time entry not found" }, 404);
+  }
+
+  return c.body(null, 204);
+});
+
+// Get a single time entry
+timeRoute.get("/entries/:id", async (c) => {
+  const entryId = c.req.param("id");
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+
+  const [entry] = await db
+    .select()
+    .from(timeEntries)
+    .where(
+      and(
+        eq(timeEntries.id, entryId),
+        eq(timeEntries.workspaceId, workspaceId),
+        eq(timeEntries.userId, userId),
+      ),
+    )
+    .limit(1);
+
+  if (!entry) {
+    return c.json({ error: "Time entry not found" }, 404);
+  }
+
+  return c.json({ data: entry }, 200);
 });
 
 export default timeRoute;
