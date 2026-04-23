@@ -1,4 +1,4 @@
-import { and, count, eq, gte, sql } from "drizzle-orm";
+import { and, count, eq, gte, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
 
 import { db } from "@/src/db";
@@ -64,7 +64,7 @@ reportsRoute.get("/stats", async (c) => {
       and(
         eq(tasks.workspaceId, workspaceId),
         gte(tasks.dueDate, today),
-        gte(tomorrow, tasks.dueDate),
+        lt(tasks.dueDate, tomorrow),
       ),
     );
 
@@ -75,7 +75,7 @@ reportsRoute.get("/stats", async (c) => {
     .where(
       and(
         eq(tasks.workspaceId, workspaceId),
-        gte(today, tasks.dueDate),
+        lt(tasks.dueDate, today),
         sql`${tasks.status} != 'done'`,
       ),
     );

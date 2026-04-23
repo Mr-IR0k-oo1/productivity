@@ -42,10 +42,11 @@ commentsRoute.get("/", async (c) => {
       .where(and(eq(comments.taskId, taskId), eq(comments.workspaceId, workspaceId)))
       .orderBy(comments.createdAt);
   } else {
+    const targetIdeaId = ideaId as string;
     rows = await db
       .select()
       .from(comments)
-      .where(and(eq(comments.ideaId, ideaId), eq(comments.workspaceId, workspaceId)))
+      .where(and(eq(comments.ideaId, targetIdeaId), eq(comments.workspaceId, workspaceId)))
       .orderBy(comments.createdAt);
   }
 

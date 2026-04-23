@@ -1,3 +1,4 @@
 {
-  "/flowcharts/page": "app/flowcharts/page.js"
+  "/flowcharts/page": "app/flowcharts/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
 }

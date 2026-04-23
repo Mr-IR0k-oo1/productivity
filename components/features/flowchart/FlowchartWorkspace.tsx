@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSessionContext } from "@/components/providers/SessionProvider";
+import { useRouter } from "next/navigation";
 import {
   useFlowchartsQuery,
   useCreateFlowchartMutation,
@@ -147,12 +148,18 @@ function resolveFlowchartCanvas() {
   return { canvas, error: null };
 }
 
-export function FlowchartWorkspace() {
+type FlowchartWorkspaceProps = {
+  flowchartId?: string;
+};
+
+export function FlowchartWorkspace({ flowchartId }: FlowchartWorkspaceProps) {
+  const router = useRouter();
   const { workspaceId, isReady } = useSessionContext();
-  const { data: flowcharts = [], isLoading } = useFlowchartsQuery();
+  const { data: flowcharts = [], isLoading, isFetching } = useFlowchartsQuery();
   const createMutation = useCreateFlowchartMutation();
   const updateMutation = useUpdateFlowchartMutation();
   const deleteMutation = useDeleteFlowchartMutation();
+  const isEditorRoute = Boolean(flowchartId);
 
   const [activeFlowchart, setActiveFlowchart] = useState<Flowchart | null>(null);
   const [nodes, setNodes] = useState<FlowchartNode[]>([]);
@@ -223,6 +230,23 @@ export function FlowchartWorkspace() {
   useEffect(() => {
     return () => clearPendingAutoSave();
   }, [clearPendingAutoSave]);
+
+  useEffect(() => {
+    if (!flowchartId) {
+      return;
+    }
+
+    const matchedFlowchart = flowcharts.find((flowchart) => flowchart.id === flowchartId);
+    if (matchedFlowchart) {
+      setActiveFlowchart((current) => {
+        if (current?.id === matchedFlowchart.id) {
+          return current;
+        }
+
+        return matchedFlowchart;
+      });
+    }
+  }, [flowchartId, flowcharts]);
 
   const createBlockedReason = useMemo(() => {
     if (createMutation.isPending) {
@@ -555,7 +579,7 @@ export function FlowchartWorkspace() {
           flowchartId: result.data.id,
           name: result.data.name,
         });
-        setActiveFlowchart(result.data);
+        router.push(`/flowcharts/${result.data.id}`);
         showToast("Flowchart created");
       } else {
         logFlowchartDebug("create:error", { reason: "no-data-returned" });
@@ -566,7 +590,7 @@ export function FlowchartWorkspace() {
       logFlowchartDebug("create:error", { error: message });
       showToast(`Failed to create flowchart: ${message}`, "error");
     }
-  }, [createBlockedReason, createMutation, isReady, logFlowchartDebug, showToast, workspaceId]);
+  }, [createBlockedReason, createMutation, isReady, logFlowchartDebug, router, showToast, workspaceId]);
 
   const handleRename = useCallback(async () => {
     const flowchart = activeFlowchartRef.current;
@@ -633,12 +657,25 @@ export function FlowchartWorkspace() {
   }, [createMutation, logFlowchartDebug, showToast]);
 
   const handleBack = useCallback(() => {
+    if (isEditorRoute) {
+      router.push("/flowcharts");
+      return;
+    }
+
     clearPendingAutoSave();
     setSelectedNode(null);
     setSelectedEdge(null);
     setActiveFlowchart(null);
     logFlowchartDebug("back-to-list");
-  }, [clearPendingAutoSave, logFlowchartDebug]);
+  }, [clearPendingAutoSave, isEditorRoute, logFlowchartDebug, router]);
+
+  const handleSelectFromList = useCallback(
+    (flowchart: Flowchart) => {
+      logFlowchartDebug("list:open-editor", { flowchartId: flowchart.id });
+      router.push(`/flowcharts/${flowchart.id}`);
+    },
+    [logFlowchartDebug, router],
+  );
 
   const handleExport = useCallback(() => {
     const flowchart = activeFlowchartRef.current;
@@ -834,7 +871,7 @@ export function FlowchartWorkspace() {
     );
   }
 
-  if (showList || !activeFlowchart) {
+  if (!isEditorRoute && (showList || !activeFlowchart)) {
     return (
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950/60 p-4">
@@ -854,7 +891,7 @@ export function FlowchartWorkspace() {
         </div>
         <FlowchartList
           flowcharts={flowcharts}
-          onSelect={setActiveFlowchart}
+          onSelect={handleSelectFromList}
           onDelete={handleDeleteFromList}
           onRename={handleRenameFromList}
           onDuplicate={handleDuplicate}
@@ -865,6 +902,28 @@ export function FlowchartWorkspace() {
             {toast.message}
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (isEditorRoute && !activeFlowchart && isFetching) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (isEditorRoute && !activeFlowchart) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+        <h1 className="text-xl font-semibold text-zinc-100">Flowchart Not Found</h1>
+        <p className="max-w-md text-sm text-zinc-400">
+          The selected flowchart could not be loaded. It may have been deleted or you may not have access to it.
+        </p>
+        <Button onClick={() => router.push("/flowcharts")}>
+          Back To Flowcharts
+        </Button>
       </div>
     );
   }
@@ -890,7 +949,7 @@ export function FlowchartWorkspace() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold text-zinc-100">{activeFlowchart.name}</h1>
+              <h1 className="text-xl font-semibold text-zinc-100">{activeFlowchart?.name ?? "Flowchart"}</h1>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditing(true)}>
                 <Pencil className="h-4 w-4" />
               </Button>

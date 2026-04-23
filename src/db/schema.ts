@@ -1,4 +1,5 @@
 import {
+  AnyPgColumn,
   boolean,
   index,
   integer,
@@ -183,7 +184,7 @@ export const comments = pgTable(
       .references(() => workspaces.id, { onDelete: "cascade" }),
     taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }),
     ideaId: uuid("idea_id").references(() => ideas.id, { onDelete: "cascade" }),
-    parentId: uuid("parent_id").references(() => comments.id, { onDelete: "cascade" }), // for threading
+    parentId: uuid("parent_id").references((): AnyPgColumn => comments.id, { onDelete: "cascade" }), // for threading
     authorId: uuid("author_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
