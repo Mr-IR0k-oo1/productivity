@@ -21,6 +21,29 @@ export type CalendarEventDTO = {
   updatedAt: string;
 };
 
+export type CreateCalendarEventPayload = {
+  title: string;
+  description?: string;
+  startsAt: string;
+  endsAt: string;
+  taskId?: string;
+  kind?: CalendarEventDTO["kind"];
+  project?: string | null;
+  location?: string | null;
+};
+
+export type UpdateCalendarEventPayload = {
+  id: string;
+  title?: string;
+  description?: string | null;
+  startsAt?: string;
+  endsAt?: string;
+  taskId?: string | null;
+  kind?: CalendarEventDTO["kind"];
+  project?: string | null;
+  location?: string | null;
+};
+
 export const calendarQueryKey = (workspaceId: string) => ["calendar", workspaceId] as const;
 
 export function useCalendarQuery() {

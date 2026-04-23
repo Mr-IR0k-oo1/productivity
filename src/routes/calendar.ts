@@ -55,6 +55,9 @@ calendarRoute.post("/", zValidator("json", createEventSchema), async (c) => {
       startsAt: new Date(payload.startsAt),
       endsAt: new Date(payload.endsAt),
       taskId: payload.taskId,
+      kind: payload.kind,
+      project: payload.project,
+      location: payload.location,
     })
     .returning();
 
@@ -66,7 +69,17 @@ calendarRoute.patch("/:id", zValidator("json", updateEventSchema), async (c) => 
   const eventId = c.req.param("id");
   const payload = c.req.valid("json");
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: {
+    title?: string;
+    description?: string | null;
+    startsAt?: Date;
+    endsAt?: Date;
+    taskId?: string | null;
+    kind?: string | null;
+    project?: string | null;
+    location?: string | null;
+    updatedAt?: Date;
+  } = {};
   if (payload.title !== undefined) updateData.title = payload.title;
   if (payload.description !== undefined) updateData.description = payload.description;
   if (payload.startsAt !== undefined) updateData.startsAt = new Date(payload.startsAt);
@@ -75,6 +88,7 @@ calendarRoute.patch("/:id", zValidator("json", updateEventSchema), async (c) => 
   if (payload.kind !== undefined) updateData.kind = payload.kind;
   if (payload.project !== undefined) updateData.project = payload.project;
   if (payload.location !== undefined) updateData.location = payload.location;
+  updateData.updatedAt = new Date();
 
   const [updated] = await db
     .update(calendarEvents)

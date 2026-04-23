@@ -278,12 +278,16 @@ export const calendarEvents = pgTable(
     description: text("description"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    kind: varchar("kind", { length: 30 }), // meeting, focus, deadline, review, travel
+    project: varchar("project", { length: 200 }),
     location: varchar("location", { length: 150 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     workspaceStartIdx: index("calendar_events_workspace_start_idx").on(table.workspaceId, table.startsAt),
+    creatorIdx: index("idx_calendar_events_creator").on(table.creatorId),
+    kindIdx: index("idx_calendar_events_kind").on(table.kind),
   }),
 );
 
