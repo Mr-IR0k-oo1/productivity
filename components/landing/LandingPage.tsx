@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
@@ -58,17 +57,6 @@ export function LandingPage() {
               asChild
             >
               <Link href="/auth">Enter Orbit</Link>
-            </Button>
-
-            <Button
-              variant="secondary"
-              className="h-14 min-w-[190px] rounded-2xl border border-[var(--accent)] bg-transparent px-8 text-lg font-medium text-[var(--foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-strong)]"
-              asChild
-            >
-              <Link href="/flow">
-                How It Works
-                <ArrowRight className="ml-1 h-5 w-5" />
-              </Link>
             </Button>
           </div>
         </div>

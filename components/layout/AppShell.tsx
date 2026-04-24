@@ -19,10 +19,6 @@ export default function AppShell({ children }: AppShellProps) {
 
   if (
     pathname === "/" ||
-    pathname === "/flow" ||
-    pathname.startsWith("/flow/") ||
-    pathname === "/how-it-works" ||
-    pathname.startsWith("/how-it-works/") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||

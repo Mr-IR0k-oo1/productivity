@@ -20,7 +20,6 @@ import {
   Settings,
   ShieldCheck,
   SunMedium,
-  Route,
   Workflow,
   X,
 } from "lucide-react";
@@ -42,7 +41,6 @@ const sampleNotifications = [
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "How It Works", href: "/flow", icon: Route },
   { name: "My Day", href: "/my-day", icon: SunMedium },
   { name: "Ideas", href: "/ideas", icon: Lightbulb },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
