@@ -10,7 +10,7 @@ const store = new Map<string, RateLimitRecord>();
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_ATTEMPTS = 10;
 
-function getIP(c: any): string {
+function getIP(c: Parameters<MiddlewareHandler>[0]): string {
   return (
     c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
     c.req.header("cf-connecting-ip") ??

@@ -1,5 +1,25 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/flowcharts/route": "app/api/flowcharts/route.js",
+  "/api/flowcharts/[id]/route": "app/api/flowcharts/[id]/route.js",
+  "/admin/page": "app/admin/page.js",
+  "/auth/callback/page": "app/auth/callback/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/auth/update-password/page": "app/auth/update-password/page.js",
+  "/auth/forgot-password/page": "app/auth/forgot-password/page.js",
+  "/calendar/page": "app/calendar/page.js",
+  "/flowcharts/[id]/page": "app/flowcharts/[id]/page.js",
   "/flowcharts/page": "app/flowcharts/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/profile/page": "app/profile/page.js"
+  "/ideas/page": "app/ideas/page.js",
+  "/login/page": "app/login/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/my-day/page": "app/my-day/page.js",
+  "/reports/page": "app/reports/page.js",
+  "/register/page": "app/register/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/tasks/[id]/focus/page": "app/tasks/[id]/focus/page.js",
+  "/tasks/page": "app/tasks/page.js",
+  "/time/page": "app/time/page.js",
+  "/page": "app/page.js"
 }

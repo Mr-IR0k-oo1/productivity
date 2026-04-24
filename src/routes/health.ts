@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { sql } from "drizzle-orm";
 import { db } from "../db";
 
@@ -23,7 +23,7 @@ healthRouter.get("/db", async (c) => {
 export { healthRouter };
 
 // Structured request logger middleware
-export const structuredLogger = async (c: any, next: any) => {
+export const structuredLogger: MiddlewareHandler = async (c, next) => {
   const start = Date.now();
   await next();
   const ms = Date.now() - start;

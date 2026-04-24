@@ -177,7 +177,7 @@ timeRoute.post("/entries", zValidator("json", createTimeEntrySchema), async (c) 
   return c.json({ data: created, entry: created }, 201);
 });
 
-const updateTimeEntryHandler = async (c: Parameters<typeof timeRoute.put>[2] extends (...args: infer T) => any ? T[0] : never) => {
+const updateTimeEntryHandler = async (c: Parameters<typeof timeRoute.put>[2] extends (...args: infer T) => unknown ? T[0] : never) => {
   const entryId = c.req.param("id");
   const workspaceId = c.get("workspaceId");
   const userId = c.get("userId");

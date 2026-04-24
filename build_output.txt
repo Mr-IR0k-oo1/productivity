@@ -1,0 +1,83 @@
+
+> orbit@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.15
+   - Environments: .env.local, .env
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 27.2s
+   Linting and checking validity of types ...
+
+Failed to compile.
+
+./app/profile/page.tsx
+12:3  Warning: 'Bell' is defined but never used.  @typescript-eslint/no-unused-vars
+13:3  Warning: 'Eye' is defined but never used.  @typescript-eslint/no-unused-vars
+14:3  Warning: 'Shield' is defined but never used.  @typescript-eslint/no-unused-vars
+17:3  Warning: 'RefreshCw' is defined but never used.  @typescript-eslint/no-unused-vars
+20:3  Warning: 'LogOut' is defined but never used.  @typescript-eslint/no-unused-vars
+137:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+143:10  Warning: 'avatarPreview' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+147:10  Warning: 'showTwoFAModal' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+147:26  Warning: 'setShowTwoFAModal' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+299:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+333:14  Warning: 'err' is defined but never used.  @typescript-eslint/no-unused-vars
+506:27  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/time/page.tsx
+5:52  Warning: 'subWeeks' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/features/CalendarView.tsx
+3:10  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+3:40  Warning: 'useRef' is defined but never used.  @typescript-eslint/no-unused-vars
+6:3  Warning: 'addHours' is defined but never used.  @typescript-eslint/no-unused-vars
+21:3  Warning: 'DragEndEvent' is defined but never used.  @typescript-eslint/no-unused-vars
+34:3  Warning: 'Link2' is defined but never used.  @typescript-eslint/no-unused-vars
+144:7  Warning: 'sourceFilters' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+273:10  Warning: 'getVisibleHoursForDay' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/features/CreateEventModal.tsx
+4:18  Warning: 'addHours' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/features/EventForm.tsx
+25:3  Warning: 'projects' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/features/IdeaWorkspace.tsx
+13:3  Warning: 'Pencil' is defined but never used.  @typescript-eslint/no-unused-vars
+28:104  Warning: 'useUpdateIdeaMutation' is defined but never used.  @typescript-eslint/no-unused-vars
+68:7  Warning: 'initialIdeas' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+1051:9  Warning: 'isError' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/settings/SettingsPageClient.tsx
+297:9  Warning: 'theme' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+748:19  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./src/controllers/auth-controller.ts
+1:14  Warning: 'sql' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/index.ts
+5:10  Warning: 'sql' is defined but never used.  @typescript-eslint/no-unused-vars
+26:10  Warning: 'db' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/middleware/rateLimiter.ts
+13:19  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/routes/health.ts
+26:43  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+26:54  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./src/routes/reports.ts
+2:41  Warning: 'sum' is defined but never used.  @typescript-eslint/no-unused-vars
+4:37  Warning: 'workspaceMembers' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/routes/settings.ts
+1:10  Warning: 'and' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/routes/tags.ts
+100:9  Warning: 'workspaceId' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./src/routes/time.ts
+180:108  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
