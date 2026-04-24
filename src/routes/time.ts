@@ -174,30 +174,27 @@ timeRoute.post("/entries", zValidator("json", createTimeEntrySchema), async (c) 
     })
     .returning();
 
-  return c.json({ data: created }, 201);
+  return c.json({ data: created, entry: created }, 201);
 });
 
-// Update a time entry
-timeRoute.patch("/entries/:id", zValidator("json", updateTimeEntrySchema), async (c) => {
+const updateTimeEntryHandler = async (c: Parameters<typeof timeRoute.put>[2] extends (...args: infer T) => any ? T[0] : never) => {
   const entryId = c.req.param("id");
   const workspaceId = c.get("workspaceId");
   const userId = c.get("userId");
   const payload = c.req.valid("json");
 
   const [existing] = await db
-    .select()
+    .select({ id: timeEntries.id, userId: timeEntries.userId })
     .from(timeEntries)
-    .where(
-      and(
-        eq(timeEntries.id, entryId),
-        eq(timeEntries.workspaceId, workspaceId),
-        eq(timeEntries.userId, userId),
-      ),
-    )
+    .where(and(eq(timeEntries.id, entryId), eq(timeEntries.workspaceId, workspaceId)))
     .limit(1);
 
   if (!existing) {
     return c.json({ error: "Time entry not found" }, 404);
+  }
+
+  if (existing.userId !== userId) {
+    return c.json({ error: "You can only edit your own time entries" }, 403);
   }
 
   const [updated] = await db
@@ -213,8 +210,14 @@ timeRoute.patch("/entries/:id", zValidator("json", updateTimeEntrySchema), async
     .where(eq(timeEntries.id, entryId))
     .returning();
 
-  return c.json({ data: updated }, 200);
-});
+  return c.json({ data: updated, entry: updated }, 200);
+};
+
+// Update a time entry (PUT endpoint required by API contract)
+timeRoute.put("/entries/:id", zValidator("json", updateTimeEntrySchema), updateTimeEntryHandler);
+
+// Update a time entry
+timeRoute.patch("/entries/:id", zValidator("json", updateTimeEntrySchema), updateTimeEntryHandler);
 
 // Delete a time entry
 timeRoute.delete("/entries/:id", async (c) => {
@@ -222,22 +225,28 @@ timeRoute.delete("/entries/:id", async (c) => {
   const workspaceId = c.get("workspaceId");
   const userId = c.get("userId");
 
-  const [deleted] = await db
-    .delete(timeEntries)
+  const [existing] = await db
+    .select({ id: timeEntries.id, userId: timeEntries.userId })
+    .from(timeEntries)
     .where(
       and(
         eq(timeEntries.id, entryId),
         eq(timeEntries.workspaceId, workspaceId),
-        eq(timeEntries.userId, userId),
       ),
     )
-    .returning({ id: timeEntries.id });
+    .limit(1);
 
-  if (!deleted) {
+  if (!existing) {
     return c.json({ error: "Time entry not found" }, 404);
   }
 
-  return c.body(null, 204);
+  if (existing.userId !== userId) {
+    return c.json({ error: "You can only delete your own time entries" }, 403);
+  }
+
+  await db.delete(timeEntries).where(eq(timeEntries.id, entryId));
+
+  return c.json({ success: true, deletedId: entryId }, 200);
 });
 
 // Get a single time entry

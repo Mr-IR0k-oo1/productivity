@@ -97,6 +97,7 @@ export const ideas = pgTable(
     title: varchar("title", { length: 200 }).notNull(),
     summary: text("summary"),
     content: text("content"),
+    votes: integer("votes").default(0).notNull(),
     status: ideaStatusEnum("status").default("draft").notNull(),
     convertedTaskId: uuid("converted_task_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -426,7 +427,6 @@ export const ideaVotes = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    vote: integer("vote").notNull(), // 1 = upvote, -1 = downvote
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({

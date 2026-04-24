@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -160,43 +160,52 @@ ideasRoute.post("/:id/vote", async (c) => {
   const workspaceId = c.get("workspaceId");
   const userId = c.get("userId");
 
-  // Check if idea exists
   const [idea] = await db
-    .select()
+    .select({ id: ideas.id, votes: ideas.votes })
     .from(ideas)
     .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
     .limit(1);
 
-  if (!idea) return c.json({ error: "Idea not found" }, 404);
+  if (!idea) {
+    return c.json({ error: "Idea not found" }, 404);
+  }
 
-  // Check if user already voted
   const [existingVote] = await db
-    .select()
+    .select({ ideaId: ideaVotes.ideaId })
     .from(ideaVotes)
     .where(and(eq(ideaVotes.ideaId, ideaId), eq(ideaVotes.userId, userId)))
     .limit(1);
 
+  let voted: boolean;
+  let newVoteCount: number;
+
   if (existingVote) {
-    return c.json({ error: "You have already voted on this idea. Use DELETE to remove vote first." }, 409);
+    await db
+      .delete(ideaVotes)
+      .where(and(eq(ideaVotes.ideaId, ideaId), eq(ideaVotes.userId, userId)));
+
+    const [updated] = await db
+      .update(ideas)
+      .set({ votes: sql`GREATEST(${ideas.votes} - 1, 0)`, updatedAt: new Date() })
+      .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
+      .returning({ votes: ideas.votes });
+
+    voted = false;
+    newVoteCount = updated?.votes ?? 0;
+  } else {
+    await db.insert(ideaVotes).values({ ideaId, userId });
+
+    const [updated] = await db
+      .update(ideas)
+      .set({ votes: sql`${ideas.votes} + 1`, updatedAt: new Date() })
+      .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
+      .returning({ votes: ideas.votes });
+
+    voted = true;
+    newVoteCount = updated?.votes ?? 0;
   }
 
-  // Create vote
-  const [created] = await db
-    .insert(ideaVotes)
-    .values({
-      ideaId,
-      userId,
-      vote: 1, // upvote
-    })
-    .returning();
-
-  // Get updated vote count
-  const voteCount = await db
-    .select({ count: ideaVotes.vote })
-    .from(ideaVotes)
-    .where(eq(ideaVotes.ideaId, ideaId));
-
-  return c.json({ data: created, voteCount: voteCount.length }, 201);
+  return c.json({ voted, voteCount: newVoteCount }, 200);
 });
 
 ideasRoute.delete("/:id/vote", async (c) => {
@@ -204,14 +213,15 @@ ideasRoute.delete("/:id/vote", async (c) => {
   const workspaceId = c.get("workspaceId");
   const userId = c.get("userId");
 
-  // Verify idea belongs to workspace
   const [idea] = await db
-    .select()
+    .select({ id: ideas.id })
     .from(ideas)
     .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
     .limit(1);
 
-  if (!idea) return c.json({ error: "Idea not found" }, 404);
+  if (!idea) {
+    return c.json({ error: "Idea not found" }, 404);
+  }
 
   const [deleted] = await db
     .delete(ideaVotes)
@@ -221,6 +231,11 @@ ideasRoute.delete("/:id/vote", async (c) => {
   if (!deleted) {
     return c.json({ error: "Vote not found" }, 404);
   }
+
+  await db
+    .update(ideas)
+    .set({ votes: sql`GREATEST(${ideas.votes} - 1, 0)`, updatedAt: new Date() })
+    .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)));
 
   return c.body(null, 204);
 });
@@ -232,27 +247,52 @@ ideasRoute.get("/:id/votes", async (c) => {
   const userId = c.get("userId");
 
   const [idea] = await db
-    .select()
+    .select({ id: ideas.id, votes: ideas.votes })
     .from(ideas)
     .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
     .limit(1);
 
-  if (!idea) return c.json({ error: "Idea not found" }, 404);
+  if (!idea) {
+    return c.json({ error: "Idea not found" }, 404);
+  }
 
-  const votes = await db
-    .select()
+  const [userVote] = await db
+    .select({ ideaId: ideaVotes.ideaId })
     .from(ideaVotes)
-    .where(eq(ideaVotes.ideaId, ideaId));
-
-  const userVote = votes.find(v => v.userId === userId);
+    .where(and(eq(ideaVotes.ideaId, ideaId), eq(ideaVotes.userId, userId)))
+    .limit(1);
 
   return c.json({
     data: {
-      total: votes.length,
+      total: idea.votes,
       userVoted: !!userVote,
-      vote: userVote?.vote ?? null,
+      vote: userVote ? 1 : null,
     }
   }, 200);
+});
+
+ideasRoute.get("/:id/votes/me", async (c) => {
+  const ideaId = c.req.param("id");
+  const workspaceId = c.get("workspaceId");
+  const userId = c.get("userId");
+
+  const [idea] = await db
+    .select({ id: ideas.id })
+    .from(ideas)
+    .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!idea) {
+    return c.json({ error: "Idea not found" }, 404);
+  }
+
+  const [existingVote] = await db
+    .select({ ideaId: ideaVotes.ideaId })
+    .from(ideaVotes)
+    .where(and(eq(ideaVotes.ideaId, ideaId), eq(ideaVotes.userId, userId)))
+    .limit(1);
+
+  return c.json({ voted: !!existingVote }, 200);
 });
 
 export default ideasRoute;
