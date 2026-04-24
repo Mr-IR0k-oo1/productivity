@@ -98,7 +98,7 @@ export async function signUpWithWorkspace(input: SignUpInput) {
   const [existingUser] = await db
     .select({ id: users.id })
     .from(users)
-    .where(sql`lower(${users.email}) = ${email}`)
+    .where(eq(users.email, email))
     .limit(1);
 
   if (existingUser) {
@@ -218,7 +218,7 @@ export async function ensureOAuthUserWorkspace(
   const [existingByEmail] = await db
     .select({ id: users.id, authUserId: users.authUserId })
     .from(users)
-    .where(sql`lower(${users.email}) = ${normalizedEmail}`)
+    .where(eq(users.email, normalizedEmail))
     .limit(1);
 
   if (existingByEmail && existingByEmail.authUserId !== input.authUserId) {
