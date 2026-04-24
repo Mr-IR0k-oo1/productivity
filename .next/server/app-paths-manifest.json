@@ -1,8 +1,7 @@
 {
   "/flowcharts/page": "app/flowcharts/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
+  "/flow/page": "app/flow/page.js",
   "/ideas/page": "app/ideas/page.js",
-  "/my-day/page": "app/my-day/page.js",
   "/tasks/page": "app/tasks/page.js",
-  "/flow/page": "app/flow/page.js"
+  "/dashboard/page": "app/dashboard/page.js"
 }
