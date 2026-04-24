@@ -10,7 +10,7 @@ export type IdeaDTO = {
   id: string;
   title: string;
   summary: string | null;
-  content: string | null;
+  content: Record<string, unknown> | string | null;
   status: "draft" | "validated" | "archived" | "converted";
   authorId: string;
   createdAt: string;
@@ -21,7 +21,7 @@ export type UpdateIdeaPayload = {
   id: string;
   title?: string;
   summary?: string | null;
-  content?: string | null;
+  content?: Record<string, unknown> | string | null;
   status?: IdeaDTO["status"];
 };
 

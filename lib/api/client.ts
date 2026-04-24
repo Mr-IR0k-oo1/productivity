@@ -1,3 +1,5 @@
+import { ApiError } from "@/lib/queryClient";
+
 type ApiSessionContext = {
   workspaceId?: string;
   authToken?: string | null;
@@ -46,7 +48,8 @@ export async function fetchApiJson<TResponse>(
   });
 
   if (!response.ok) {
-    throw new Error(await readErrorMessage(response));
+    const message = await readErrorMessage(response);
+    throw new ApiError(response.status, message);
   }
 
   if (response.status === 204) {

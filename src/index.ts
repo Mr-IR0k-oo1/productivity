@@ -1,7 +1,12 @@
 import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
+import { HTTPException } from "hono/http-exception";
 import { Hono } from "hono";
 import { sql } from "drizzle-orm";
+
+// Validate environment variables on startup
+import { validateEnv } from "@/src/lib/env";
+validateEnv();
 
 import workspaceRoute from "@/src/routes/workspace";
 import authRoute from "@/src/routes/auth";
@@ -17,31 +22,38 @@ import tagsRoute from "@/src/routes/tags";
 import subtasksRoute from "@/src/routes/subtasks";
 import commentsRoute from "@/src/routes/comments";
 import attachmentsRoute from "@/src/routes/attachments";
+import { healthRouter, structuredLogger } from "@/src/routes/health";
 import { db } from "@/src/db";
 
 const app = new Hono();
 
 app.use("*", cors());
+app.use("*", structuredLogger);
 
+// Global error handler
 app.onError((error, c) => {
-  console.error(error);
+  console.error("[Orbit API Error]", error);
+
+  if (error instanceof HTTPException) {
+    return c.json({ error: error.message }, error.status);
+  }
+
+  // Zod validation errors from @hono/zod-validator
+  if (error.name === "ZodError") {
+    return c.json(
+      { error: "Validation failed", details: JSON.parse(error.message) },
+      422
+    );
+  }
+
   return c.json({ error: "Internal server error" }, 500);
 });
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 
 app.get("/", (c) => c.json({ ok: true, service: "Orbit API" }));
-app.get("/health", (c) => c.json({ ok: true }));
-app.get("/api/health/db", async (c) => {
-  try {
-    await db.execute(sql`select 1`);
-    return c.json({ ok: true, database: "reachable", timestamp: new Date().toISOString() }, 200);
-  } catch (error) {
-    console.error("Database health check failed", error);
-    return c.json({ ok: false, database: "unreachable" }, 503);
-  }
-});
 
+app.route("/api/health", healthRouter);
 app.route("/api/auth", authRoute);
 app.route("/api/workspace", workspaceRoute);
 app.route("/api/settings", settingsRoute);

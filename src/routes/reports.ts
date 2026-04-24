@@ -1,101 +1,216 @@
-import { and, count, eq, gte, lt, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { eq, and, gte, lte, sql, count, sum } from "drizzle-orm";
+import { db } from "../db";
+import { tasks, timeEntries, ideas, workspaceMembers, users, projects } from "../db/schema";
+import { authMiddleware } from "../middleware/auth";
+import { workspaceMiddleware } from "../middleware/workspace";
 
-import { db } from "@/src/db";
-import { ideas, tasks, timeEntries } from "@/src/db/schema";
-import { authMiddleware } from "@/src/middleware/auth";
-import { workspaceMiddleware } from "@/src/middleware/workspace";
-import type { WorkspaceBindings } from "@/src/types/bindings";
+const reportsRoute = new Hono();
 
-const reportsRoute = new Hono<WorkspaceBindings>();
-reportsRoute.use("*", authMiddleware, workspaceMiddleware);
+reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
+  const wsId = c.get("workspaceId");
+  const { from, to } = c.req.query();
 
-reportsRoute.get("/stats", async (c) => {
-  const workspaceId = c.get("workspaceId");
+  // Default to last 30 days if not provided
+  const fromDate = from ?? new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+  const toDate   = to   ?? new Date().toISOString().slice(0, 10);
 
-  // Task breakdown by status
-  const taskBreakdown = await db
-    .select({ status: tasks.status, count: count() })
+  // ── 1. Summary stats ───────────────────────────────────────────────────────
+
+  const [{ tasksCompleted }] = await db
+    .select({ tasksCompleted: count() })
     .from(tasks)
-    .where(eq(tasks.workspaceId, workspaceId))
-    .groupBy(tasks.status);
+    .where(
+      and(
+        eq(tasks.workspaceId, wsId),
+        eq(tasks.status, "done"),
+        sql`DATE(${tasks.updatedAt}) >= ${fromDate}`,
+        sql`DATE(${tasks.updatedAt}) <= ${toDate}`
+      )
+    );
 
-  // Ideas breakdown by status
-  const ideaBreakdown = await db
-    .select({ status: ideas.status, count: count() })
+  const [{ totalTimeMinutes }] = await db
+    .select({ totalTimeMinutes: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0)` })
+    .from(timeEntries)
+    .where(
+      and(
+        eq(timeEntries.workspaceId, wsId),
+        gte(timeEntries.date, fromDate),
+        lte(timeEntries.date, toDate)
+      )
+    );
+
+  // Active members = members who logged at least one time entry in the period
+  const activeMembersRows = await db
+    .selectDistinct({ userId: timeEntries.userId })
+    .from(timeEntries)
+    .where(
+      and(
+        eq(timeEntries.workspaceId, wsId),
+        gte(timeEntries.date, fromDate),
+        lte(timeEntries.date, toDate)
+      )
+    );
+
+  const [{ ideasConverted }] = await db
+    .select({ ideasConverted: count() })
     .from(ideas)
-    .where(eq(ideas.workspaceId, workspaceId))
-    .groupBy(ideas.status);
+    .where(
+      and(
+        eq(ideas.workspaceId, wsId),
+        eq(ideas.status, "converted"),
+        sql`DATE(${ideas.updatedAt}) >= ${fromDate}`,
+        sql`DATE(${ideas.updatedAt}) <= ${toDate}`
+      )
+    );
 
-  // Time tracked total
-  const [totalHours] = await db
+  // ── 2. Tasks by day ────────────────────────────────────────────────────────
+
+  const createdByDay = await db
     .select({
-      value: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0) / 60`,
+      date: sql<string>`DATE(${tasks.createdAt})`,
+      created: count(),
     })
-    .from(timeEntries)
-    .where(eq(timeEntries.workspaceId, workspaceId));
-
-  // Time tracked this week
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const [weeklyHours] = await db
-    .select({
-      value: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0) / 60`,
-    })
-    .from(timeEntries)
-    .where(and(eq(timeEntries.workspaceId, workspaceId), gte(timeEntries.startedAt, weekAgo)));
-
-  // Completed tasks count
-  const [completedTasksCount] = await db
-    .select({ count: count() })
-    .from(tasks)
-    .where(and(eq(tasks.workspaceId, workspaceId), eq(tasks.status, "done")));
-
-  // Tasks due today
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-
-  const [dueTodayCount] = await db
-    .select({ count: count() })
     .from(tasks)
     .where(
       and(
-        eq(tasks.workspaceId, workspaceId),
-        gte(tasks.dueDate, today),
-        lt(tasks.dueDate, tomorrow),
-      ),
-    );
+        eq(tasks.workspaceId, wsId),
+        sql`DATE(${tasks.createdAt}) >= ${fromDate}`,
+        sql`DATE(${tasks.createdAt}) <= ${toDate}`
+      )
+    )
+    .groupBy(sql`DATE(${tasks.createdAt})`);
 
-  // Overdue tasks
-  const [overdueCount] = await db
-    .select({ count: count() })
+  const completedByDay = await db
+    .select({
+      date: sql<string>`DATE(${tasks.updatedAt})`,
+      completed: count(),
+    })
     .from(tasks)
     .where(
       and(
-        eq(tasks.workspaceId, workspaceId),
-        lt(tasks.dueDate, today),
-        sql`${tasks.status} != 'done'`,
-      ),
-    );
+        eq(tasks.workspaceId, wsId),
+        eq(tasks.status, "done"),
+        sql`DATE(${tasks.updatedAt}) >= ${fromDate}`,
+        sql`DATE(${tasks.updatedAt}) <= ${toDate}`
+      )
+    )
+    .groupBy(sql`DATE(${tasks.updatedAt})`);
 
-  return c.json(
-    {
-      data: {
-        totalTasks: taskBreakdown.reduce((sum, t) => sum + Number(t.count), 0),
-        taskBreakdown: taskBreakdown.map((t) => ({ status: t.status, count: Number(t.count) })),
-        totalIdeas: ideaBreakdown.reduce((sum, i) => sum + Number(i.count), 0),
-        ideaBreakdown: ideaBreakdown.map((i) => ({ status: i.status, count: Number(i.count) })),
-        completedTasks: Number(completedTasksCount?.count ?? 0),
-        hoursTrackedTotal: Number(totalHours?.value ?? 0),
-        hoursTrackedThisWeek: Number(weeklyHours?.value ?? 0),
-        tasksDueToday: Number(dueTodayCount?.count ?? 0),
-        overdueTasks: Number(overdueCount?.count ?? 0),
-      },
+  // Merge into unified array indexed by date
+  const dateMap: Record<string, { date: string; created: number; completed: number }> = {};
+  createdByDay.forEach(({ date, created }) => {
+    if (!dateMap[date]) dateMap[date] = { date, created: 0, completed: 0 };
+    dateMap[date].created = created;
+  });
+  completedByDay.forEach(({ date, completed }) => {
+    if (!dateMap[date]) dateMap[date] = { date, created: 0, completed: 0 };
+    dateMap[date].completed = completed;
+  });
+  const tasksByDay = Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
+
+  // ── 3. Time by project ─────────────────────────────────────────────────────
+
+  const timeByProjectRows = await db
+    .select({
+      projectId: tasks.projectId,
+      projectName: projects.name,
+      projectColor: projects.color,
+      minutes: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0)`,
+    })
+    .from(timeEntries)
+    .leftJoin(tasks, eq(timeEntries.taskId, tasks.id))
+    .leftJoin(projects, eq(tasks.projectId, projects.id))
+    .where(
+      and(
+        eq(timeEntries.workspaceId, wsId),
+        gte(timeEntries.date, fromDate),
+        lte(timeEntries.date, toDate)
+      )
+    )
+    .groupBy(tasks.projectId, projects.name, projects.color)
+    .orderBy(sql`SUM(${timeEntries.durationMinutes}) DESC`)
+    .limit(8);
+
+  const timeByProject = timeByProjectRows.map((r) => ({
+    name:    r.projectName ?? "Unlinked",
+    minutes: Number(r.minutes),
+    color:   r.projectColor ?? "#6b7280",
+  }));
+
+  // ── 4. Velocity by week ────────────────────────────────────────────────────
+
+  const velocityRows = await db
+    .select({
+      week: sql<string>`TO_CHAR(DATE_TRUNC('week', ${tasks.updatedAt}), 'Mon DD')`,
+      velocity: count(),
+    })
+    .from(tasks)
+    .where(
+      and(
+        eq(tasks.workspaceId, wsId),
+        eq(tasks.status, "done"),
+        sql`DATE(${tasks.updatedAt}) >= ${fromDate}`,
+        sql`DATE(${tasks.updatedAt}) <= ${toDate}`
+      )
+    )
+    .groupBy(sql`DATE_TRUNC('week', ${tasks.updatedAt})`)
+    .orderBy(sql`DATE_TRUNC('week', ${tasks.updatedAt})`);
+
+  const velocityByWeek = velocityRows.map((r) => ({
+    week: r.week,
+    velocity: r.velocity,
+  }));
+
+  // ── 5. Workload by member ──────────────────────────────────────────────────
+
+  const workloadRows = await db
+    .select({
+      userId: tasks.assigneeId,
+      name: users.name,
+      taskCount: count(tasks.id),
+      timeMinutes: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0)`,
+    })
+    .from(tasks)
+    .leftJoin(users, eq(tasks.assigneeId, users.id))
+    .leftJoin(
+      timeEntries,
+      and(
+        eq(timeEntries.userId, tasks.assigneeId),
+        gte(timeEntries.date, fromDate),
+        lte(timeEntries.date, toDate)
+      )
+    )
+    .where(
+      and(
+        eq(tasks.workspaceId, wsId),
+        sql`DATE(${tasks.createdAt}) >= ${fromDate}`,
+        sql`DATE(${tasks.createdAt}) <= ${toDate}`
+      )
+    )
+    .groupBy(tasks.assigneeId, users.name)
+    .orderBy(sql`COUNT(${tasks.id}) DESC`)
+    .limit(10);
+
+  const workloadByMember = workloadRows.map((r) => ({
+    name:        r.name ?? "Unassigned",
+    taskCount:   r.taskCount,
+    timeMinutes: Number(r.timeMinutes),
+  }));
+
+  return c.json({
+    summary: {
+      tasksCompleted: Number(tasksCompleted),
+      totalTimeMinutes: Number(totalTimeMinutes),
+      activeMembers: activeMembersRows.length,
+      ideasConverted: Number(ideasConverted),
     },
-    200,
-  );
+    tasksByDay,
+    timeByProject,
+    velocityByWeek,
+    workloadByMember,
+  });
 });
 
 export default reportsRoute;
+

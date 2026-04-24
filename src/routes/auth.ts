@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { authMiddleware } from "@/src/middleware/auth";
+import { authRateLimiter } from "@/src/middleware/rateLimiter";
 import { ensureOAuthUserWorkspace, loginWithPassword, signUpWithWorkspace } from "@/src/controllers/auth-controller";
 import type { AuthBindings } from "@/src/types/bindings";
 import { AUTH_COOKIE_MAX_AGE_SECONDS, AUTH_COOKIE_NAME } from "@/lib/auth/session";
@@ -84,7 +85,7 @@ function getRegisterErrorStatus(message: string) {
 
 const auth = new Hono<AuthBindings>();
 
-auth.post("/signup", zValidator("json", signupSchema), async (c) => {
+auth.post("/signup", authRateLimiter, zValidator("json", signupSchema), async (c) => {
   const payload = c.req.valid("json");
   try {
     const result = await signUpWithWorkspace(payload);
@@ -106,7 +107,7 @@ auth.post("/signup", zValidator("json", signupSchema), async (c) => {
   }
 });
 
-auth.post("/login", zValidator("json", loginSchema), async (c) => {
+auth.post("/login", authRateLimiter, zValidator("json", loginSchema), async (c) => {
   const payload = c.req.valid("json");
 
   try {
@@ -126,7 +127,7 @@ auth.post("/login", zValidator("json", loginSchema), async (c) => {
   }
 });
 
-auth.post("/register", zValidator("json", signupSchema), async (c) => {
+auth.post("/register", authRateLimiter, zValidator("json", signupSchema), async (c) => {
   const payload = c.req.valid("json");
   try {
     const result = await signUpWithWorkspace(payload);

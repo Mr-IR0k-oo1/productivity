@@ -11,7 +11,7 @@ import { normalizeTaskViewMetadata, type TaskViewMetadata } from "@/types/task-v
 export type TaskDTO = {
   id: string;
   title: string;
-  description: string | null;
+  description: Record<string, unknown> | string | null;
   assigneeId: string | null;
   status: TaskStatus;
   priority: number;
@@ -32,7 +32,7 @@ export type TaskFilters = {
 export type UpdateTaskPayload = {
   id: string;
   title?: string;
-  description?: string | null;
+  description?: Record<string, unknown> | string | null;
   assigneeId?: string | null;
   status?: TaskStatus;
   priority?: number;

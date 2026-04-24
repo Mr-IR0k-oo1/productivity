@@ -96,7 +96,7 @@ export const ideas = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 200 }).notNull(),
     summary: text("summary"),
-    content: text("content"),
+    content: jsonb("content"),
     votes: integer("votes").default(0).notNull(),
     status: ideaStatusEnum("status").default("draft").notNull(),
     convertedTaskId: uuid("converted_task_id"),
@@ -106,6 +106,23 @@ export const ideas = pgTable(
   (table) => ({
     workspaceIdx: index("ideas_workspace_idx").on(table.workspaceId),
     authorIdx: index("ideas_author_idx").on(table.authorId),
+  }),
+);
+
+export const ideaDependencies = pgTable(
+  "idea_dependencies",
+  {
+    ideaId: uuid("idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    dependsOnIdeaId: uuid("depends_on_idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.ideaId, table.dependsOnIdeaId] }),
+    dependsOnIdx: index("idx_idea_dependencies_depends_on").on(table.dependsOnIdeaId),
   }),
 );
 
@@ -123,7 +140,7 @@ export const tasks = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
     title: varchar("title", { length: 200 }).notNull(),
-    description: text("description"),
+    description: jsonb("description"),
     status: taskStatusEnum("status").default("todo").notNull(),
     priority: integer("priority").default(2).notNull(),
     dueDate: timestamp("due_date", { withTimezone: true }),
