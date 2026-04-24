@@ -15,7 +15,9 @@ interface EdgeEditorModalProps {
 }
 
 export function EdgeEditorModal({ edge, onClose, onUpdate, onDelete }: EdgeEditorModalProps) {
-  const [label, setLabel] = useState((edge.data as { label?: string })?.label || "");
+  const [label, setLabel] = useState(
+    typeof edge.label === "string" ? edge.label : (edge.data as { label?: string } | undefined)?.label || "",
+  );
 
   const handleSave = () => {
     onUpdate(edge.id, { label });

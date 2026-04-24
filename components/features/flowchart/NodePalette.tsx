@@ -1,6 +1,6 @@
 "use client";
 
-import { Grip, Circle, Square, Diamond, ArrowRightLeft, Clock } from "lucide-react";
+import { Circle, Square, Diamond, ArrowRightLeft, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 

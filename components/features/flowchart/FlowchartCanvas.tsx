@@ -1,5 +1,6 @@
 "use client";
 
+import type { RefObject } from "react";
 import {
   ReactFlow,
   Background,
@@ -11,6 +12,8 @@ import {
   type OnEdgesChange,
   type OnConnect,
   type NodeMouseHandler,
+  type EdgeMouseHandler,
+  type OnSelectionChangeFunc,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -27,7 +30,11 @@ interface FlowchartCanvasProps {
   onConnect: OnConnect;
   onNodeClick?: NodeMouseHandler<FlowchartNode>;
   onNodeDoubleClick?: NodeMouseHandler<FlowchartNode>;
-  onEdgeClick?: (event: React.MouseEvent, edge: FlowchartEdge) => void;
+  onEdgeClick?: EdgeMouseHandler<FlowchartEdge>;
+  onEdgeDoubleClick?: EdgeMouseHandler<FlowchartEdge>;
+  onPaneClick?: () => void;
+  onSelectionChange?: OnSelectionChangeFunc<FlowchartNode, FlowchartEdge>;
+  containerRef?: RefObject<HTMLDivElement | null>;
   nodeTypes: NodeTypes;
   showMinimap?: boolean;
 }
@@ -41,11 +48,15 @@ export function FlowchartCanvas({
   onNodeClick,
   onNodeDoubleClick,
   onEdgeClick,
+  onEdgeDoubleClick,
+  onPaneClick,
+  onSelectionChange,
+  containerRef,
   nodeTypes,
   showMinimap = true,
 }: FlowchartCanvasProps) {
   return (
-    <div className="h-full w-full">
+    <div ref={containerRef} className="h-full w-full">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -55,9 +66,13 @@ export function FlowchartCanvas({
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}
         onEdgeClick={onEdgeClick}
+        onEdgeDoubleClick={onEdgeDoubleClick}
+        onPaneClick={onPaneClick}
+        onSelectionChange={onSelectionChange}
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.2 }}
+        deleteKeyCode={null}
         defaultEdgeOptions={{
           animated: true,
           style: { stroke: "#60a5fa", strokeWidth: 2 },

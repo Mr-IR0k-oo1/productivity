@@ -7,7 +7,21 @@ import { eq, and } from "drizzle-orm";
 
 const isAuthBypassEnabled =
   process.env.ORBIT_DISABLE_AUTH === "true" || process.env.NEXT_PUBLIC_ORBIT_DISABLE_AUTH === "true";
+const flowchartItemRouteDebugEnabled = process.env.NODE_ENV !== "production";
 let cachedBypassAuthUserId: string | null = null;
+
+function logFlowchartItemRoute(event: string, payload?: Record<string, unknown>) {
+  if (!flowchartItemRouteDebugEnabled) {
+    return;
+  }
+
+  if (payload) {
+    console.log(`[api/flowcharts/:id] ${event}`, payload);
+    return;
+  }
+
+  console.log(`[api/flowcharts/:id] ${event}`);
+}
 
 async function getAuthUserId(request: NextRequest): Promise<string | null> {
   if (isAuthBypassEnabled) {
@@ -42,11 +56,16 @@ async function getAuthUserId(request: NextRequest): Promise<string | null> {
 async function getUserAndWorkspace(request: NextRequest) {
   const authUserId = await getAuthUserId(request);
   if (!authUserId) {
+    logFlowchartItemRoute("auth:blocked", { reason: "missing-auth-user" });
     return null;
   }
 
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
+    logFlowchartItemRoute("auth:blocked", {
+      reason: "missing-workspace-id",
+      authUserId,
+    });
     return null;
   }
 
@@ -57,6 +76,11 @@ async function getUserAndWorkspace(request: NextRequest) {
     .limit(1);
 
   if (!user) {
+    logFlowchartItemRoute("auth:blocked", {
+      reason: "user-not-found",
+      authUserId,
+      workspaceId,
+    });
     return null;
   }
 
@@ -70,6 +94,13 @@ async function getUserAndWorkspace(request: NextRequest) {
     .limit(1);
 
   if (!member || !member.isActive) {
+    logFlowchartItemRoute("auth:blocked", {
+      reason: "inactive-or-missing-membership",
+      authUserId,
+      workspaceId,
+      userId: user.id,
+      isMemberActive: member?.isActive ?? null,
+    });
     return null;
   }
 
@@ -98,9 +129,17 @@ export async function GET(
       .limit(1);
 
     if (!flowchart) {
+      logFlowchartItemRoute("get:not-found", {
+        flowchartId: id,
+        workspaceId: context.workspaceId,
+      });
       return NextResponse.json({ error: "Flowchart not found" }, { status: 404 });
     }
 
+    logFlowchartItemRoute("get:success", {
+      flowchartId: id,
+      workspaceId: context.workspaceId,
+    });
     return NextResponse.json({ data: flowchart });
   } catch (error) {
     console.error("GET /api/flowcharts/[id] error:", error);
@@ -135,9 +174,19 @@ export async function PATCH(
       .returning();
 
     if (!updated) {
+      logFlowchartItemRoute("patch:not-found", {
+        flowchartId: id,
+        workspaceId: context.workspaceId,
+      });
       return NextResponse.json({ error: "Flowchart not found" }, { status: 404 });
     }
 
+    logFlowchartItemRoute("patch:success", {
+      flowchartId: id,
+      workspaceId: context.workspaceId,
+      hasName: Boolean(body.name),
+      hasData: Boolean(body.data),
+    });
     return NextResponse.json({ data: updated });
   } catch (error) {
     console.error("PATCH /api/flowcharts/[id] error:", error);
@@ -166,9 +215,17 @@ export async function DELETE(
       .returning({ id: flowcharts.id });
 
     if (!deleted) {
+      logFlowchartItemRoute("delete:not-found", {
+        flowchartId: id,
+        workspaceId: context.workspaceId,
+      });
       return NextResponse.json({ error: "Flowchart not found" }, { status: 404 });
     }
 
+    logFlowchartItemRoute("delete:success", {
+      flowchartId: id,
+      workspaceId: context.workspaceId,
+    });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error("DELETE /api/flowcharts/[id] error:", error);
