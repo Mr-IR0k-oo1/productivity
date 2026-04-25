@@ -120,7 +120,16 @@ export async function GET(
     const { id } = await params;
 
     const [flowchart] = await db
-      .select()
+      .select({
+        id: flowcharts.id,
+        workspaceId: flowcharts.workspaceId,
+        creatorId: flowcharts.ownerId,
+        name: flowcharts.title,
+        description: flowcharts.description,
+        data: flowcharts.canvasState,
+        createdAt: flowcharts.createdAt,
+        updatedAt: flowcharts.updatedAt,
+      })
       .from(flowcharts)
       .where(and(
         eq(flowcharts.id, id),
@@ -163,15 +172,23 @@ export async function PATCH(
     const [updated] = await db
       .update(flowcharts)
       .set({
-        ...(body.name && { name: body.name }),
-        ...(body.data && { data: body.data }),
+        ...(body.name && { title: body.name }),
+        ...(body.data && { canvasState: body.data }),
         updatedAt: new Date(),
       })
       .where(and(
         eq(flowcharts.id, id),
         eq(flowcharts.workspaceId, context.workspaceId)
       ))
-      .returning();
+      .returning({
+        id: flowcharts.id,
+        workspaceId: flowcharts.workspaceId,
+        creatorId: flowcharts.ownerId,
+        name: flowcharts.title,
+        data: flowcharts.canvasState,
+        createdAt: flowcharts.createdAt,
+        updatedAt: flowcharts.updatedAt,
+      });
 
     if (!updated) {
       logFlowchartItemRoute("patch:not-found", {

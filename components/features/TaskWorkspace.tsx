@@ -31,6 +31,7 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { TaskDescriptionEditor } from "./TaskDescriptionEditor";
 import { KanbanBoard } from "@/components/features/KanbanBoard";
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -59,7 +60,7 @@ type DueFilter = "all" | "mine" | "overdue" | "this-week";
 type TaskRecord = {
   id: string;
   title: string;
-  description: string;
+  description: string | Record<string, unknown>;
   assigneeId: string | null;
   assignee: string;
   initials: string;
@@ -108,7 +109,7 @@ function mapTaskDTOToRecord(
   return {
     id: task.id,
     title: task.title,
-    description: task.description || "",
+    description: task.description ?? "",
     assigneeId: task.assigneeId,
     assignee: assigneeName,
     initials: assigneeName.slice(0, 2).toUpperCase(),
@@ -435,7 +436,13 @@ function TaskDetailPanel({
               <Badge variant="default">{task.status.replace("_", " ")}</Badge>
             </div>
             <h2 className="mt-3 text-2xl font-semibold text-zinc-100">{task.title}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{task.description}</p>
+            {typeof task.description === "string" ? (
+              <p className="mt-2 text-sm text-zinc-400">{task.description}</p>
+            ) : (
+              <div className="mt-4">
+                <TaskDescriptionEditor taskId={task.id} initialContent={task.description} readOnly />
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -1103,7 +1110,7 @@ export function TaskWorkspace() {
       const matchesSearch =
         search.trim().length === 0 ||
         [task.title, task.description, task.assignee, ...task.labels].some((value) =>
-          value.toLowerCase().includes(search.toLowerCase()),
+          typeof value === "string" && value.toLowerCase().includes(search.toLowerCase()),
         );
       const matchesPriority = priorityFilter === "All" || task.priority === priorityFilter;
       const matchesAssignee = assigneeFilter === "All" || task.assigneeId === assigneeFilter;

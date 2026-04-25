@@ -22,7 +22,7 @@ export type TaskStatus = SharedTaskStatus;
 type KanbanTask = {
   id: string;
   title: string;
-  description: string;
+  description: string | Record<string, unknown>;
   assignee: string;
   initials: string;
   dueDate: string;

@@ -15,6 +15,7 @@ import {
   TimerReset,
 } from "lucide-react";
 
+import { TaskDescriptionEditor } from "./TaskDescriptionEditor";
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -263,7 +264,13 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
               <div className="space-y-2">
                 <CardTitle className="text-4xl font-semibold tracking-tight md:text-5xl">{task.title}</CardTitle>
                 <CardDescription className="max-w-3xl text-base text-zinc-300">
-                  {task.description || "This task does not have a description yet."}
+                  {typeof task.description === "string" ? (
+                    task.description || "This task does not have a description yet."
+                  ) : (
+                    <div className="mt-2 text-left">
+                      <TaskDescriptionEditor taskId={task.id} initialContent={task.description} readOnly />
+                    </div>
+                  )}
                 </CardDescription>
               </div>
 

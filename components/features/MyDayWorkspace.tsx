@@ -220,7 +220,7 @@ export function MyDayWorkspace() {
                           <div>
                             <h3 className="text-xl font-semibold text-zinc-100">{task.title}</h3>
                             <p className="mt-1 max-w-3xl text-sm text-zinc-400">
-                              {task.description || "No description yet."}
+                              {(typeof task.description === 'string' ? task.description : null) || "No description yet."}
                             </p>
                           </div>
                         </div>

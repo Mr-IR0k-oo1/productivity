@@ -7,8 +7,10 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -18,6 +20,25 @@ import { taskStatusValues } from "@/types/task-status";
 export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"]);
 export const taskStatusEnum = pgEnum("task_status", taskStatusValues);
 export const ideaStatusEnum = pgEnum("idea_status", ["draft", "validated", "archived", "converted"]);
+export const canvasModeEnum = pgEnum("canvas_mode", ["infinite", "page"]);
+export const pageSizeEnum = pgEnum("page_size", ["a4", "letter", "custom"]);
+export const nodeTypeEnum = pgEnum("node_type", ["shape", "text", "sticky", "image", "task_card", "idea_card", "group", "code"]);
+export const shapeVariantEnum = pgEnum("shape_variant", ["rectangle", "diamond", "circle", "parallelogram", "rounded_rect"]);
+export const edgeStyleEnum = pgEnum("edge_style", ["straight", "curved", "orthogonal"]);
+export const lineStyleEnum = pgEnum("line_style", ["solid", "dashed", "dotted"]);
+export const arrowTypeEnum = pgEnum("arrow_type", ["none", "open", "filled"]);
+export const portEnum = pgEnum("port", ["top", "right", "bottom", "left", "custom"]);
+export const accessRoleEnum = pgEnum("fc_access_role", ["viewer", "editor", "owner"]);
+
+const defaultCanvasState = {
+  nodes: [],
+  edges: [],
+  viewport: {
+    x: 0,
+    y: 0,
+    zoom: 1,
+  },
+};
 
 export const users = pgTable(
   "users",
@@ -339,17 +360,114 @@ export const flowcharts = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    creatorId: uuid("creator_id")
+    ownerId: uuid("owner_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 200 }).notNull(),
-    data: jsonb("data").default({ nodes: [], edges: [] }).notNull(),
+    title: text("title").notNull().default("Untitled flowchart"),
+    description: text("description"),
+    mode: canvasModeEnum("mode").notNull().default("infinite"),
+    pageSize: pageSizeEnum("page_size"),
+    pageWidth: real("page_width"),
+    pageHeight: real("page_height"),
+    diagramType: text("diagram_type"),
+    canvasState: jsonb("canvas_state").default(defaultCanvasState).notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    isPublic: boolean("is_public").default(false).notNull(),
+    publicToken: text("public_token").unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     workspaceIdx: index("flowcharts_workspace_idx").on(table.workspaceId),
-    creatorIdx: index("flowcharts_creator_idx").on(table.creatorId),
+    ownerIdx: index("flowcharts_owner_idx").on(table.ownerId),
+  }),
+);
+
+export const flowchartNodes = pgTable(
+  "flowchart_nodes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    nodeType: nodeTypeEnum("node_type").notNull(),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+    ideaId: uuid("idea_id").references(() => ideas.id, { onDelete: "set null" }),
+    x: real("x").notNull().default(0),
+    y: real("y").notNull().default(0),
+    width: real("width").notNull().default(200),
+    height: real("height").notNull().default(80),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    flowchartIdx: index("fc_nodes_flowchart_idx").on(table.flowchartId),
+    taskIdx: index("fc_nodes_task_idx").on(table.taskId),
+    ideaIdx: index("fc_nodes_idea_idx").on(table.ideaId),
+  }),
+);
+
+export const flowchartVersions = pgTable(
+  "flowchart_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    snapshot: jsonb("snapshot").notNull(),
+    label: text("label"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    flowchartIdx: index("fc_versions_flowchart_idx").on(table.flowchartId),
+  }),
+);
+
+export const flowchartComments = pgTable(
+  "flowchart_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id").references((): AnyPgColumn => flowchartComments.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    x: real("x").notNull(),
+    y: real("y").notNull(),
+    resolved: boolean("resolved").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    flowchartIdx: index("fc_comments_flowchart_idx").on(table.flowchartId),
+  }),
+);
+
+export const flowchartAccess = pgTable(
+  "flowchart_access",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: accessRoleEnum("role").notNull().default("viewer"),
+    grantedBy: uuid("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantedAt: timestamp("granted_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueUserAccess: unique("fc_access_unique").on(table.flowchartId, table.userId),
+    flowchartIdx: index("fc_access_flowchart_idx").on(table.flowchartId),
+    userIdx: index("fc_access_user_idx").on(table.userId),
   }),
 );
 

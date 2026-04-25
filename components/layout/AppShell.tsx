@@ -14,6 +14,8 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isTaskFocusRoute = pathname === "/tasks" && searchParams.has("taskId");
+  const isFlowchartEditorRoute = /^\/flowcharts\/[^/]+$/.test(pathname);
+  const isPublicFlowchartRoute = /^\/f\/[^/]+$/.test(pathname);
 
   useKeyboardShortcuts(true);
 
@@ -23,7 +25,9 @@ export default function AppShell({ children }: AppShellProps) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/tasks/") ||
-    isTaskFocusRoute
+    isTaskFocusRoute ||
+    isFlowchartEditorRoute ||
+    isPublicFlowchartRoute
   ) {
     return <>{children}</>;
   }

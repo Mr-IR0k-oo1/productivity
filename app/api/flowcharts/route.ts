@@ -86,7 +86,16 @@ export async function GET(request: NextRequest) {
     }
 
     const rows = await db
-      .select()
+      .select({
+        id: flowcharts.id,
+        workspaceId: flowcharts.workspaceId,
+        creatorId: flowcharts.ownerId,
+        name: flowcharts.title,
+        description: flowcharts.description,
+        data: flowcharts.canvasState,
+        createdAt: flowcharts.createdAt,
+        updatedAt: flowcharts.updatedAt,
+      })
       .from(flowcharts)
       .where(eq(flowcharts.workspaceId, workspaceId))
       .orderBy(flowcharts.updatedAt);
@@ -170,11 +179,19 @@ export async function POST(request: NextRequest) {
       .insert(flowcharts)
       .values({
         workspaceId,
-        creatorId: user.id,
-        name: body.name,
-        data: body.data ?? { nodes: [], edges: [] },
+        ownerId: user.id,
+        title: body.name,
+        canvasState: body.data ?? { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
       })
-      .returning();
+      .returning({
+        id: flowcharts.id,
+        workspaceId: flowcharts.workspaceId,
+        creatorId: flowcharts.ownerId,
+        name: flowcharts.title,
+        data: flowcharts.canvasState,
+        createdAt: flowcharts.createdAt,
+        updatedAt: flowcharts.updatedAt,
+      });
 
     logFlowchartsRoute("post:success", {
       authUserId,
