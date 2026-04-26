@@ -1,4 +1,9 @@
 {
+  "/my-day/page": "app/my-day/page.js",
+  "/ideas/page": "app/ideas/page.js",
+  "/tasks/page": "app/tasks/page.js",
+  "/reports/page": "app/reports/page.js",
   "/flowcharts/page": "app/flowcharts/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/settings/page": "app/settings/page.js",
+  "/time/page": "app/time/page.js"
 }

@@ -7,8 +7,7 @@ import { useRouter } from "next/navigation";
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/loading-state";
-import { AsciiBackground } from "./AsciiBackground";
-import { ThreeSpaceLayer } from "./ThreeSpaceLayer";
+import { OrbitalRingsBackground } from "./OrbitalRingsBackground";
 
 export function LandingPage() {
   const router = useRouter();
@@ -26,8 +25,7 @@ export function LandingPage() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-transparent">
-      <AsciiBackground />
-      <ThreeSpaceLayer />
+      <OrbitalRingsBackground />
 
       <div className="absolute inset-0 bg-transparent" />
 

@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame } from "lucide-react";
+import { Flame, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { useUIStore } from "@/stores/ui-store";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Ideas", href: "/ideas" },
   { label: "Tasks", href: "/tasks" },
+  { label: "Flowcharts", href: "/flowcharts" },
   { label: "Calendar", href: "/calendar" },
   { label: "Time", href: "/time" },
   { label: "Reports", href: "/reports" },
@@ -17,16 +21,23 @@ const navItems = [
 
 export default function TopNav() {
   const pathname = usePathname();
+  const theme = useUIStore((state) => state.theme);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-900/90 bg-[#0a0a0a]/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[var(--color-border-secondary)] bg-[var(--color-surface)]/95 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-100 text-zinc-900">
+            <span className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-md",
+              theme === "dark" ? "bg-zinc-100 text-zinc-900" : "bg-zinc-900 text-zinc-100"
+            )}>
               <Flame className="h-4 w-4" />
             </span>
-            <span className="text-lg font-bold tracking-tight text-zinc-100">Orbit</span>
+            <span className={cn(
+              "text-lg font-bold tracking-tight",
+              theme === "dark" ? "text-zinc-100" : "text-zinc-900"
+            )}>Orbit</span>
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
@@ -39,8 +50,8 @@ export default function TopNav() {
                   className={cn(
                     "rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "bg-zinc-900 text-zinc-100"
-                      : "text-zinc-400 hover:bg-zinc-950 hover:text-zinc-100",
+                      ? "bg-[var(--color-surface-strong)] text-[var(--color-text-primary)]"
+                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]",
                   )}
                 >
                   {item.label}
@@ -48,6 +59,10 @@ export default function TopNav() {
               );
             })}
           </nav>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <ThemeToggle variant="icon" />
         </div>
       </div>
     </header>

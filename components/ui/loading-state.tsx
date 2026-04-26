@@ -4,23 +4,25 @@ interface LoadingStateProps {
   label?: string;
   description?: string;
   minHeight?: string;
+  fullPage?: boolean;
 }
 
 export function LoadingState({
   label = "Loading",
   description,
-  minHeight = "min-h-[55vh]",
+  minHeight = "min-h-[200px]",
+  fullPage = false,
 }: LoadingStateProps) {
   return (
     <div
-      className={`flex ${minHeight} items-center justify-center rounded-3xl border border-[color:var(--card-border)] bg-[var(--surface)] p-8 text-center`}
+      className={`flex ${minHeight} ${fullPage ? "min-h-screen" : ""} items-center justify-center rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-8 text-center`}
     >
-      <div className="space-y-3">
-        <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--accent)]" />
+      <div className="space-y-4">
+        <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--color-accent)]" />
         <div>
-          <p className="font-medium text-[var(--foreground)]">{label}</p>
+          <p className="font-semibold text-[var(--color-text-primary)]">{label}</p>
           {description && (
-            <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{description}</p>
           )}
         </div>
       </div>

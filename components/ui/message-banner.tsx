@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, AlertTriangle, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, AlertTriangle, Info, X } from "lucide-react";
 import { useState } from "react";
 
 type MessageType = "success" | "error" | "warning" | "info";
@@ -18,27 +18,35 @@ interface MessageBannerProps {
 const typeConfig = {
   success: {
     icon: CheckCircle2,
-    borderClass: "border-emerald-500/40 bg-emerald-500/10",
-    textClass: "text-emerald-400",
-    titleClass: "text-emerald-200",
+    iconColor: "text-[var(--color-success)]",
+    borderColor: "border-[var(--color-success)]/30",
+    bgColor: "bg-[var(--color-success)]/10",
+    titleColor: "text-[var(--color-success)]",
+    textColor: "text-[var(--color-success)]",
   },
   error: {
     icon: AlertCircle,
-    borderClass: "border-rose-500/40 bg-rose-500/10",
-    textClass: "text-rose-400",
-    titleClass: "text-rose-200",
+    iconColor: "text-[var(--color-error)]",
+    borderColor: "border-[var(--color-error)]/30",
+    bgColor: "bg-[var(--color-error)]/10",
+    titleColor: "text-[var(--color-error)]",
+    textColor: "text-[var(--color-error)]",
   },
   warning: {
     icon: AlertTriangle,
-    borderClass: "border-amber-500/40 bg-amber-500/10",
-    textClass: "text-amber-400",
-    titleClass: "text-amber-200",
+    iconColor: "text-[var(--color-warning)]",
+    borderColor: "border-[var(--color-warning)]/30",
+    bgColor: "bg-[var(--color-warning)]/10",
+    titleColor: "text-[var(--color-warning)]",
+    textColor: "text-[var(--color-warning)]",
   },
   info: {
-    icon: AlertCircle,
-    borderClass: "border-blue-500/40 bg-blue-500/10",
-    textClass: "text-blue-400",
-    titleClass: "text-blue-200",
+    icon: Info,
+    iconColor: "text-[var(--color-info)]",
+    borderColor: "border-[var(--color-info)]/30",
+    bgColor: "bg-[var(--color-info)]/10",
+    titleColor: "text-[var(--color-info)]",
+    textColor: "text-[var(--color-info)]",
   },
 };
 
@@ -64,21 +72,21 @@ export function MessageBanner({
 
   return (
     <div
-      className={`flex items-start gap-3 rounded-2xl border p-4 ${config.borderClass}`}
+      className={`flex items-start gap-3 rounded-xl border p-4 ${config.borderColor} ${config.bgColor}`}
     >
-      <Icon className={`h-5 w-5 flex-shrink-0 ${config.textClass} mt-0.5`} />
+      <Icon className={`h-5 w-5 flex-shrink-0 ${config.iconColor} mt-0.5`} />
       <div className="flex-1 min-w-0">
         {title && (
-          <h4 className={`font-medium ${config.titleClass}`}>{title}</h4>
+          <h4 className={`font-semibold ${config.titleColor}`}>{title}</h4>
         )}
-        <p className={`text-sm ${title ? "mt-1" : ""} ${config.textClass}`}>
+        <p className={`text-sm ${title ? "mt-1" : ""} ${config.textColor}`}>
           {message}
         </p>
         {action && (
           <button
             onClick={action.onClick}
             type="button"
-            className={`mt-3 text-sm font-medium ${config.textClass} underline hover:opacity-80`}
+            className={`mt-3 text-sm font-semibold underline hover:opacity-80 ${config.textColor}`}
           >
             {action.label}
           </button>
@@ -88,7 +96,7 @@ export function MessageBanner({
         <button
           onClick={handleDismiss}
           type="button"
-          className={`flex-shrink-0 ${config.textClass} hover:opacity-80`}
+          className={`flex-shrink-0 ${config.iconColor} hover:opacity-80`}
         >
           <X className="h-5 w-5" />
         </button>

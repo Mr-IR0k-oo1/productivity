@@ -6,7 +6,20 @@ import { Toaster } from "sonner";
 
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { ThemeSync } from "@/components/providers/ThemeSync";
+import { useUIStore } from "@/stores/ui-store";
 import { queryClient } from "@/lib/queryClient";
+
+function ToasterWithTheme() {
+  const theme = useUIStore((state) => state.theme);
+  return (
+    <Toaster
+      position="bottom-right"
+      theme={theme}
+      richColors
+      closeButton
+    />
+  );
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -15,12 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>
-      <Toaster
-        position="bottom-right"
-        theme="dark"
-        richColors
-        closeButton
-      />
+      <ToasterWithTheme />
     </SessionProvider>
   );
 }
