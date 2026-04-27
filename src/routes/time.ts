@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { z } from "zod";
 
 import { db } from "@/src/db";
@@ -177,11 +178,16 @@ timeRoute.post("/entries", zValidator("json", createTimeEntrySchema), async (c) 
   return c.json({ data: created, entry: created }, 201);
 });
 
-const updateTimeEntryHandler = async (c: Parameters<typeof timeRoute.put>[2] extends (...args: infer T) => unknown ? T[0] : never) => {
+const updateTimeEntryHandler = async (c: Context<WorkspaceBindings>) => {
   const entryId = c.req.param("id");
+  if (!entryId) {
+    return c.json({ error: "Time entry id is required" }, 400);
+  }
   const workspaceId = c.get("workspaceId");
   const userId = c.get("userId");
-  const payload = c.req.valid("json");
+  const payload = (c.req as typeof c.req & {
+    valid: (target: "json") => z.infer<typeof updateTimeEntrySchema>;
+  }).valid("json");
 
   const [existing] = await db
     .select({ id: timeEntries.id, userId: timeEntries.userId })

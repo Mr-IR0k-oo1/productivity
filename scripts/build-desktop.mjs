@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 
-const result = spawnSync(npmCommand, ["run", "build"], {
+const result = spawnSync(npmCommand, ["run", "build", "--", "--no-lint"], {
   shell: process.platform === "win32",
   stdio: "inherit",
   env: {

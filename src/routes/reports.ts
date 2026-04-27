@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { eq, and, gte, lte, sql, count, sum } from "drizzle-orm";
+import { eq, and, sql, count, sum } from "drizzle-orm";
 import { db } from "../db";
 import { tasks, timeEntries, ideas, workspaceMembers, users, projects } from "../db/schema";
 import { authMiddleware } from "../middleware/auth";
@@ -14,6 +14,11 @@ reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
   // Default to last 30 days if not provided
   const fromDate = from ?? new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
   const toDate   = to   ?? new Date().toISOString().slice(0, 10);
+  const timeEntryDateRange = and(
+    eq(timeEntries.workspaceId, wsId),
+    sql`DATE(${timeEntries.startedAt}) >= ${fromDate}`,
+    sql`DATE(${timeEntries.startedAt}) <= ${toDate}`
+  );
 
   // ── 1. Summary stats ───────────────────────────────────────────────────────
 
@@ -32,25 +37,13 @@ reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
   const [{ totalTimeMinutes }] = await db
     .select({ totalTimeMinutes: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0)` })
     .from(timeEntries)
-    .where(
-      and(
-        eq(timeEntries.workspaceId, wsId),
-        gte(timeEntries.date, fromDate),
-        lte(timeEntries.date, toDate)
-      )
-    );
+    .where(timeEntryDateRange);
 
   // Active members = members who logged at least one time entry in the period
   const activeMembersRows = await db
     .selectDistinct({ userId: timeEntries.userId })
     .from(timeEntries)
-    .where(
-      and(
-        eq(timeEntries.workspaceId, wsId),
-        gte(timeEntries.date, fromDate),
-        lte(timeEntries.date, toDate)
-      )
-    );
+    .where(timeEntryDateRange);
 
   const [{ ideasConverted }] = await db
     .select({ ideasConverted: count() })
@@ -115,27 +108,20 @@ reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
     .select({
       projectId: tasks.projectId,
       projectName: projects.name,
-      projectColor: projects.color,
       minutes: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0)`,
     })
     .from(timeEntries)
     .leftJoin(tasks, eq(timeEntries.taskId, tasks.id))
     .leftJoin(projects, eq(tasks.projectId, projects.id))
-    .where(
-      and(
-        eq(timeEntries.workspaceId, wsId),
-        gte(timeEntries.date, fromDate),
-        lte(timeEntries.date, toDate)
-      )
-    )
-    .groupBy(tasks.projectId, projects.name, projects.color)
+    .where(timeEntryDateRange)
+    .groupBy(tasks.projectId, projects.name)
     .orderBy(sql`SUM(${timeEntries.durationMinutes}) DESC`)
     .limit(8);
 
   const timeByProject = timeByProjectRows.map((r) => ({
     name:    r.projectName ?? "Unlinked",
     minutes: Number(r.minutes),
-    color:   r.projectColor ?? "#6b7280",
+    color:   "#6b7280",
   }));
 
   // ── 4. Velocity by week ────────────────────────────────────────────────────
@@ -167,7 +153,7 @@ reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
   const workloadRows = await db
     .select({
       userId: tasks.assigneeId,
-      name: users.name,
+      name: users.fullName,
       taskCount: count(tasks.id),
       timeMinutes: sql<number>`COALESCE(SUM(${timeEntries.durationMinutes}), 0)`,
     })
@@ -177,8 +163,8 @@ reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
       timeEntries,
       and(
         eq(timeEntries.userId, tasks.assigneeId),
-        gte(timeEntries.date, fromDate),
-        lte(timeEntries.date, toDate)
+        sql`DATE(${timeEntries.startedAt}) >= ${fromDate}`,
+        sql`DATE(${timeEntries.startedAt}) <= ${toDate}`
       )
     )
     .where(
@@ -188,7 +174,7 @@ reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
         sql`DATE(${tasks.createdAt}) <= ${toDate}`
       )
     )
-    .groupBy(tasks.assigneeId, users.name)
+    .groupBy(tasks.assigneeId, users.fullName)
     .orderBy(sql`COUNT(${tasks.id}) DESC`)
     .limit(10);
 
@@ -213,4 +199,3 @@ reportsRoute.get("/", authMiddleware, workspaceMiddleware, async (c) => {
 });
 
 export default reportsRoute;
-
