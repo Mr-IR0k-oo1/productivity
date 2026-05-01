@@ -1,94 +1,102 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
-import { useEffect, useMemo, useRef } from "react";
-import { toast } from "sonner";
+import { useEffect, useRef } from "react";
 
-import { getFlowchartCanvasSnapshot, useFlowchartStore } from "@/stores/flowchartStore";
+import { useFlowchartStore } from "@/stores/flowchartStore";
 import { useSaveCanvas } from "@/hooks/useFlowchart";
+import type { CanvasState } from "@/types/flowchart";
 
-const AUTOSAVE_DELAY_MS = 2000;
+type AutosaveProps = {
+  flowchartId: string | null;
+};
 
 export function useFlowchartAutosave(flowchartId: string | null) {
   const isDirty = useFlowchartStore((state) => state.isDirty);
   const isSaving = useFlowchartStore((state) => state.isSaving);
-  const lastSavedAt = useFlowchartStore((state) => state.lastSavedAt);
-  const setIsSaving = useFlowchartStore((state) => state.setIsSaving);
+  const getCanvasSnapshot = () => {
+    const state = useFlowchartStore.getState();
+    return {
+      nodes: state.nodes,
+      edges: state.edges,
+      viewport: state.viewport,
+    } as CanvasState;
+  };
+  const loadCanvas = useFlowchartStore((state) => state.loadCanvas);
   const markSaved = useFlowchartStore((state) => state.markSaved);
-  const saveCanvas = useSaveCanvas(flowchartId ?? "");
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setIsSaving = useFlowchartStore((state) => state.setIsSaving);
 
+  const saveCanvas = useSaveCanvas(flowchartId ?? "");
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedStateRef = useRef<string>("");
+
+  // Debounced autosave: 2000ms after last change
   useEffect(() => {
-    if (!flowchartId || !isDirty) {
-      return;
+    if (!flowchartId || !isDirty) return;
+
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
     }
 
-    timerRef.current = setTimeout(() => {
-      const snapshot = getFlowchartCanvasSnapshot();
+    timerRef.current = setTimout(() => {
+      const canvasState = getCanvasSnapshot();
+      const stateString = JSON.stringify(canvasState);
+
+      // Skip if nothing changed
+      if (stateString === lastSavedStateRef.current) {
+        useFlowchartStore.getState().setIsDirty(false);
+        return;
+      }
+
       setIsSaving(true);
-
-      void saveCanvas
-        .mutateAsync(snapshot)
-        .then(() => {
+      saveCanvas.mutate(canvasState, {
+        onSuccess: () => {
+          lastSavedStateRef.current = stateString;
           markSaved();
-        })
-        .catch((error) => {
-          console.error("Flowchart autosave failed", error);
+        },
+        onSettled: () => {
           setIsSaving(false);
-          toast.error("Failed to save flowchart");
-        });
-    }, AUTOSAVE_DELAY_MS);
+        },
+      });
+    }, 2000);
 
     return () => {
-      if (!timerRef.current) {
-        return;
-      }
-
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    };
-  }, [flowchartId, isDirty, markSaved, saveCanvas, setIsSaving]);
-
-  useEffect(() => {
-    return () => {
-      if (!flowchartId || !useFlowchartStore.getState().isDirty) {
-        return;
-      }
-
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        timerRef.current = null;
       }
-
-      const snapshot = getFlowchartCanvasSnapshot();
-      setIsSaving(true);
-      void saveCanvas
-        .mutateAsync(snapshot)
-        .then(() => {
-          markSaved();
-        })
-        .catch((error) => {
-          console.error("Flowchart autosave flush failed", error);
-          setIsSaving(false);
-        });
     };
-  }, [flowchartId, markSaved, saveCanvas, setIsSaving]);
+  }, [isDirty, flowchartId, getCanvasSnapshot, saveCanvas, markSaved, setIsSaving]);
 
-  const statusLabel = useMemo(() => {
-    if (isSaving) {
-      return "Saving...";
+  // Flush on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      // Flush any pending changes
+      if (isDirty && flowchartId) {
+        const canvasState = getCanvasSnapshot();
+        saveCanvas.mutate(canvasState);
+      }
+    };
+  }, []);
+
+  const statusLabel = (() => {
+    if (isSaving) return "Saving...";
+    if (!isDirty) {
+      const lastSaved = useFlowchartStore.getState().lastSavedAt;
+      if (lastSaved) {
+        const seconds = Math.round((Date.now() - lastSaved.getTime()) / 1000);
+        if (seconds < 60) return `Saved ${seconds}s ago`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `Saved ${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        return `Saved ${hours}h ago`;
+      }
+      return "All changes saved";
     }
+    return "Unsaved changes";
+  })();
 
-    if (lastSavedAt) {
-      return `Saved ${formatDistanceToNow(lastSavedAt, { addSuffix: true })}`;
-    }
-
-    return "Idle";
-  }, [isSaving, lastSavedAt]);
-
-  return {
-    isSaving,
-    lastSavedAt,
-    statusLabel,
-  };
+  return { statusLabel };
 }

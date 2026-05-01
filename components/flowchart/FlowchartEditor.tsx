@@ -15,7 +15,6 @@ import ShareModal from "@/components/flowchart/ShareModal";
 import VersionHistoryPanel from "@/components/flowchart/VersionHistoryPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useSessionContext } from "@/components/providers/SessionProvider";
 import {
   useFlowchart,
   usePublicFlowchart,
@@ -108,9 +107,8 @@ export default function FlowchartEditor({ flowchartId, publicToken }: FlowchartE
     if (publicToken || !flowchart) {
       return false;
     }
-
-    return flowchart.ownerId === userId || workspaceRole === "owner" || workspaceRole === "admin";
-  }, [flowchart, publicToken, userId, workspaceRole]);
+    return true; // Local storage mode: always editable
+  }, [flowchart, publicToken]);
 
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeIds[0]) ?? null,
