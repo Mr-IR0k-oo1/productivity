@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
@@ -74,7 +75,7 @@ type Session = {
 
 function requireSession(session: Session): { workspaceId: string; authToken: string | null } {
   if (!session.isReady || !session.workspaceId) {
-    throw new Error("Session not ready");
+    throw new Error("Session not ready – please wait for authentication to complete");
   }
 
   return {
@@ -83,13 +84,33 @@ function requireSession(session: Session): { workspaceId: string; authToken: str
   };
 }
 
+/**
+ * Build a session snapshot getter so mutations always read the latest values
+ * instead of stale closure captures from render time.
+ */
+function useSessionSnapshot() {
+  const ctx = useSessionContext();
+  const ref = useRef(ctx);
+  ref.current = ctx;
+
+  return useCallback(
+    (): Session => ({
+      workspaceId: ref.current.workspaceId,
+      authToken: ref.current.authToken,
+      isReady: ref.current.isReady,
+    }),
+    [],
+  );
+}
+
 export function useFlowcharts(search = "", limit = 20, offset = 0) {
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const { workspaceId, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useQuery({
     queryKey: flowchartKeys.list(workspaceId, search, limit, offset),
     queryFn: async () => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const query = new URLSearchParams({
         search,
         limit: String(limit),
@@ -107,12 +128,13 @@ export function useFlowcharts(search = "", limit = 20, offset = 0) {
 }
 
 export function useFlowchart(flowchartId: string | null) {
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const { workspaceId, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useQuery({
     queryKey: flowchartKeys.detail(workspaceId, flowchartId),
     queryFn: async () => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>(`/api/flowcharts/${flowchartId}`, {
         session,
       });
@@ -146,11 +168,11 @@ export function usePublicFlowchart(token: string | null) {
 
 export function useCreateFlowchart() {
   const queryClient = useQueryClient();
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (payload: CreateFlowchartInput) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>("/api/flowcharts", {
         method: "POST",
         headers: {
@@ -166,6 +188,7 @@ export function useCreateFlowchart() {
       return flowchartResponseSchema.parse(response).flowchart;
     },
     onSuccess: (flowchart) => {
+      const { workspaceId } = getSession();
       queryClient.invalidateQueries({ queryKey: flowchartKeys.list(workspaceId) });
       queryClient.setQueryData(flowchartKeys.detail(workspaceId, flowchart.id), flowchart);
     },
@@ -174,11 +197,11 @@ export function useCreateFlowchart() {
 
 export function useUpdateFlowchart(flowchartId: string) {
   const queryClient = useQueryClient();
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (payload: UpdateFlowchartInput) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>(`/api/flowcharts/${flowchartId}`, {
         method: "PUT",
         headers: {
@@ -191,6 +214,7 @@ export function useUpdateFlowchart(flowchartId: string) {
       return flowchartResponseSchema.parse(response).flowchart;
     },
     onSuccess: (flowchart) => {
+      const { workspaceId } = getSession();
       queryClient.invalidateQueries({ queryKey: flowchartKeys.list(workspaceId) });
       queryClient.setQueryData(flowchartKeys.detail(workspaceId, flowchartId), flowchart);
     },
@@ -198,11 +222,11 @@ export function useUpdateFlowchart(flowchartId: string) {
 }
 
 export function useSaveCanvas(flowchartId: string) {
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (canvasState: CanvasState) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>(`/api/flowcharts/${flowchartId}/canvas`, {
         method: "PUT",
         headers: {
@@ -219,11 +243,11 @@ export function useSaveCanvas(flowchartId: string) {
 
 export function useDeleteFlowchart() {
   const queryClient = useQueryClient();
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (flowchartId: string) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>(`/api/flowcharts/${flowchartId}`, {
         method: "DELETE",
         session,
@@ -235,6 +259,7 @@ export function useDeleteFlowchart() {
       };
     },
     onSuccess: ({ flowchartId }) => {
+      const { workspaceId } = getSession();
       queryClient.invalidateQueries({ queryKey: flowchartKeys.list(workspaceId) });
       queryClient.removeQueries({ queryKey: flowchartKeys.detail(workspaceId, flowchartId) });
     },
@@ -243,11 +268,11 @@ export function useDeleteFlowchart() {
 
 export function useDuplicateFlowchart() {
   const queryClient = useQueryClient();
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (flowchartId: string) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>(`/api/flowcharts/${flowchartId}/duplicate`, {
         method: "POST",
         session,
@@ -256,6 +281,7 @@ export function useDuplicateFlowchart() {
       return flowchartResponseSchema.parse(response).flowchart;
     },
     onSuccess: (flowchart) => {
+      const { workspaceId } = getSession();
       queryClient.invalidateQueries({ queryKey: flowchartKeys.list(workspaceId) });
       queryClient.setQueryData(flowchartKeys.detail(workspaceId, flowchart.id), flowchart);
     },
@@ -264,11 +290,11 @@ export function useDuplicateFlowchart() {
 
 export function useShareFlowchart(flowchartId: string) {
   const queryClient = useQueryClient();
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (enabled: boolean) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>(`/api/flowcharts/${flowchartId}/share`, {
         method: "POST",
         headers: {
@@ -281,6 +307,7 @@ export function useShareFlowchart(flowchartId: string) {
       return shareResponseSchema.parse(response);
     },
     onSuccess: () => {
+      const { workspaceId } = getSession();
       queryClient.invalidateQueries({ queryKey: flowchartKeys.detail(workspaceId, flowchartId) });
       queryClient.invalidateQueries({ queryKey: flowchartKeys.list(workspaceId) });
     },
@@ -288,11 +315,11 @@ export function useShareFlowchart(flowchartId: string) {
 }
 
 export function useUploadFlowchartImage(flowchartId: string) {
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (file: File) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const formData = new FormData();
       formData.set("file", file);
 
@@ -308,11 +335,11 @@ export function useUploadFlowchartImage(flowchartId: string) {
 }
 
 export function useDeleteFlowchartImage(flowchartId: string) {
-  const { workspaceId, authToken, isReady } = useSessionContext();
+  const getSession = useSessionSnapshot();
 
   return useMutation({
     mutationFn: async (storageKey: string) => {
-      const session = requireSession({ workspaceId, authToken, isReady });
+      const session = requireSession(getSession());
       const response = await fetchApiJson<unknown>(
         `/api/flowcharts/${flowchartId}/images/${encodeURIComponent(storageKey)}`,
         {

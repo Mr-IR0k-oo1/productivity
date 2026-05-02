@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Activity } from "lucide-react";
 
 import { ActivityItem } from "@/components/common/ActivityItem";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { TableSkeletonRow } from "@/components/ui/skeleton";
@@ -69,14 +69,14 @@ export function ActivityFeed() {
   }, [ideasQuery.data, tasksQuery.data, timeEntriesQuery.data]);
 
   return (
-    <Card className="transition-colors hover:border-zinc-700">
-      <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
-        <p className="text-sm text-[var(--muted)]">
+    <div className="orbit-card overflow-hidden">
+      <div className="border-b border-[color:var(--card-border)] px-5 py-4">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">Recent Activity</h3>
+        <p className="mt-0.5 text-xs text-[var(--muted)]">
           Latest updates from your workspace
         </p>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div className="p-5">
         {error ? (
           <ErrorState
             title="Activity Failed"
@@ -111,8 +111,8 @@ export function ActivityFeed() {
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

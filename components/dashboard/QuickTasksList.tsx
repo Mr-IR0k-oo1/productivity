@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { CheckSquare } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { TableSkeletonRow } from "@/components/ui/skeleton";
@@ -76,12 +76,12 @@ export function QuickTasksList() {
   }, [tasksQuery.data]);
 
   return (
-    <Card className="transition-colors hover:border-zinc-700">
-      <CardHeader>
-        <CardTitle>Quick Tasks</CardTitle>
-        <p className="text-sm text-[var(--muted)]">Your immediate priorities</p>
-      </CardHeader>
-      <CardContent>
+    <div className="orbit-card overflow-hidden">
+      <div className="border-b border-[color:var(--card-border)] px-5 py-4">
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">Quick Tasks</h3>
+        <p className="mt-0.5 text-xs text-[var(--muted)]">Your immediate priorities</p>
+      </div>
+      <div className="p-5">
         {tasksQuery.error ? (
           <ErrorState
             title="Tasks Failed"
@@ -147,8 +147,8 @@ export function QuickTasksList() {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

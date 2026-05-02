@@ -27,6 +27,7 @@ import { useShareFlowchart } from "@/hooks/useFlowchartShare";
 import { useAutoSaveVersion, useRestoreVersion, useSaveVersion, useVersions } from "@/hooks/useFlowchartVersions";
 import { buildTemplateCanvas } from "@/lib/flowchart/templates";
 import { useFlowchartStore } from "@/stores/flowchartStore";
+import { useSessionContext } from "@/components/providers/SessionProvider";
 import type { FlowchartComment, OrbitEdge, OrbitNode } from "@/types/flowchart";
 
 type FlowchartEditorProps = {
