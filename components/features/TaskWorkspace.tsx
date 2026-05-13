@@ -7,7 +7,6 @@ import {
   endOfMonth,
   endOfWeek,
   format,
-  isAfter,
   isSameDay,
   isSameMonth,
   isToday,
@@ -25,22 +24,23 @@ import {
   Flag,
   GanttChartSquare,
   Link2,
-  ListFilter,
   Plus,
   Search,
   SquareCheckBig,
   Table2,
   Trash2,
-  UserPlus,
 } from "lucide-react";
 
+import { TaskDescriptionEditor } from "./TaskDescriptionEditor";
 import { KanbanBoard } from "@/components/features/KanbanBoard";
+import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  useAddTaskDependencyMutation,
   useTasksQuery,
   useUpdateTaskStatusMutation,
   useUpdateTaskMutation,
@@ -48,17 +48,20 @@ import {
   useDeleteTaskMutation,
   type TaskDTO,
 } from "@/hooks/useTasks";
+import { useWorkspaceMembersQuery, type WorkspaceMemberDTO } from "@/hooks/useWorkspaceMembers";
 import { cn } from "@/lib/utils";
+import type { TaskStatus } from "@/types/task-status";
+import { normalizeTaskViewMetadata, type TaskViewMetadata } from "@/types/task-view-metadata";
 
 type ViewMode = "kanban" | "list" | "calendar" | "gantt";
-type TaskStatus = "todo" | "in_progress" | "review" | "done";
 type TaskPriority = "High" | "Medium" | "Low";
 type DueFilter = "all" | "mine" | "overdue" | "this-week";
 
 type TaskRecord = {
   id: string;
   title: string;
-  description: string;
+  description: string | Record<string, unknown>;
+  assigneeId: string | null;
   assignee: string;
   initials: string;
   dueDate: string;
@@ -72,194 +75,73 @@ type TaskRecord = {
   progress: number;
   recurring?: boolean;
   dependency?: string;
+  isMilestone: boolean;
   startDate: string;
   endDate: string;
+  metadata: TaskViewMetadata;
 };
 
-const referenceDate = new Date("2026-04-14T09:00:00");
+const priorityOptions = ["All", "High", "Medium", "Low"] as const;
 
-function mapTaskDTOToRecord(task: TaskDTO): TaskRecord {
+function resolveMemberDisplayName(member: WorkspaceMemberDTO | undefined) {
+  if (!member) {
+    return null;
+  }
+
+  const fullName = member.user.fullName?.trim();
+  if (fullName) {
+    return fullName;
+  }
+
+  return member.user.email;
+}
+
+function mapTaskDTOToRecord(
+  task: TaskDTO,
+  memberMap: Map<string, WorkspaceMemberDTO>,
+  currentUserId: string | null,
+): TaskRecord {
   const priorityMap: Record<number, TaskPriority> = { 1: "High", 2: "Medium", 3: "Low" };
-  const metadata = task.metadata as Record<string, unknown> || {};
+  const metadata = normalizeTaskViewMetadata(task.metadata, { startDate: task.createdAt });
+  const member = task.assigneeId ? memberMap.get(task.assigneeId) : undefined;
+  const assigneeName = metadata.assigneeName ?? (task.assigneeId === currentUserId ? "You" : resolveMemberDisplayName(member)) ?? "Unassigned";
+
   return {
     id: task.id,
     title: task.title,
-    description: task.description || "",
-    assignee: (metadata.assigneeName as string) || "Unassigned",
-    initials: ((metadata.assigneeName as string) || "U").slice(0, 2).toUpperCase(),
-    dueDate: task.dueDate || new Date().toISOString(),
+    description: task.description ?? "",
+    assigneeId: task.assigneeId,
+    assignee: assigneeName,
+    initials: assigneeName.slice(0, 2).toUpperCase(),
+    dueDate: task.dueDate || task.createdAt,
     priority: priorityMap[task.priority] || "Medium",
-    labels: (metadata.labels as string[]) || [],
+    labels: metadata.labels,
     status: task.status,
-    subtasksDone: (metadata.subtasksDone as number) || 0,
-    subtasksTotal: (metadata.subtasksTotal as number) || 0,
-    comments: (metadata.comments as number) || 0,
-    estimateHours: (metadata.estimateHours as number) || 0,
-    progress: (metadata.progress as number) || 0,
-    recurring: metadata.recurring as boolean,
-    dependency: metadata.dependency as string,
-    startDate: (metadata.startDate as string) || new Date().toISOString(),
-    endDate: task.dueDate || new Date().toISOString(),
+    subtasksDone: metadata.subtasksDone,
+    subtasksTotal: metadata.subtasksTotal,
+    comments: metadata.comments,
+    estimateHours: metadata.estimateHours,
+    progress: metadata.progress,
+    recurring: metadata.recurring,
+    dependency: metadata.dependency ?? undefined,
+    isMilestone: metadata.isMilestone,
+    startDate: metadata.startDate,
+    endDate: task.dueDate || metadata.startDate,
+    metadata,
   };
 }
 
-const initialTasks: TaskRecord[] = [
-  {
-    id: "task-1",
-    title: "Finalize onboarding checklist",
-    description: "Polish the onboarding flow and align it with the latest product launch priorities.",
-    assignee: "Arun",
-    initials: "A",
-    dueDate: "2026-04-13T17:00:00",
-    priority: "High",
-    labels: ["Launch", "Ops"],
-    status: "todo",
-    subtasksDone: 2,
-    subtasksTotal: 5,
-    comments: 3,
-    estimateHours: 6,
-    progress: 40,
-    recurring: true,
-    startDate: "2026-04-12T09:00:00",
-    endDate: "2026-04-17T18:00:00",
-  },
-  {
-    id: "task-2",
-    title: "Ship realtime notifications",
-    description: "Finish realtime notifications and validate the websocket update path.",
-    assignee: "Bala",
-    initials: "B",
-    dueDate: "2026-04-15T12:00:00",
-    priority: "Medium",
-    labels: ["Platform", "Realtime"],
-    status: "in_progress",
-    subtasksDone: 3,
-    subtasksTotal: 4,
-    comments: 8,
-    estimateHours: 9,
-    progress: 75,
-    dependency: "Depends on API review",
-    startDate: "2026-04-13T09:00:00",
-    endDate: "2026-04-18T18:00:00",
-  },
-  {
-    id: "task-3",
-    title: "Review investor deck",
-    description: "Prepare the final review pass for the next investor update.",
-    assignee: "Chitra",
-    initials: "C",
-    dueDate: "2026-04-16T10:30:00",
-    priority: "Low",
-    labels: ["Strategy"],
-    status: "review",
-    subtasksDone: 5,
-    subtasksTotal: 6,
-    comments: 4,
-    estimateHours: 4,
-    progress: 84,
-    startDate: "2026-04-11T09:00:00",
-    endDate: "2026-04-18T18:00:00",
-  },
-  {
-    id: "task-4",
-    title: "Update billing retry logic",
-    description: "Fix retry handling and make sure the overdue invoice flow is safe.",
-    assignee: "Dev",
-    initials: "D",
-    dueDate: "2026-04-10T14:00:00",
-    priority: "High",
-    labels: ["Billing", "Bug"],
-    status: "done",
-    subtasksDone: 6,
-    subtasksTotal: 6,
-    comments: 5,
-    estimateHours: 7,
-    progress: 100,
-    startDate: "2026-04-08T09:00:00",
-    endDate: "2026-04-12T18:00:00",
-  },
-  {
-    id: "task-5",
-    title: "Plan sprint retro",
-    description: "Assemble talking points, owners, and action items for the weekly retro.",
-    assignee: "Arun",
-    initials: "A",
-    dueDate: "2026-04-18T16:00:00",
-    priority: "Medium",
-    labels: ["Team"],
-    status: "todo",
-    subtasksDone: 1,
-    subtasksTotal: 3,
-    comments: 1,
-    estimateHours: 2,
-    progress: 33,
-    recurring: true,
-    startDate: "2026-04-16T09:00:00",
-    endDate: "2026-04-21T18:00:00",
-  },
-  {
-    id: "task-6",
-    title: "Refine workspace filters",
-    description: "Align filter chips, global search, and assignee state across task views.",
-    assignee: "Bala",
-    initials: "B",
-    dueDate: "2026-04-14T19:00:00",
-    priority: "High",
-    labels: ["UX", "Filters"],
-    status: "in_progress",
-    subtasksDone: 4,
-    subtasksTotal: 7,
-    comments: 6,
-    estimateHours: 8,
-    progress: 57,
-    dependency: "Blocked by task API update",
-    startDate: "2026-04-14T09:00:00",
-    endDate: "2026-04-20T18:00:00",
-  },
-  {
-    id: "task-7",
-    title: "Write release notes",
-    description: "Summarize the latest product and engineering changes for the release.",
-    assignee: "Chitra",
-    initials: "C",
-    dueDate: "2026-04-17T11:00:00",
-    priority: "Low",
-    labels: ["Docs"],
-    status: "review",
-    subtasksDone: 2,
-    subtasksTotal: 3,
-    comments: 2,
-    estimateHours: 3,
-    progress: 66,
-    startDate: "2026-04-15T09:00:00",
-    endDate: "2026-04-19T18:00:00",
-  },
-  {
-    id: "task-8",
-    title: "Validate calendar sync",
-    description: "Check task due dates against the calendar experience and overdue highlighting.",
-    assignee: "Dev",
-    initials: "D",
-    dueDate: "2026-04-14T23:00:00",
-    priority: "Medium",
-    labels: ["Calendar", "QA"],
-    status: "todo",
-    subtasksDone: 1,
-    subtasksTotal: 4,
-    comments: 0,
-    estimateHours: 5,
-    progress: 25,
-    startDate: "2026-04-13T09:00:00",
-    endDate: "2026-04-16T18:00:00",
-  },
-];
-
-const assigneeOptions = ["All", "Arun", "Bala", "Chitra", "Dev"] as const;
-const priorityOptions = ["All", "High", "Medium", "Low"] as const;
-
 function formatDueDate(value: string) {
+  const now = new Date();
   const dueDate = parseISO(value);
-  const overdue = dueDate < referenceDate && !isToday(dueDate);
+  if (Number.isNaN(dueDate.getTime())) {
+    return {
+      label: "No due date",
+      overdue: false,
+    };
+  }
+
+  const overdue = dueDate < now && !isToday(dueDate);
 
   return {
     label: format(dueDate, "MMM d, h:mm a"),
@@ -268,18 +150,32 @@ function formatDueDate(value: string) {
 }
 
 function getTaskWindow(task: TaskRecord) {
+  const parsedStart = parseISO(task.startDate);
+  const start = Number.isNaN(parsedStart.getTime()) ? new Date() : parsedStart;
+  const parsedEnd = parseISO(task.endDate);
+  const end = Number.isNaN(parsedEnd.getTime()) ? start : parsedEnd;
+
   return {
-    start: parseISO(task.startDate),
-    end: parseISO(task.endDate),
+    start,
+    end,
   };
 }
 
-const TaskStats = memo(function TaskStats() {
+const TaskStats = memo(function TaskStats({ tasks }: { tasks: TaskRecord[] }) {
+  const now = new Date();
+  const openCount = tasks.filter((task) => task.status !== "done").length;
+  const overdueCount = tasks.filter((task) => {
+    const due = parseISO(task.dueDate);
+    return due < now && task.status !== "done";
+  }).length;
+  const inProgressCount = tasks.filter((task) => task.status === "in_progress").length;
+  const doneCount = tasks.filter((task) => task.status === "done").length;
+
   const stats = [
-    { title: "Open Tasks", value: "18", trend: "+3 this week" },
-    { title: "Overdue", value: "2", trend: "Needs attention", positive: false },
-    { title: "In Progress", value: "7", trend: "Balanced across owners" },
-    { title: "Completed", value: "12", trend: "67% this sprint" },
+    { title: "Open Tasks", value: String(openCount), trend: `${openCount} active now` },
+    { title: "Overdue", value: String(overdueCount), trend: overdueCount > 0 ? "Needs attention" : "All clear", positive: overdueCount === 0 },
+    { title: "In Progress", value: String(inProgressCount), trend: `${inProgressCount} being worked on` },
+    { title: "Completed", value: String(doneCount), trend: `${doneCount} completed` },
   ];
 
   return (
@@ -318,6 +214,7 @@ const TaskToolbar = memo(function TaskToolbar({
   onOpenCreate,
   onBulkStatusChange,
   onBulkDelete,
+  assigneeOptions,
   activeFilterCount,
   clearAllFilters,
 }: {
@@ -337,6 +234,7 @@ const TaskToolbar = memo(function TaskToolbar({
   onOpenCreate: () => void;
   onBulkStatusChange: (status: TaskStatus) => void;
   onBulkDelete: () => void;
+  assigneeOptions: Array<{ value: string; label: string }>;
   activeFilterCount: number;
   clearAllFilters: () => void;
 }) {
@@ -352,7 +250,7 @@ const TaskToolbar = memo(function TaskToolbar({
               Manage tasks across Kanban, list, calendar, and gantt views from one workspace.
             </p>
           </div>
-          <Button onClick={onOpenCreate}>
+          <Button type="button" onClick={onOpenCreate}>
             <Plus className="h-4 w-4" />
             New Task
           </Button>
@@ -397,7 +295,11 @@ const TaskToolbar = memo(function TaskToolbar({
               className="pl-9"
             />
           </div>
-          <Button variant="secondary" onClick={activeFilterCount > 0 ? clearAllFilters : undefined}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={activeFilterCount > 0 ? clearAllFilters : undefined}
+          >
             <Filter className="h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
@@ -434,8 +336,8 @@ const TaskToolbar = memo(function TaskToolbar({
             className="h-10 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
           >
             {assigneeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option === "All" ? "All Assignees" : option}
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -458,7 +360,12 @@ const TaskToolbar = memo(function TaskToolbar({
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <div className="relative">
-                <Button variant="secondary" size="sm" onClick={() => setShowStatusDropdown(!showStatusDropdown)}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                >
                   <Check className="h-4 w-4" />
                   Bulk Status
                 </Button>
@@ -480,7 +387,13 @@ const TaskToolbar = memo(function TaskToolbar({
                   </div>
                 )}
               </div>
-              <Button variant="secondary" size="sm" className="border-red-900 text-red-200" onClick={onBulkDelete}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="border-red-900 text-red-200"
+                onClick={onBulkDelete}
+              >
                 <Trash2 className="h-4 w-4" />
                 Delete
               </Button>
@@ -523,7 +436,13 @@ function TaskDetailPanel({
               <Badge variant="default">{task.status.replace("_", " ")}</Badge>
             </div>
             <h2 className="mt-3 text-2xl font-semibold text-zinc-100">{task.title}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{task.description}</p>
+            {typeof task.description === "string" ? (
+              <p className="mt-2 text-sm text-zinc-400">{task.description}</p>
+            ) : (
+              <div className="mt-4">
+                <TaskDescriptionEditor taskId={task.id} initialContent={task.description} readOnly />
+              </div>
+            )}
           </div>
           <button
             type="button"
@@ -576,9 +495,8 @@ function TaskDetailPanel({
               <CardContent className="space-y-3 p-4">
                 <p className="text-sm font-medium text-zinc-200">Comments + Activity</p>
                 <div className="space-y-2 text-sm text-zinc-400">
-                  <p>Arun: Needs review on the dependency blocker.</p>
-                  <p>Bala: Updated the filter logic and rechecked the due date state.</p>
-                  <p>Dev: Waiting on the API update before final handoff.</p>
+                  <p>Activity syncs from live task updates and collaboration actions.</p>
+                  <p>Use Focus Mode for deep work and return here to manage dependencies.</p>
                 </div>
               </CardContent>
             </Card>
@@ -590,15 +508,20 @@ function TaskDetailPanel({
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button className="w-full justify-start" variant="secondary" onClick={onStartTimer}>
+                <Button type="button" className="w-full justify-start" variant="secondary" onClick={onStartTimer}>
                   <Clock3 className="h-4 w-4" />
-                  Start timer
+                  Open focus mode
                 </Button>
-                <Button className="w-full justify-start" variant="secondary" onClick={onConvertToMilestone}>
+                <Button
+                  type="button"
+                  className="w-full justify-start"
+                  variant="secondary"
+                  onClick={onConvertToMilestone}
+                >
                   <Flag className="h-4 w-4" />
                   Convert to milestone
                 </Button>
-                <Button className="w-full justify-start" variant="secondary" onClick={onAddDependency}>
+                <Button type="button" className="w-full justify-start" variant="secondary" onClick={onAddDependency}>
                   <Link2 className="h-4 w-4" />
                   Add dependency
                 </Button>
@@ -626,6 +549,10 @@ function TaskDetailPanel({
                   <span>Dependency</span>
                   <span className="text-zinc-100">{task.dependency ?? "None"}</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span>Milestone</span>
+                  <span className="text-zinc-100">{task.isMilestone ? "Yes" : "No"}</span>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -640,32 +567,42 @@ function TaskCreateModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (data: { title: string; description: string; priority: TaskPriority; dueDate: string }) => void;
+  onCreate: (data: { title: string; description: string; priority: TaskPriority; dueDate: string }) => Promise<void>;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("Medium");
   const [dueDate, setDueDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = () => {
-    if (!title.trim()) return;
-    onCreate({ title: title.trim(), description, priority, dueDate });
-    onClose();
+  const handleSubmit = async () => {
+    if (!title.trim() || isSubmitting) {
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      await onCreate({ title: title.trim(), description, priority, dueDate });
+      onClose();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Unable to create task. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
         <div className="flex items-start justify-between gap-4 border-b border-zinc-900 p-6">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Create</p>
             <h2 className="mt-1 text-2xl font-semibold text-zinc-100">New task</h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
-          >
+          <button type="button" onClick={onClose} className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900">
             Close
           </button>
         </div>
@@ -675,13 +612,19 @@ function TaskCreateModal({
             <Input
               placeholder="Task title *"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setErrorMessage(null);
+              }}
               className="w-full"
             />
           </div>
           <select
             value={priority}
-            onChange={(e) => setPriority(e.target.value as TaskPriority)}
+            onChange={(e) => {
+              setPriority(e.target.value as TaskPriority);
+              setErrorMessage(null);
+            }}
             className="h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100"
           >
             <option value="High">High Priority</option>
@@ -691,7 +634,10 @@ function TaskCreateModal({
           <Input
             type="datetime-local"
             value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
+            onChange={(e) => {
+              setDueDate(e.target.value);
+              setErrorMessage(null);
+            }}
             className="w-full"
           />
           <div className="md:col-span-2">
@@ -699,17 +645,28 @@ function TaskCreateModal({
               className="min-h-[120px] w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-zinc-600"
               placeholder="Description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setErrorMessage(null);
+              }}
             />
           </div>
         </div>
 
+        {errorMessage ? (
+          <div className="px-6 pb-2">
+            <div className="rounded-lg border border-rose-900/60 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+              {errorMessage}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-end gap-2 border-t border-zinc-900 p-6">
-          <Button variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!title.trim()}>
-            Create Task
+          <Button type="button" onClick={handleSubmit} disabled={!title.trim() || isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Task"}
           </Button>
         </div>
       </div>
@@ -763,7 +720,7 @@ const ListView = memo(function ListView({
                   <td className="px-4 py-3">
                     <button type="button" onClick={() => onOpenTask(task)} className="text-left hover:text-zinc-100">
                       <p className="font-medium">{task.title}</p>
-                      <p className="text-xs text-zinc-500">{task.labels.join(" · ")}</p>
+                      <p className="text-xs text-zinc-500">{task.labels.join(" - ")}</p>
                     </button>
                   </td>
                   <td className="px-4 py-3">
@@ -795,10 +752,10 @@ const ListView = memo(function ListView({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
                         View
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => onOpenTask(task)}>
                         Edit
                       </Button>
                     </div>
@@ -816,7 +773,7 @@ const ListView = memo(function ListView({
 ListView.displayName = "ListView";
 
 function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (task: TaskRecord) => void }) {
-  const monthDate = referenceDate;
+  const monthDate = new Date();
   const start = startOfWeek(startOfMonth(monthDate), { weekStartsOn: 1 });
   const end = endOfWeek(endOfMonth(monthDate), { weekStartsOn: 1 });
   const days: Date[] = [];
@@ -885,12 +842,13 @@ function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: 
 }
 
 function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (task: TaskRecord) => void }) {
+  const now = new Date();
   const windows = tasks.map((task) => {
     const { start, end } = getTaskWindow(task);
     return { task, start, end };
   });
-  const minStart = windows.reduce((min, item) => (item.start < min ? item.start : min), windows[0]?.start ?? referenceDate);
-  const maxEnd = windows.reduce((max, item) => (item.end > max ? item.end : max), windows[0]?.end ?? referenceDate);
+  const minStart = windows.reduce((min, item) => (item.start < min ? item.start : min), windows[0]?.start ?? now);
+  const maxEnd = windows.reduce((max, item) => (item.end > max ? item.end : max), windows[0]?.end ?? now);
   const totalDays = Math.max(1, differenceInCalendarDays(maxEnd, minStart) + 1);
 
   return (
@@ -919,7 +877,7 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
             <div key={task.id} className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-4 rounded-xl border border-zinc-900 bg-zinc-950/40 p-3">
               <button type="button" onClick={() => onOpenTask(task)} className="text-left">
                 <p className="text-sm font-medium text-zinc-100">{task.title}</p>
-                <p className="text-xs text-zinc-500">{task.assignee} · {task.priority} · {due.label}</p>
+                <p className="text-xs text-zinc-500">{task.assignee} - {task.priority} - {due.label}</p>
               </button>
               <div className="relative h-10 rounded-lg border border-zinc-900 bg-zinc-950/50">
                 <div
@@ -1044,13 +1002,15 @@ function TaskErrorState({ message, onRetry }: { message: string; onRetry: () => 
 export function TaskWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { userId } = useSessionContext();
   const taskIdFromQuery = searchParams.get("taskId");
   const { data: apiTasks, isLoading, isError, error, refetch } = useTasksQuery();
+  const { data: workspaceMembers } = useWorkspaceMembersQuery();
   const updateTaskStatus = useUpdateTaskStatusMutation();
   const updateTask = useUpdateTaskMutation();
+  const addTaskDependency = useAddTaskDependencyMutation();
   const createTask = useCreateTaskMutation();
   const deleteTask = useDeleteTaskMutation();
-  const [tasks, setTasks] = useState<TaskRecord[]>(initialTasks);
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("All");
@@ -1058,10 +1018,70 @@ export function TaskWorkspace() {
   const [dueFilter, setDueFilter] = useState<DueFilter>("all");
   const [myTasksOnly, setMyTasksOnly] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-  const [selectedTask, setSelectedTask] = useState<TaskRecord | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
-  const [bulkStatusOpen, setBulkStatusOpen] = useState(false);
+
+  const memberMap = useMemo(() => {
+    const map = new Map<string, WorkspaceMemberDTO>();
+    for (const member of workspaceMembers ?? []) {
+      map.set(member.user.id, member);
+    }
+    return map;
+  }, [workspaceMembers]);
+
+  const tasks = useMemo(
+    () => (apiTasks ?? []).map((task) => mapTaskDTOToRecord(task, memberMap, userId)),
+    [apiTasks, memberMap, userId],
+  );
+
+  const selectedTask = useMemo(() => {
+    if (!taskIdFromQuery) {
+      return null;
+    }
+
+    return tasks.find((task) => task.id === taskIdFromQuery) ?? null;
+  }, [taskIdFromQuery, tasks]);
+
+  useEffect(() => {
+    const currentTaskIds = new Set(tasks.map((task) => task.id));
+    setSelectedTaskIds((current) => current.filter((taskId) => currentTaskIds.has(taskId)));
+  }, [tasks]);
+
+  const assigneeOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string }> = [{ value: "All", label: "All Assignees" }];
+    const seen = new Set<string>();
+
+    for (const member of workspaceMembers ?? []) {
+      if (!member.isActive) {
+        continue;
+      }
+
+      const label = resolveMemberDisplayName(member);
+      if (!label) {
+        continue;
+      }
+
+      options.push({
+        value: member.user.id,
+        label: member.user.id === userId ? `${label} (You)` : label,
+      });
+      seen.add(member.user.id);
+    }
+
+    for (const task of tasks) {
+      if (!task.assigneeId || seen.has(task.assigneeId)) {
+        continue;
+      }
+
+      options.push({
+        value: task.assigneeId,
+        label: task.assignee,
+      });
+      seen.add(task.assigneeId);
+    }
+
+    return options;
+  }, [tasks, userId, workspaceMembers]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -1081,62 +1101,43 @@ export function TaskWorkspace() {
     setMyTasksOnly(false);
   };
 
-  useEffect(() => {
-    if (apiTasks && apiTasks.length > 0) {
-      setTasks(apiTasks.map(mapTaskDTOToRecord));
-    }
-  }, [apiTasks]);
-
-  useEffect(() => {
-    if (!taskIdFromQuery) {
-      setSelectedTask(null);
-      return;
-    }
-
-    const nextTask = tasks.find((task) => task.id === taskIdFromQuery) ?? null;
-    setSelectedTask(nextTask);
-  }, [taskIdFromQuery, tasks]);
-
   const filteredTasks = useMemo(() => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
     return tasks.filter((task) => {
       const matchesSearch =
         search.trim().length === 0 ||
         [task.title, task.description, task.assignee, ...task.labels].some((value) =>
-          value.toLowerCase().includes(search.toLowerCase()),
+          typeof value === "string" && value.toLowerCase().includes(search.toLowerCase()),
         );
       const matchesPriority = priorityFilter === "All" || task.priority === priorityFilter;
-      const matchesAssignee = assigneeFilter === "All" || task.assignee === assigneeFilter;
+      const matchesAssignee = assigneeFilter === "All" || task.assigneeId === assigneeFilter;
       const dueDate = parseISO(task.dueDate);
+      const hasValidDueDate = !Number.isNaN(dueDate.getTime());
+      const isMine = Boolean(userId) && task.assigneeId === userId;
       const matchesDue =
         dueFilter === "all"
           ? true
           : dueFilter === "mine"
-            ? task.assignee === "Arun"
+            ? isMine
             : dueFilter === "overdue"
-              ? dueDate < referenceDate
-              : isWithinInterval(dueDate, {
-                  start: startOfWeek(referenceDate, { weekStartsOn: 1 }),
-                  end: endOfWeek(referenceDate, { weekStartsOn: 1 }),
+              ? hasValidDueDate && dueDate < now
+              : hasValidDueDate &&
+                isWithinInterval(dueDate, {
+                  start: weekStart,
+                  end: weekEnd,
                 });
-      const matchesMyTasks = !myTasksOnly || task.assignee === "Arun";
+      const matchesMyTasks = !myTasksOnly || isMine;
 
       return matchesSearch && matchesPriority && matchesAssignee && matchesDue && matchesMyTasks;
     });
-  }, [assigneeFilter, dueFilter, myTasksOnly, priorityFilter, search, tasks]);
+  }, [assigneeFilter, dueFilter, myTasksOnly, priorityFilter, search, tasks, userId]);
 
   const selectedCount = selectedTaskIds.length;
 
-  const selectedTasks = useMemo(
-    () => filteredTasks.filter((task) => selectedTaskIds.includes(task.id)),
-    [filteredTasks, selectedTaskIds],
-  );
-
-  const visibleTaskIds = useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
-
   function moveTask(taskId: string, status: TaskStatus) {
-    setTasks((current) =>
-      current.map((task) => (task.id === taskId ? { ...task, status, progress: status === "done" ? 100 : task.progress } : task)),
-    );
     updateTaskStatus.mutate({ taskId, status });
   }
 
@@ -1146,36 +1147,35 @@ export function TaskWorkspace() {
     );
   }
 
-  function openTask(task: TaskRecord) {
-    setSelectedTask(task);
+  function openTask(task: { id: string }) {
     router.push(`/tasks?taskId=${encodeURIComponent(task.id)}`);
   }
 
   function closeTask() {
-    setSelectedTask(null);
     router.replace("/tasks");
   }
 
-  function handleCreateTask(data: { title: string; description: string; priority: TaskPriority; dueDate: string }) {
+  async function handleCreateTask(data: { title: string; description: string; priority: TaskPriority; dueDate: string }): Promise<void> {
     const priorityMap: Record<TaskPriority, number> = { High: 1, Medium: 2, Low: 3 };
-    createTask.mutate({
+    const dueDate = data.dueDate ? new Date(data.dueDate).toISOString() : undefined;
+
+    await createTask.mutateAsync({
       title: data.title,
       description: data.description,
       priority: priorityMap[data.priority],
-      dueDate: data.dueDate || undefined,
+      dueDate,
       status: "todo",
+      metadata: {
+        startDate: new Date().toISOString(),
+      },
     });
   }
 
   function handleBulkStatusChange(status: TaskStatus) {
     selectedTaskIds.forEach((id) => {
       updateTaskStatus.mutate({ taskId: id, status });
-      setTasks((current) =>
-        current.map((task) => (task.id === id ? { ...task, status, progress: status === "done" ? 100 : task.progress } : task))
-      );
     });
     setSelectedTaskIds([]);
-    setBulkStatusOpen(false);
   }
 
   function handleBulkDelete() {
@@ -1183,7 +1183,6 @@ export function TaskWorkspace() {
     if (confirm(`Delete ${selectedCount} task${selectedCount === 1 ? "" : "s"}?`)) {
       selectedTaskIds.forEach((id) => {
         deleteTask.mutate(id);
-        setTasks((current) => current.filter((task) => task.id !== id));
       });
       setSelectedTaskIds([]);
     }
@@ -1191,34 +1190,56 @@ export function TaskWorkspace() {
 
   function handleStartTimer() {
     if (selectedTask) {
-      router.push(`/time?taskId=${selectedTask.id}`);
+      router.push(`/tasks/${selectedTask.id}/focus`);
     }
   }
 
-  function handleConvertToMilestone() {
-    if (selectedTask) {
-      updateTask.mutate({
+  async function handleConvertToMilestone() {
+    if (!selectedTask) {
+      return;
+    }
+
+    try {
+      await updateTask.mutateAsync({
         id: selectedTask.id,
-        metadata: { ...selectedTask, isMilestone: true },
+        metadata: { isMilestone: true },
       });
+      closeTask();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unable to update milestone");
     }
-    setSelectedTask(null);
   }
 
-  function handleAddDependency() {
-    if (selectedTask) {
-      const dependency = prompt("Enter task ID to link as dependency:");
-      if (dependency) {
-        updateTask.mutate({
-          id: selectedTask.id,
-          metadata: { ...selectedTask, dependency },
-        });
-        setTasks((current) =>
-          current.map((task) => (task.id === selectedTask.id ? { ...task, dependency } : task))
-        );
-      }
+  async function handleAddDependency() {
+    if (!selectedTask) {
+      return;
     }
-    setSelectedTask(null);
+
+    const dependency = prompt("Enter task ID to link as dependency:")?.trim();
+    if (!dependency) {
+      return;
+    }
+
+    if (dependency === selectedTask.id) {
+      alert("A task cannot depend on itself.");
+      return;
+    }
+
+    try {
+      await addTaskDependency.mutateAsync({
+        taskId: selectedTask.id,
+        dependsOnTaskId: dependency,
+      });
+
+      await updateTask.mutateAsync({
+        id: selectedTask.id,
+        metadata: { dependency },
+      });
+
+      closeTask();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Unable to add dependency");
+    }
   }
 
   function renderView() {
@@ -1256,7 +1277,7 @@ export function TaskWorkspace() {
     return <TaskErrorState message={error?.message || "Failed to load tasks"} onRetry={() => refetch()} />;
   }
 
-  const showEmptyState = !apiTasks || apiTasks.length === 0;
+  const showEmptyState = tasks.length === 0;
 
   return (
     <div className="space-y-6 page-animate">
@@ -1277,14 +1298,15 @@ export function TaskWorkspace() {
         onOpenCreate={() => setIsCreateOpen(true)}
         onBulkStatusChange={handleBulkStatusChange}
         onBulkDelete={handleBulkDelete}
+        assigneeOptions={assigneeOptions}
         activeFilterCount={activeFilterCount}
         clearAllFilters={clearAllFilters}
       />
 
-      <TaskStats />
+      <TaskStats tasks={tasks} />
 
       <div className="space-y-4">
-        {showEmptyState && tasks.length === 0 ? (
+        {showEmptyState ? (
           <TaskEmptyState onCreate={() => setIsCreateOpen(true)} />
         ) : (
           renderView()

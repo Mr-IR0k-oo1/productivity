@@ -1,48 +1,50 @@
-import { Inbox } from "lucide-react";
-import { ReactNode } from "react";
+"use client";
 
-interface EmptyStateProps {
-  icon?: ReactNode;
-  title: string;
-  description?: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+import * as React from "react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type EmptyStateAction = {
+  label: string;
+  onClick: () => void;
+};
+
+type EmptyStateProps = React.HTMLAttributes<HTMLDivElement> & {
+  icon?: React.ReactNode;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: EmptyStateAction;
   minHeight?: string;
-}
+};
 
-export function EmptyState({
-  icon = <Inbox className="h-12 w-12" />,
-  title,
-  description,
-  action,
-  minHeight = "min-h-[55vh]",
-}: EmptyStateProps) {
-  return (
+export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
+  ({ action, children, className, description, icon, minHeight, title, ...props }, ref) => (
     <div
-      className={`flex ${minHeight} items-center justify-center rounded-3xl border border-dashed border-[color:var(--card-border)] bg-[var(--surface-strong)]/50 p-8 text-center`}
+      ref={ref}
+      className={cn(
+        "flex flex-col items-center justify-center rounded-lg border border-dashed border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-8 text-center",
+        minHeight,
+        className,
+      )}
+      {...props}
     >
-      <div className="space-y-3">
-        <div className="flex justify-center text-[var(--muted)]">{icon}</div>
-        <div>
-          <h3 className="text-lg font-semibold text-[var(--foreground)]">
-            {title}
-          </h3>
-          {description && (
-            <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
-          )}
+      {icon ? (
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--color-border-secondary)] bg-[var(--color-surface-elevated)] text-[var(--foreground)]">
+          {icon}
         </div>
-        {action && (
-          <button
-            onClick={action.onClick}
-            type="button"
-            className="mt-4 inline-flex rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--background)] transition-colors hover:bg-[var(--accent-strong)]"
-          >
-            {action.label}
-          </button>
-        )}
-      </div>
+      ) : null}
+      {title ? <h3 className="text-lg font-semibold text-[var(--foreground)]">{title}</h3> : null}
+      {description ? (
+        <p className="mt-2 max-w-md text-sm text-[var(--muted)]">{description}</p>
+      ) : null}
+      {action ? (
+        <Button type="button" className="mt-5" onClick={action.onClick}>
+          {action.label}
+        </Button>
+      ) : null}
+      {children}
     </div>
-  );
-}
+  ),
+);
+EmptyState.displayName = "EmptyState";

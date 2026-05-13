@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { AUTH_SESSION_STORAGE_KEY, REMEMBER_ME_STORAGE_KEY } from "@/lib/auth/session";
+import { AUTH_STORAGE_KEY, REMEMBER_ME_STORAGE_KEY } from "@/lib/auth/session";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
@@ -46,7 +46,7 @@ export const supabaseClient: SupabaseClient | null = hasSupabaseConfig
             window.sessionStorage.removeItem(key);
           },
         },
-        storageKey: AUTH_SESSION_STORAGE_KEY,
+        storageKey: AUTH_STORAGE_KEY,
         persistSession: true,
       },
     })

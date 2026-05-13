@@ -1,5 +1,6 @@
 node_modules
 .next
+out
 dist-api
 drizzle
 .env
@@ -7,3 +8,10 @@ drizzle
 .vercel
 *.tsbuildinfo
 *.log
+
+# Test files
+test-connection-verbose.mjs
+test-db-connection.mjs
+
+# Lock files (optional - remove if you want to commit)
+pnpm-lock.yaml

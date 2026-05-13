@@ -101,7 +101,7 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
           password,
           fullName: fullName.trim(),
           workspaceName: workspaceName.trim(),
-          jobTitle: jobTitle.trim() || undefined,
+          jobTitle: jobTitle.trim() ? jobTitle.trim() : undefined,
         }),
         session: {},
       });
@@ -130,7 +130,7 @@ export default function RegisterForm({ onRegistered, showLoginPrompt = true, onL
       }
 
       setSuccessMessage("Account created. Please check your email to confirm your account.");
-      router.replace("/auth?tab=login&notice=check_email");
+      router.replace("/login?notice=check_email");
       router.refresh();
     } catch (err) {
       setSuccessMessage(null);

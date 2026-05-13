@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Orbit",
+  "version": "0.1.0",
+  "identifier": "com.orbit.app",
+  "build": {
+    "beforeBuildCommand": "npm run build:desktop",
+    "beforeDevCommand": "npm run dev:web",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../out"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Orbit",
+        "label": "main",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 680,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "decorations": true,
+        "transparent": false,
+        "shadow": true,
+        "focus": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:*"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "dmg", "appimage", "deb"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/256x256.png",
+      "icons/512x512.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "shortDescription": "Fast productivity app for startup teams",
+    "longDescription": "Orbit is a clean, fast, dark-themed productivity desktop app for startup teams. Manage tasks, ideas, time tracking, flowcharts, and calendar — all in one beautiful interface.",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  }
+}

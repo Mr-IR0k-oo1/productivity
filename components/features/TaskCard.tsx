@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 type TaskCardProps = {
   title: string;
-  description?: string;
+  description?: string | Record<string, unknown>;
   assignee?: string;
   initials?: string;
   dueDate?: string;
@@ -54,7 +54,11 @@ export function TaskCard({
             </Badge>
           ) : null}
         </div>
-        {description ? <p className="text-sm text-zinc-400">{description}</p> : null}
+        {description ? (
+          <p className="text-sm text-zinc-400">
+            {typeof description === "string" ? description : "Rich text description"}
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">

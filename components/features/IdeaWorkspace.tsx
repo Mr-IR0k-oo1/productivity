@@ -229,11 +229,18 @@ function toIdeaRecord(idea: IdeaDTO, previous?: IdeaRecord): IdeaRecord {
     ? "Now"
     : parsedDate.toLocaleDateString("en-US", { month: "short", day: "2-digit" });
 
+  const normalizedContent =
+    typeof idea.content === "string"
+      ? idea.content
+      : idea.content
+        ? JSON.stringify(idea.content)
+        : null;
+
   return {
     id: idea.id,
     title: idea.title,
     summary: idea.summary ?? previous?.summary ?? "No summary yet.",
-    content: idea.content ?? previous?.content ?? idea.summary ?? idea.title,
+    content: normalizedContent ?? previous?.content ?? idea.summary ?? idea.title,
     status: idea.status,
     author: previous?.author ?? "Teammate",
     tags: previous?.tags ?? ["Idea"],
@@ -1032,7 +1039,7 @@ export function IdeaWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const ideaIdFromQuery = searchParams.get("ideaId");
-  const [ideas, setIdeas] = useState<IdeaRecord[]>(initialIdeas);
+  const [ideas, setIdeas] = useState<IdeaRecord[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | IdeaStatus>("all");

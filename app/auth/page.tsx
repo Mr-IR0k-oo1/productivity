@@ -1,77 +1,41 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Chrome, Github, Mail } from "lucide-react";
+type SearchParamValue = string | string[] | undefined;
 
-import LoginForm from "@/components/auth/LoginForm";
-import RegisterForm from "@/components/auth/RegisterForm";
-import { REMEMBER_ME_STORAGE_KEY } from "@/lib/auth/session";
-import { supabase } from "@/lib/supabase";
-
-type AuthTab = "login" | "register";
-type OAuthProvider = "google" | "github";
-
-type ProviderConfig = {
-  provider: OAuthProvider;
-  label: string;
-  icon: typeof Chrome;
-  className: string;
+type AuthRedirectPageProps = {
+  searchParams?: Promise<{
+    tab?: SearchParamValue;
+    error?: SearchParamValue;
+    notice?: SearchParamValue;
+  }>;
 };
 
-const providers: ProviderConfig[] = [
-  {
-    provider: "google",
-    label: "Continue with Google",
-    icon: Chrome,
-    className: "bg-white text-black hover:bg-zinc-100",
-  },
-  {
-    provider: "github",
-    label: "Continue with GitHub",
-    icon: Github,
-    className: "border border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
-  },
-];
+function readFirst(value: SearchParamValue) {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
 
-const callbackErrorMessages: Record<string, string> = {
-  oauth_failed: "OAuth sign-in failed. Please try again.",
-  oauth_bootstrap_failed: "Sign-in succeeded, but workspace setup failed. Please contact support.",
-  oauth_unavailable: "OAuth is not available right now. Check your Supabase client configuration.",
-};
-
-const queryNoticeMessages: Record<string, string> = {
-  check_email: "Account created. Check your inbox to confirm your email before signing in.",
-};
-
-function resolveTab(tabValue: string | null): AuthTab {
-  return tabValue === "register" ? "register" : "login";
+  return typeof value === "string" ? value : null;
 }
 
-export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState<AuthTab>("login");
-  const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
-  const [magicLinkEmail, setMagicLinkEmail] = useState("");
-  const [magicLinkLoading, setMagicLinkLoading] = useState(false);
-  const [inlineError, setInlineError] = useState<string | null>(null);
-  const [inlineNotice, setInlineNotice] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const router = useRouter();
+export default async function AuthRedirectPage({ searchParams }: AuthRedirectPageProps) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const tab = readFirst(resolvedParams?.tab);
+  const error = readFirst(resolvedParams?.error);
+  const notice = readFirst(resolvedParams?.notice);
 
-  const callbackError = searchParams.get("error");
-  const tabParam = searchParams.get("tab");
-  const noticeParam = searchParams.get("notice");
+  const target = tab === "register" && !error && !notice ? "/register" : "/login";
+  const nextParams = new URLSearchParams();
 
-  useEffect(() => {
-    setActiveTab(resolveTab(tabParam));
-  }, [tabParam]);
+  if (error) {
+    nextParams.set("error", error);
+  }
 
-  useEffect(() => {
-    if (!noticeParam) {
-      return;
-    }
+  if (notice) {
+    nextParams.set("notice", notice);
+  }
 
+<<<<<<< HEAD
     const message = queryNoticeMessages[noticeParam];
 
     if (message) {
@@ -324,3 +288,7 @@ export default function AuthPage() {
     </div>
   );
 }
+=======
+  redirect(nextParams.size > 0 ? `${target}?${nextParams.toString()}` : target);
+}
+>>>>>>> 5887c3ffd1f244c5f98a8839a5bce2fd51cdc98a

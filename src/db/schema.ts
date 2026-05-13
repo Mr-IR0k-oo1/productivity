@@ -1,4 +1,5 @@
 import {
+  AnyPgColumn,
   boolean,
   index,
   integer,
@@ -6,8 +7,10 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -17,28 +20,61 @@ import { taskStatusValues } from "@/types/task-status";
 export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"]);
 export const taskStatusEnum = pgEnum("task_status", taskStatusValues);
 export const ideaStatusEnum = pgEnum("idea_status", ["draft", "validated", "archived", "converted"]);
+export const canvasModeEnum = pgEnum("canvas_mode", ["infinite", "page"]);
+export const pageSizeEnum = pgEnum("page_size", ["a4", "letter", "custom"]);
+export const nodeTypeEnum = pgEnum("node_type", ["shape", "text", "sticky", "image", "task_card", "idea_card", "group", "code"]);
+export const shapeVariantEnum = pgEnum("shape_variant", ["rectangle", "diamond", "circle", "parallelogram", "rounded_rect"]);
+export const edgeStyleEnum = pgEnum("edge_style", ["straight", "curved", "orthogonal"]);
+export const lineStyleEnum = pgEnum("line_style", ["solid", "dashed", "dotted"]);
+export const arrowTypeEnum = pgEnum("arrow_type", ["none", "open", "filled"]);
+export const portEnum = pgEnum("port", ["top", "right", "bottom", "left", "custom"]);
+export const accessRoleEnum = pgEnum("fc_access_role", ["viewer", "editor", "owner"]);
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  authUserId: uuid("auth_user_id").notNull().unique(),
-  fullName: varchar("full_name", { length: 120 }),
-  jobTitle: varchar("job_title", { length: 120 }),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  avatarUrl: text("avatar_url"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+const defaultCanvasState = {
+  nodes: [],
+  edges: [],
+  viewport: {
+    x: 0,
+    y: 0,
+    zoom: 1,
+  },
+};
 
-export const workspaces = pgTable("workspaces", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 120 }).notNull(),
-  slug: varchar("slug", { length: 120 }).notNull().unique(),
-  ownerId: uuid("owner_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    authUserId: uuid("auth_user_id").notNull().unique(),
+    fullName: varchar("full_name", { length: 120 }),
+    jobTitle: varchar("job_title", { length: 120 }),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    avatarUrl: text("avatar_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    emailIdx: index("idx_users_email").on(table.email),
+    authUserIdIdx: index("idx_users_auth_user_id").on(table.authUserId),
+  }),
+);
+
+export const workspaces = pgTable(
+  "workspaces",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 120 }).notNull(),
+    slug: varchar("slug", { length: 120 }).notNull().unique(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    slugIdx: index("idx_workspaces_slug").on(table.slug),
+    ownerIdIdx: index("idx_workspaces_owner_id").on(table.ownerId),
+  }),
+);
 
 export const workspaceSettings = pgTable("workspace_settings", {
   workspaceId: uuid("workspace_id")
@@ -65,6 +101,7 @@ export const workspaceMembers = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.workspaceId, table.userId] }),
     memberWorkspaceIdx: index("workspace_members_workspace_idx").on(table.workspaceId),
+    memberUserIdx: index("idx_workspace_members_user_id").on(table.userId),
   }),
 );
 
@@ -80,7 +117,8 @@ export const ideas = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: varchar("title", { length: 200 }).notNull(),
     summary: text("summary"),
-    content: text("content"),
+    content: jsonb("content"),
+    votes: integer("votes").default(0).notNull(),
     status: ideaStatusEnum("status").default("draft").notNull(),
     convertedTaskId: uuid("converted_task_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -92,6 +130,23 @@ export const ideas = pgTable(
   }),
 );
 
+export const ideaDependencies = pgTable(
+  "idea_dependencies",
+  {
+    ideaId: uuid("idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    dependsOnIdeaId: uuid("depends_on_idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.ideaId, table.dependsOnIdeaId] }),
+    dependsOnIdx: index("idx_idea_dependencies_depends_on").on(table.dependsOnIdeaId),
+  }),
+);
+
 export const tasks = pgTable(
   "tasks",
   {
@@ -99,13 +154,14 @@ export const tasks = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
+    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
     ideaId: uuid("idea_id").references(() => ideas.id, { onDelete: "set null" }),
     creatorId: uuid("creator_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
     title: varchar("title", { length: 200 }).notNull(),
-    description: text("description"),
+    description: jsonb("description"),
     status: taskStatusEnum("status").default("todo").notNull(),
     priority: integer("priority").default(2).notNull(),
     dueDate: timestamp("due_date", { withTimezone: true }),
@@ -119,6 +175,9 @@ export const tasks = pgTable(
   (table) => ({
     workspaceStatusIdx: index("tasks_workspace_status_idx").on(table.workspaceId, table.status),
     assigneeIdx: index("tasks_assignee_idx").on(table.assigneeId),
+    dueDateIdx: index("idx_tasks_due_date").on(table.dueDate),
+    workspaceCreatorIdx: index("idx_tasks_workspace_creator").on(table.workspaceId, table.creatorId),
+    projectIdIdx: index("idx_tasks_project_id").on(table.projectId),
   }),
 );
 
@@ -155,19 +214,29 @@ export const taskDependencies = pgTable(
   }),
 );
 
-export const comments = pgTable("comments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  workspaceId: uuid("workspace_id")
-    .notNull()
-    .references(() => workspaces.id, { onDelete: "cascade" }),
-  taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }),
-  ideaId: uuid("idea_id").references(() => ideas.id, { onDelete: "cascade" }),
-  authorId: uuid("author_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  body: text("body").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "cascade" }),
+    ideaId: uuid("idea_id").references(() => ideas.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id").references((): AnyPgColumn => comments.id, { onDelete: "cascade" }), // for threading
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    taskIdIdx: index("idx_comments_task_id").on(table.taskId),
+    ideaIdIdx: index("idx_comments_idea_id").on(table.ideaId),
+    parentIdIdx: index("idx_comments_parent_id").on(table.parentId),
+  }),
+);
 
 export const attachments = pgTable("attachments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -228,6 +297,9 @@ export const timeEntries = pgTable(
   },
   (table) => ({
     workspaceUserIdx: index("time_entries_workspace_user_idx").on(table.workspaceId, table.userId),
+    userIdIdx: index("idx_time_entries_user_id").on(table.userId),
+    taskIdIdx: index("idx_time_entries_task_id").on(table.taskId),
+    workspacePeriodIdx: index("idx_time_entries_workspace_period").on(table.workspaceId, table.startedAt),
   }),
 );
 
@@ -246,12 +318,16 @@ export const calendarEvents = pgTable(
     description: text("description"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    kind: varchar("kind", { length: 30 }), // meeting, focus, deadline, review, travel
+    project: varchar("project", { length: 200 }),
     location: varchar("location", { length: 150 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     workspaceStartIdx: index("calendar_events_workspace_start_idx").on(table.workspaceId, table.startsAt),
+    creatorIdx: index("idx_calendar_events_creator").on(table.creatorId),
+    kindIdx: index("idx_calendar_events_kind").on(table.kind),
   }),
 );
 
@@ -271,6 +347,9 @@ export const activityLog = pgTable(
   },
   (table) => ({
     workspaceIdx: index("activity_log_workspace_idx").on(table.workspaceId),
+    entityIdx: index("idx_activity_log_workspace_entity").on(table.workspaceId, table.entityType, table.entityId),
+    actorIdIdx: index("idx_activity_log_actor_id").on(table.actorId),
+    createdAtIdx: index("idx_activity_log_created_at").on(table.createdAt),
   }),
 );
 
@@ -281,16 +360,235 @@ export const flowcharts = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
-    creatorId: uuid("creator_id")
+    ownerId: uuid("owner_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 200 }).notNull(),
-    data: jsonb("data").default({ nodes: [], edges: [] }).notNull(),
+    title: text("title").notNull().default("Untitled flowchart"),
+    description: text("description"),
+    mode: canvasModeEnum("mode").notNull().default("infinite"),
+    pageSize: pageSizeEnum("page_size"),
+    pageWidth: real("page_width"),
+    pageHeight: real("page_height"),
+    diagramType: text("diagram_type"),
+    canvasState: jsonb("canvas_state").default(defaultCanvasState).notNull(),
+    thumbnailUrl: text("thumbnail_url"),
+    isPublic: boolean("is_public").default(false).notNull(),
+    publicToken: text("public_token").unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
     workspaceIdx: index("flowcharts_workspace_idx").on(table.workspaceId),
-    creatorIdx: index("flowcharts_creator_idx").on(table.creatorId),
+    ownerIdx: index("flowcharts_owner_idx").on(table.ownerId),
+  }),
+);
+
+export const flowchartNodes = pgTable(
+  "flowchart_nodes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    nodeType: nodeTypeEnum("node_type").notNull(),
+    taskId: uuid("task_id").references(() => tasks.id, { onDelete: "set null" }),
+    ideaId: uuid("idea_id").references(() => ideas.id, { onDelete: "set null" }),
+    x: real("x").notNull().default(0),
+    y: real("y").notNull().default(0),
+    width: real("width").notNull().default(200),
+    height: real("height").notNull().default(80),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    flowchartIdx: index("fc_nodes_flowchart_idx").on(table.flowchartId),
+    taskIdx: index("fc_nodes_task_idx").on(table.taskId),
+    ideaIdx: index("fc_nodes_idea_idx").on(table.ideaId),
+  }),
+);
+
+export const flowchartVersions = pgTable(
+  "flowchart_versions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    snapshot: jsonb("snapshot").notNull(),
+    label: text("label"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    flowchartIdx: index("fc_versions_flowchart_idx").on(table.flowchartId),
+  }),
+);
+
+export const flowchartComments = pgTable(
+  "flowchart_comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id").references((): AnyPgColumn => flowchartComments.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    x: real("x").notNull(),
+    y: real("y").notNull(),
+    resolved: boolean("resolved").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    flowchartIdx: index("fc_comments_flowchart_idx").on(table.flowchartId),
+  }),
+);
+
+export const flowchartAccess = pgTable(
+  "flowchart_access",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    flowchartId: uuid("flowchart_id")
+      .notNull()
+      .references(() => flowcharts.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: accessRoleEnum("role").notNull().default("viewer"),
+    grantedBy: uuid("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantedAt: timestamp("granted_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueUserAccess: unique("fc_access_unique").on(table.flowchartId, table.userId),
+    flowchartIdx: index("fc_access_flowchart_idx").on(table.flowchartId),
+    userIdx: index("fc_access_user_idx").on(table.userId),
+  }),
+);
+
+// ==================== NEW TABLES ====================
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: varchar("type", { length: 50 }).notNull(), // mention, assignment, comment, deadline, etc.
+    title: varchar("title", { length: 200 }).notNull(),
+    body: text("body"),
+    link: text("link"), // navigation path
+    isRead: boolean("is_read").default(false).notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("idx_notifications_user_id").on(table.userId, table.isRead),
+    workspaceIdIdx: index("idx_notifications_workspace_id").on(table.workspaceId),
+    createdAtIdx: index("idx_notifications_created_at").on(table.createdAt),
+  }),
+);
+
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 200 }).notNull(),
+    description: text("description"),
+    status: varchar("status", { length: 30 }).default("active").notNull(), // active, completed, archived
+    startDate: timestamp("start_date", { withTimezone: true }),
+    endDate: timestamp("end_date", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    workspaceIdIdx: index("idx_projects_workspace_id").on(table.workspaceId),
+    statusIdx: index("idx_projects_status").on(table.status),
+  }),
+);
+
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 50 }).notNull(),
+    color: varchar("color", { length: 20 }), // hex color code
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    workspaceIdIdx: index("idx_tags_workspace_id").on(table.workspaceId),
+    nameIdx: index("idx_tags_name").on(table.workspaceId, table.name),
+  }),
+);
+
+export const taskTags = pgTable(
+  "task_tags",
+  {
+    taskId: uuid("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.taskId, table.tagId] }),
+    tagIdIdx: index("idx_task_tags_tag_id").on(table.tagId),
+  }),
+);
+
+export const ideaVotes = pgTable(
+  "idea_votes",
+  {
+    ideaId: uuid("idea_id")
+      .notNull()
+      .references(() => ideas.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.ideaId, table.userId] }),
+    ideaIdx: index("idx_idea_votes_idea_id").on(table.ideaId),
+    userIdx: index("idx_idea_votes_user_id").on(table.userId),
+  }),
+);
+
+export const reactions = pgTable(
+  "reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    entityType: varchar("entity_type", { length: 30 }).notNull(), // comment, task, idea
+    entityId: uuid("entity_id").notNull(),
+    emoji: varchar("emoji", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    entityIdIdx: index("idx_reactions_entity").on(table.entityType, table.entityId),
+    userIdIdx: index("idx_reactions_user_id").on(table.userId),
+    uniqueReaction: index("idx_unique_reaction").on(table.entityType, table.entityId, table.userId, table.emoji),
   }),
 );

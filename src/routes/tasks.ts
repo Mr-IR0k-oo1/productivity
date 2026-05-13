@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -25,7 +25,7 @@ const createTaskSchema = z.object({
   status: z.enum(taskStatusValues).optional(),
   priority: z.number().int().min(1).max(3).optional(),
   dueDate: z.string().datetime().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.object({}).catchall(z.unknown()).optional(),
 });
 
 const listTaskQuerySchema = z.object({
@@ -44,7 +44,7 @@ const updateTaskSchema = z
     status: z.enum(taskStatusValues).optional(),
     priority: z.number().int().min(1).max(3).optional(),
     dueDate: z.string().datetime().optional().nullable(),
-    metadata: z.record(z.unknown()).optional(),
+    metadata: z.object({}).catchall(z.unknown()).optional(),
   })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one field is required",
@@ -159,13 +159,25 @@ tasksRoute.post("/:id/dependencies", zValidator("json", dependencySchema), async
   const workspaceId = c.get("workspaceId");
   const payload = c.req.valid("json");
 
-  const [task] = await db
+  if (taskId === payload.dependsOnTaskId) {
+    return c.json({ error: "A task cannot depend on itself" }, 400);
+  }
+
+  const relatedTaskIds = [taskId, payload.dependsOnTaskId];
+  const relatedTasks = await db
     .select({ id: tasks.id })
     .from(tasks)
-    .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
-    .limit(1);
+    .where(and(eq(tasks.workspaceId, workspaceId), inArray(tasks.id, relatedTaskIds)));
 
-  if (!task) return c.json({ error: "Task not found" }, 404);
+  const hasSourceTask = relatedTasks.some((task) => task.id === taskId);
+  if (!hasSourceTask) {
+    return c.json({ error: "Task not found" }, 404);
+  }
+
+  const hasDependencyTask = relatedTasks.some((task) => task.id === payload.dependsOnTaskId);
+  if (!hasDependencyTask) {
+    return c.json({ error: "Dependency task not found in this workspace" }, 400);
+  }
 
   const dependency = await addTaskDependency(taskId, payload.dependsOnTaskId);
   return c.json({ data: dependency }, 201);
