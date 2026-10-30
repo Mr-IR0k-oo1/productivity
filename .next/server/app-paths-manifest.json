@@ -1,9 +1,0 @@
-{
-  "/api/flowcharts/route": "app/api/flowcharts/route.js",
-  "/flowcharts/page": "app/flowcharts/page.js",
-  "/page": "app/page.js",
-  "/auth/page": "app/auth/page.js",
-  "/login/page": "app/login/page.js",
-  "/auth/callback/page": "app/auth/callback/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
-}
