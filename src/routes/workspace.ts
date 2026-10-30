@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 
 import { db } from "@/src/db";
-import { users, workspaceMembers, workspaces } from "@/src/db/schema";
+import { users, workspaceMembers, workspaces, memberRoleValues, workspaceInvites } from "@/src/db/schema";
 import { authMiddleware } from "@/src/middleware/auth";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import {
@@ -23,7 +23,7 @@ const createWorkspaceSchema = z.object({
   slug: z.string().min(2).optional(),
 });
 
-const memberRoleSchema = z.enum(["owner", "admin", "member"]);
+const memberRoleSchema = z.enum(memberRoleValues);
 
 const addMemberSchema = z.object({
   email: z.string().email(),
@@ -223,7 +223,17 @@ workspace.post("/members", workspaceMiddleware, zValidator("json", addMemberSche
     .limit(1);
 
   if (!targetUser) {
-    return c.json({ error: "No account exists for that email yet" }, 404);
+    // No account yet: keep a pending invite that is applied when they sign up with this email.
+    const [invite] = await db
+      .insert(workspaceInvites)
+      .values({ workspaceId, email: payload.email.trim().toLowerCase(), role: payload.role, invitedBy: c.get("userId") })
+      .onConflictDoUpdate({
+        target: [workspaceInvites.workspaceId, workspaceInvites.email],
+        set: { role: payload.role },
+      })
+      .returning();
+
+    return c.json({ data: { invite } }, 202);
   }
 
   const [membership] = await db
@@ -258,6 +268,32 @@ workspace.post("/members", workspaceMiddleware, zValidator("json", addMemberSche
     },
     201,
   );
+});
+
+workspace.get("/invites", workspaceMiddleware, async (c) => {
+  if (!canManageWorkspaceMember(c.get("workspaceRole"))) {
+    return c.json({ error: "You do not have permission to view invites" }, 403);
+  }
+
+  const invites = await db
+    .select()
+    .from(workspaceInvites)
+    .where(eq(workspaceInvites.workspaceId, c.get("workspaceId")));
+
+  return c.json({ data: invites }, 200);
+});
+
+workspace.delete("/invites/:id", workspaceMiddleware, async (c) => {
+  if (!canManageWorkspaceMember(c.get("workspaceRole"))) {
+    return c.json({ error: "You do not have permission to revoke invites" }, 403);
+  }
+
+  const [revoked] = await db
+    .delete(workspaceInvites)
+    .where(and(eq(workspaceInvites.id, c.req.param("id")), eq(workspaceInvites.workspaceId, c.get("workspaceId"))))
+    .returning({ id: workspaceInvites.id });
+
+  return revoked ? c.body(null, 204) : c.json({ error: "Invite not found" }, 404);
 });
 
 workspace.patch("/members/:userId", workspaceMiddleware, zValidator("json", updateMemberSchema), async (c) => {

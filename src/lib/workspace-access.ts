@@ -1,4 +1,4 @@
-export type WorkspaceRole = "owner" | "admin" | "member";
+export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
 
 export function isPrivilegedWorkspaceRole(role: WorkspaceRole | null | undefined): role is "owner" | "admin" {
   return role === "owner" || role === "admin";

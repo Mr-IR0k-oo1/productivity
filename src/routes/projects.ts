@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/src/db";
 import { projects } from "@/src/db/schema";
 import { authMiddleware } from "@/src/middleware/auth";
+import { requirePermission } from "@/src/middleware/permissions";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
 
@@ -44,7 +45,7 @@ projectsRoute.get("/", async (c) => {
   return c.json({ data: rows }, 200);
 });
 
-projectsRoute.post("/", zValidator("json", createProjectSchema), async (c) => {
+projectsRoute.post("/", requirePermission("manageProjects"), zValidator("json", createProjectSchema), async (c) => {
   const workspaceId = c.get("workspaceId");
   const payload = c.req.valid("json");
 
@@ -80,7 +81,7 @@ projectsRoute.get("/:id", async (c) => {
   return c.json({ data: project }, 200);
 });
 
-projectsRoute.patch("/:id", zValidator("json", updateProjectSchema), async (c) => {
+projectsRoute.patch("/:id", requirePermission("manageProjects"), zValidator("json", updateProjectSchema), async (c) => {
   const projectId = c.req.param("id");
   const workspaceId = c.get("workspaceId");
   const payload = c.req.valid("json");
@@ -105,7 +106,7 @@ projectsRoute.patch("/:id", zValidator("json", updateProjectSchema), async (c) =
   return c.json({ data: updated }, 200);
 });
 
-projectsRoute.delete("/:id", async (c) => {
+projectsRoute.delete("/:id", requirePermission("manageProjects"), async (c) => {
   const projectId = c.req.param("id");
   const workspaceId = c.get("workspaceId");
 

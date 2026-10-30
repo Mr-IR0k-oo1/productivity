@@ -4,9 +4,10 @@ import { createMiddleware } from "hono/factory";
 import { db } from "@/src/db";
 import { users, workspaceMembers } from "@/src/db/schema";
 import type { WorkspaceBindings } from "@/src/types/bindings";
+import { isAuthBypassEnabled as resolveAuthBypass } from "@/src/lib/local-mode";
+import { isWriteAllowedForRole } from "@/src/lib/permissions";
 
-const isAuthBypassEnabled =
-  process.env.ORBIT_DISABLE_AUTH === "true" || process.env.NEXT_PUBLIC_ORBIT_DISABLE_AUTH === "true";
+const isAuthBypassEnabled = resolveAuthBypass();
 
 async function resolveFirstActiveMembership(userId: string) {
   const [member] = await db
@@ -49,6 +50,9 @@ export const workspaceMiddleware = createMiddleware<WorkspaceBindings>(async (c,
     c.set("userId", user.id);
     c.set("workspaceId", fallbackMembership.workspaceId);
     c.set("workspaceRole", fallbackMembership.role);
+    if (!isWriteAllowedForRole(c.get("workspaceRole"), c.req.method, c.req.path)) {
+      return c.json({ error: "You have read-only access to this workspace" }, 403);
+    }
     await next();
   };
 
@@ -77,5 +81,8 @@ export const workspaceMiddleware = createMiddleware<WorkspaceBindings>(async (c,
   c.set("userId", user.id);
   c.set("workspaceId", requestedWorkspaceId);
   c.set("workspaceRole", member.role);
+  if (!isWriteAllowedForRole(c.get("workspaceRole"), c.req.method, c.req.path)) {
+    return c.json({ error: "You have read-only access to this workspace" }, 403);
+  }
   await next();
 });

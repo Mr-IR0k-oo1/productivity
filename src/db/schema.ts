@@ -17,9 +17,14 @@ import {
 
 import { taskStatusValues } from "@/types/task-status";
 
-export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"]);
+export const memberRoleValues = ["owner", "admin", "member", "viewer"] as const;
+export const memberRoleEnum = pgEnum("member_role", memberRoleValues);
 export const taskStatusEnum = pgEnum("task_status", taskStatusValues);
 export const ideaStatusEnum = pgEnum("idea_status", ["draft", "validated", "archived", "converted"]);
+export const issueTypeValues = ["epic", "story", "task", "bug"] as const;
+export const issueTypeEnum = pgEnum("issue_type", issueTypeValues);
+export const sprintStatusValues = ["planned", "active", "completed"] as const;
+export const sprintStatusEnum = pgEnum("sprint_status", sprintStatusValues);
 export const canvasModeEnum = pgEnum("canvas_mode", ["infinite", "page"]);
 export const pageSizeEnum = pgEnum("page_size", ["a4", "letter", "custom"]);
 export const nodeTypeEnum = pgEnum("node_type", ["shape", "text", "sticky", "image", "task_card", "idea_card", "group", "code"]);
@@ -64,6 +69,9 @@ export const workspaces = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", { length: 120 }).notNull(),
     slug: varchar("slug", { length: 120 }).notNull().unique(),
+    // Issue keys are `${issueKeyPrefix}-${tasks.number}`, e.g. ORB-42.
+    issueKeyPrefix: varchar("issue_key_prefix", { length: 10 }).default("ORB").notNull(),
+    issueCounter: integer("issue_counter").default(0).notNull(),
     ownerId: uuid("owner_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -160,6 +168,12 @@ export const tasks = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
+    number: integer("number"),
+    issueType: issueTypeEnum("issue_type").default("task").notNull(),
+    // Epic (or other parent issue) this issue rolls up into.
+    parentId: uuid("parent_id").references((): AnyPgColumn => tasks.id, { onDelete: "set null" }),
+    sprintId: uuid("sprint_id").references((): AnyPgColumn => sprints.id, { onDelete: "set null" }),
+    storyPoints: integer("story_points"),
     title: varchar("title", { length: 200 }).notNull(),
     description: jsonb("description"),
     status: taskStatusEnum("status").default("todo").notNull(),
@@ -178,6 +192,33 @@ export const tasks = pgTable(
     dueDateIdx: index("idx_tasks_due_date").on(table.dueDate),
     workspaceCreatorIdx: index("idx_tasks_workspace_creator").on(table.workspaceId, table.creatorId),
     projectIdIdx: index("idx_tasks_project_id").on(table.projectId),
+    sprintIdx: index("idx_tasks_sprint_id").on(table.sprintId),
+    parentIdx: index("idx_tasks_parent_id").on(table.parentId),
+    workspaceNumberUnique: unique("tasks_workspace_number_unique").on(table.workspaceId, table.number),
+  }),
+);
+
+export const sprints = pgTable(
+  "sprints",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    goal: text("goal"),
+    status: sprintStatusEnum("status").default("planned").notNull(),
+    startDate: timestamp("start_date", { withTimezone: true }),
+    endDate: timestamp("end_date", { withTimezone: true }),
+    // Story points in the sprint at the moment it started; the burndown starts from here.
+    committedPoints: integer("committed_points"),
+    completedPoints: integer("completed_points"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    workspaceStatusIdx: index("sprints_workspace_status_idx").on(table.workspaceId, table.status),
   }),
 );
 
@@ -590,5 +631,95 @@ export const reactions = pgTable(
     entityIdIdx: index("idx_reactions_entity").on(table.entityType, table.entityId),
     userIdIdx: index("idx_reactions_user_id").on(table.userId),
     uniqueReaction: index("idx_unique_reaction").on(table.entityType, table.entityId, table.userId, table.emoji),
+  }),
+);
+
+// ===== Better Auth (self-hosted login; only used when BETTER_AUTH_SECRET is set) =====
+// Field names follow Better Auth's core schema. ids are UUIDs so users.authUserId can reference them.
+
+export const authUsers = pgTable("auth_users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  image: text("image"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const authSessions = pgTable(
+  "auth_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    token: text("token").notNull().unique(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("auth_sessions_user_idx").on(table.userId),
+  }),
+);
+
+export const authAccounts = pgTable(
+  "auth_accounts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("auth_accounts_user_idx").on(table.userId),
+  }),
+);
+
+export const authVerifications = pgTable(
+  "auth_verifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    identifierIdx: index("auth_verifications_identifier_idx").on(table.identifier),
+  }),
+);
+
+// Pending invitations for people who don't have an account yet; accepted on sign-up.
+export const workspaceInvites = pgTable(
+  "workspace_invites",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    email: varchar("email", { length: 255 }).notNull(),
+    role: memberRoleEnum("role").default("member").notNull(),
+    invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    workspaceEmailUnique: unique("workspace_invites_workspace_email_unique").on(table.workspaceId, table.email),
+    emailIdx: index("workspace_invites_email_idx").on(table.email),
   }),
 );

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/src/db";
 import { tags, taskTags } from "@/src/db/schema";
 import { authMiddleware } from "@/src/middleware/auth";
+import { requirePermission } from "@/src/middleware/permissions";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
 
@@ -58,7 +59,7 @@ tagsRoute.post("/", zValidator("json", createTagSchema), async (c) => {
   return c.json({ data: created }, 201);
 });
 
-tagsRoute.patch("/:id", zValidator("json", updateTagSchema), async (c) => {
+tagsRoute.patch("/:id", requirePermission("manageProjects"), zValidator("json", updateTagSchema), async (c) => {
   const tagId = c.req.param("id");
   const workspaceId = c.get("workspaceId");
   const payload = c.req.valid("json");
@@ -79,7 +80,7 @@ tagsRoute.patch("/:id", zValidator("json", updateTagSchema), async (c) => {
   return c.json({ data: updated }, 200);
 });
 
-tagsRoute.delete("/:id", async (c) => {
+tagsRoute.delete("/:id", requirePermission("manageProjects"), async (c) => {
   const tagId = c.req.param("id");
   const workspaceId = c.get("workspaceId");
 

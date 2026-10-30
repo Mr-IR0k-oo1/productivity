@@ -2,7 +2,6 @@ import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { Hono } from "hono";
-import { sql } from "drizzle-orm";
 
 // Validate environment variables on startup
 import { validateEnv } from "@/src/lib/env";
@@ -21,13 +20,24 @@ import tagsRoute from "@/src/routes/tags";
 import subtasksRoute from "@/src/routes/subtasks";
 import commentsRoute from "@/src/routes/comments";
 import attachmentsRoute from "@/src/routes/attachments";
+import flowchartsRoute from "@/src/routes/flowcharts";
+import sprintsRoute from "@/src/routes/sprints";
+import profileRoute from "@/src/routes/profile";
+import notificationsRoute from "@/src/routes/notifications";
+import searchRoute from "@/src/routes/search";
 import { healthRouter, structuredLogger } from "@/src/routes/health";
-import { db } from "@/src/db";
+import { dbReady } from "@/src/db";
+import { identity } from "@/src/lib/identity";
 
 const app = new Hono();
 
 app.use("*", cors());
 app.use("*", structuredLogger);
+// Requests wait for migrations (and the local seed) on first start.
+app.use("*", async (_c, next) => {
+  await dbReady;
+  await next();
+});
 
 // Global error handler
 app.onError((error, c) => {
@@ -54,6 +64,11 @@ app.get("/", (c) => c.json({ ok: true, service: "Orbit API" }));
 
 app.route("/api/health", healthRouter);
 app.route("/api/auth", authRoute);
+// Better Auth handles the rest of /api/auth/* (sign-in, sign-up, OAuth callbacks).
+if (identity) {
+  const handler = identity.handler;
+  app.on(["GET", "POST"], "/api/auth/*", (c) => handler(c.req.raw));
+}
 app.route("/api/workspace", workspaceRoute);
 app.route("/api/settings", settingsRoute);
 app.route("/api/ideas", ideasRoute);
@@ -66,14 +81,20 @@ app.route("/api/tags", tagsRoute);
 app.route("/api/subtasks", subtasksRoute);
 app.route("/api/comments", commentsRoute);
 app.route("/api/attachments", attachmentsRoute);
+app.route("/api/flowcharts", flowchartsRoute);
+app.route("/api/sprints", sprintsRoute);
+app.route("/api/profile", profileRoute);
+app.route("/api/notifications", notificationsRoute);
+app.route("/api/search", searchRoute);
 
 export default app;
 
-if (process.env.NODE_ENV !== "production") {
+// On Vercel the app is served through api/[[...route]].ts instead.
+if (!process.env.VERCEL) {
   serve(
     {
       fetch: app.fetch,
-      port: 8787,
+      port: Number(process.env.API_PORT ?? 8787),
     },
     (info) => {
       console.log(`Orbit API running on http://localhost:${info.port}`);

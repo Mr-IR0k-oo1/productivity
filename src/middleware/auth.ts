@@ -1,91 +1,53 @@
+import { eq } from "drizzle-orm";
 import { createMiddleware } from "hono/factory";
-import { getCookie } from "hono/cookie";
 
 import { db } from "@/src/db";
 import { users } from "@/src/db/schema";
-import { supabaseAdmin } from "@/src/lib/supabase";
+import { identity } from "@/src/lib/identity";
+import { LOCAL_AUTH_USER_ID } from "@/src/lib/local-mode";
 import type { AuthBindings } from "@/src/types/bindings";
-import { AUTH_COOKIE_NAME } from "@/lib/auth/session";
 
-const isAuthBypassEnabled =
-  process.env.ORBIT_DISABLE_AUTH === "true" || process.env.NEXT_PUBLIC_ORBIT_DISABLE_AUTH === "true";
 let cachedBypassAuthUserId: string | null = null;
 
-function readCookieSessionToken(cookieValue: string | undefined) {
-  if (!cookieValue) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(cookieValue) as { access_token?: string } | null;
-    return typeof parsed?.access_token === "string" ? parsed.access_token : null;
-  } catch {
-    return null;
-  }
-}
-
+/** Single-user mode: the built-in local user, or the first user of an existing database. */
 async function resolveBypassAuthUserId() {
   if (cachedBypassAuthUserId) {
     return cachedBypassAuthUserId;
   }
 
-  const [user] = await db
+  const [local] = await db
     .select({ authUserId: users.authUserId })
     .from(users)
+    .where(eq(users.authUserId, LOCAL_AUTH_USER_ID))
     .limit(1);
+  const [first] = local ? [local] : await db.select({ authUserId: users.authUserId }).from(users).limit(1);
 
-  cachedBypassAuthUserId = user?.authUserId ?? null;
+  cachedBypassAuthUserId = first?.authUserId ?? null;
   return cachedBypassAuthUserId;
 }
 
 export const authMiddleware = createMiddleware<AuthBindings>(async (c, next) => {
-  const headerToken = c.req.header("authorization")?.replace("Bearer ", "").trim();
-  const cookieToken = readCookieSessionToken(getCookie(c, AUTH_COOKIE_NAME));
-  const token = headerToken || cookieToken;
-
-  if (isAuthBypassEnabled) {
-    // Allow real OAuth tokens to keep working even when local bypass is enabled.
-    if (token && token !== "dev-auth-bypass") {
-      const { data, error } = await supabaseAdmin.auth.getUser(token);
-
-      if (!error && data.user) {
-        c.set("authUserId", data.user.id);
-        c.set("authToken", token);
-        await next();
-        return;
-      }
-    }
-
-    const headerAuthUserId = c.req.header("x-dev-auth-user-id")?.trim();
-    const fallbackAuthUserId = await resolveBypassAuthUserId();
-    const authUserId = headerAuthUserId || fallbackAuthUserId;
+  if (!identity) {
+    const authUserId = await resolveBypassAuthUserId();
 
     if (!authUserId) {
-      return c.json(
-        {
-          error: "Auth bypass is enabled but no users exist in public.users. Create at least one user first.",
-        },
-        500,
-      );
+      return c.json({ error: "No local user exists yet. Restart the API to create one." }, 500);
     }
 
     c.set("authUserId", authUserId);
-    c.set("authToken", token || "dev-auth-bypass");
+    c.set("authToken", "local");
     await next();
     return;
   }
 
-  if (!token) {
+  // Better Auth reads its session cookie from the request headers.
+  const session = await identity.api.getSession({ headers: c.req.raw.headers });
+
+  if (!session) {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-
-  if (error || !data.user) {
-    return c.json({ error: "Invalid auth token" }, 401);
-  }
-
-  c.set("authUserId", data.user.id);
-  c.set("authToken", token);
+  c.set("authUserId", session.user.id);
+  c.set("authToken", session.session.token);
   await next();
 });

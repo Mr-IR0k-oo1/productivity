@@ -10,19 +10,21 @@
     "dev:all": "concurrently -k -n tauri,api -c cyan,magenta \"tauri dev\" \"tsx --tsconfig tsconfig.api.json src/index.ts\"",
     "build": "next build",
     "build:desktop": "node scripts/build-desktop.mjs",
-    "start": "next start",
+    "start": "concurrently -k -n web,api -c cyan,magenta \"next start\" \"tsx --tsconfig tsconfig.api.json src/index.ts\"",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.api.json --noEmit",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test": "vitest run"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@electric-sql/pglite": "0.5.13",
     "@hono/node-server": "^1.14.4",
     "@hono/zod-validator": "^0.4.3",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -32,7 +34,6 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-slot": "^1.2.3",
-    "@supabase/supabase-js": "^2.50.0",
     "@tanstack/react-query": "^5.80.7",
     "@tauri-apps/plugin-dialog": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.5.0",
@@ -40,6 +41,7 @@
     "@tiptap/react": "^2.11.5",
     "@tiptap/starter-kit": "^2.11.5",
     "@xyflow/react": "^12.8.3",
+    "better-auth": "1.7.14",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -60,7 +62,6 @@
     "shiki": "^4.0.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.0",
-    "three": "^0.184.0",
     "zod": "^3.24.4",
     "zustand": "^5.0.5"
   },
@@ -71,13 +72,13 @@
     "@types/pg": "^8.15.2",
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
-    "@types/three": "^0.184.0",
     "concurrently": "^9.1.2",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.27.0",
     "eslint-config-next": "^15.2.4",
     "tailwindcss": "^4.1.7",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "5.0.5"
   }
 }

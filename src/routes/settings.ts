@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { db } from "@/src/db";
 import { users, workspaceMembers, workspaceSettings, workspaces } from "@/src/db/schema";
 import { authMiddleware } from "@/src/middleware/auth";
+import { requirePermission } from "@/src/middleware/permissions";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
 import {
@@ -89,7 +90,7 @@ settingsRoute.get("/", async (c) => {
   );
 });
 
-settingsRoute.patch("/", zValidator("json", workspaceSettingsPatchSchema), async (c) => {
+settingsRoute.patch("/", requirePermission("manageSettings"), zValidator("json", workspaceSettingsPatchSchema), async (c) => {
   const workspaceId = c.get("workspaceId");
   const payload = c.req.valid("json");
 

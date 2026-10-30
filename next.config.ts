@@ -14,10 +14,7 @@ const nextConfig: NextConfig = {
       }
     : {}),
   async rewrites() {
-    if (process.env.NODE_ENV === "production") {
-      return [];
-    }
-
+    // The Hono API always runs as a separate local process (see `npm run dev` / `npm start`).
     const apiUrl = process.env.API_URL?.trim() || "http://localhost:8787";
 
     return [

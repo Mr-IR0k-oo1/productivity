@@ -58,17 +58,12 @@ const postgresUrlSchema = z
   }, "DATABASE_URL must be a valid postgres connection URL (check quotes and URL-encoding)");
 
 const envSchema = z.object({
-  DATABASE_URL: postgresUrlSchema,
+  // Optional: when unset, Orbit uses the embedded local database (see src/lib/local-mode.ts).
+  DATABASE_URL: z.preprocess((value) => (typeof value === "string" && value.trim() === "" ? undefined : value), postgresUrlSchema.optional()),
   APP_URL: z.string().default(resolveAppUrl()),
-  SUPABASE_URL: z.string().default("http://localhost:54321"),
-  SUPABASE_ANON_KEY: z.string().default(""),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),
 });
 
 export const env = envSchema.parse({
   DATABASE_URL: process.env.DATABASE_URL,
   APP_URL: process.env.APP_URL,
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
 });

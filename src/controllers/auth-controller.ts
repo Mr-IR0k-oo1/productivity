@@ -1,22 +1,14 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/src/db";
-import { users, workspaceMembers, workspaces } from "@/src/db/schema";
-import { supabaseAnon } from "@/src/lib/supabase";
+import { users, workspaceInvites, workspaceMembers, workspaces } from "@/src/db/schema";
+import { LOCAL_AUTH_USER_ID } from "@/src/lib/local-mode";
 import { createUniqueWorkspaceSlug } from "@/src/lib/workspace-slug";
 
 type DatabaseError = {
   code?: string;
   constraint?: string;
   message?: string;
-};
-
-type SignUpInput = {
-  email: string;
-  password: string;
-  fullName: string;
-  workspaceName: string;
-  jobTitle?: string;
 };
 
 type EnsureOAuthUserWorkspaceInput = {
@@ -92,105 +84,23 @@ async function ensureWorkspaceForUser(userId: string, preferredWorkspaceName: st
   return { workspaceId: workspace.id, createdWorkspace: true };
 }
 
-export async function signUpWithWorkspace(input: SignUpInput) {
-  const email = normalizeEmail(input.email);
+/**
+ * When login is first switched on, the first account to sign up takes over the built-in
+ * local profile (and its workspace) instead of starting empty. Returns true if claimed.
+ */
+export async function claimLocalProfile(input: { authUserId: string; email: string; fullName?: string | null }) {
+  const [claimed] = await db
+    .update(users)
+    .set({
+      authUserId: input.authUserId,
+      email: normalizeEmail(input.email),
+      fullName: input.fullName?.trim() || null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.authUserId, LOCAL_AUTH_USER_ID))
+    .returning({ id: users.id });
 
-  const [existingUser] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-
-  if (existingUser) {
-    throw new Error("An account with this email already exists. Please sign in instead.");
-  }
-
-  const { data, error } = await supabaseAnon.auth.signUp({
-    email,
-    password: input.password,
-    options: {
-      data: {
-        full_name: input.fullName,
-        ...(input.jobTitle ? { job_title: input.jobTitle } : {}),
-      },
-    },
-  });
-
-  if (error || !data.user) {
-    throw new Error(error?.message ?? "Failed to sign up");
-  }
-
-  const authUserId = data.user.id;
-
-  let userId = "";
-  let workspaceId = "";
-
-  try {
-    await db.transaction(async (tx) => {
-      const [user] = await tx
-        .insert(users)
-        .values({
-          authUserId,
-          email,
-          fullName: input.fullName,
-          jobTitle: input.jobTitle,
-        })
-        .returning({ id: users.id });
-
-      const slug = await createUniqueWorkspaceSlug(input.workspaceName);
-
-      const [workspace] = await tx
-        .insert(workspaces)
-        .values({
-          name: input.workspaceName,
-          slug,
-          ownerId: user.id,
-        })
-        .returning({ id: workspaces.id });
-
-      await tx.insert(workspaceMembers).values({
-        workspaceId: workspace.id,
-        userId: user.id,
-        role: "owner",
-      });
-
-      userId = user.id;
-      workspaceId = workspace.id;
-    });
-  } catch (error) {
-    if (isDatabaseUniqueViolation(error) && (isEmailUniqueViolation(error) || isAuthUserUniqueViolation(error))) {
-      throw new Error("An account with this email already exists. Please sign in instead.");
-    }
-
-    throw error;
-  }
-
-  return {
-    userId,
-    workspaceId,
-    authUserId,
-    session: data.session ?? null,
-  };
-}
-
-export async function loginWithPassword(email: string, password: string) {
-  const normalizedEmail = normalizeEmail(email);
-  const { data, error } = await supabaseAnon.auth.signInWithPassword({ email: normalizedEmail, password });
-
-  if (error || !data.session) {
-    throw new Error(error?.message ?? "Invalid credentials");
-  }
-
-  const [user] = await db
-    .select({ id: users.id, email: users.email, fullName: users.fullName, jobTitle: users.jobTitle })
-    .from(users)
-    .where(eq(users.authUserId, data.user.id))
-    .limit(1);
-
-  return {
-    session: data.session,
-    user,
-  };
+  return Boolean(claimed);
 }
 
 export async function ensureOAuthUserWorkspace(
@@ -274,4 +184,32 @@ export async function ensureOAuthUserWorkspace(
     createdUser,
     createdWorkspace: workspace.createdWorkspace,
   };
+}
+
+/** Turns pending invites for this email into memberships. Returns how many were accepted. */
+export async function acceptPendingInvites(input: { authUserId: string; email: string }) {
+  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.authUserId, input.authUserId)).limit(1);
+
+  if (!user) {
+    return 0;
+  }
+
+  return db.transaction(async (tx) => {
+    const invites = await tx
+      .delete(workspaceInvites)
+      .where(eq(workspaceInvites.email, normalizeEmail(input.email)))
+      .returning();
+
+    for (const invite of invites) {
+      await tx
+        .insert(workspaceMembers)
+        .values({ workspaceId: invite.workspaceId, userId: user.id, role: invite.role })
+        .onConflictDoUpdate({
+          target: [workspaceMembers.workspaceId, workspaceMembers.userId],
+          set: { role: invite.role, isActive: true },
+        });
+    }
+
+    return invites.length;
+  });
 }

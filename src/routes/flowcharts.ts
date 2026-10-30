@@ -36,7 +36,7 @@ import {
   users,
 } from "@/src/db/schema";
 import { checkFlowchartAccess } from "@/src/lib/flowchart/checkFlowchartAccess";
-import { supabaseAdmin } from "@/src/lib/supabase";
+import { deleteLocalFile, isValidStorageKey, localFileUrl, readLocalFile, saveLocalFile } from "@/src/lib/local-files";
 import { authMiddleware } from "@/src/middleware/auth";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
@@ -335,6 +335,25 @@ flowchartsRouter.get("/public/:token", async (c) => {
       updatedAt: serialized.updatedAt,
     },
   });
+});
+
+// Image bytes are served without auth headers so <img> tags can load them; keys are random UUIDs.
+flowchartsRouter.get("/files/:storageKey", async (c) => {
+  const storageKey = decodeURIComponent(c.req.param("storageKey"));
+
+  if (!isValidStorageKey(storageKey)) {
+    throw new HTTPException(404, { message: "Image not found" });
+  }
+
+  try {
+    const contents = await readLocalFile(storageKey);
+    return c.body(new Uint8Array(contents), 200, {
+      "content-type": "image/webp",
+      "cache-control": "private, max-age=31536000, immutable",
+    });
+  } catch {
+    throw new HTTPException(404, { message: "Image not found" });
+  }
 });
 
 flowchartsRouter.use("*", authMiddleware, workspaceMiddleware);
@@ -884,28 +903,15 @@ flowchartsRouter.post("/:id/images", async (c) => {
     .toBuffer();
 
   const storageKey = `flowcharts/${flowchartId}/${crypto.randomUUID()}.webp`;
-  const bucket = "flowchart-assets";
-
-  const upload = await supabaseAdmin.storage
-    .from(bucket)
-    .upload(storageKey, compressedBuffer, {
-      contentType: "image/webp",
-      upsert: false,
-    });
-
-  if (upload.error) {
-    console.error("Flowchart image upload error", upload.error);
+  try {
+    await saveLocalFile(storageKey, compressedBuffer);
+  } catch (error) {
+    console.error("Flowchart image upload error", error);
     throw new HTTPException(500, { message: "Failed to upload image" });
   }
 
-  const signed = await supabaseAdmin.storage.from(bucket).createSignedUrl(storageKey, 60);
-  if (signed.error || !signed.data?.signedUrl) {
-    console.error("Flowchart image signed url error", signed.error);
-    throw new HTTPException(500, { message: "Failed to create image URL" });
-  }
-
   return c.json({
-    url: signed.data.signedUrl,
+    url: localFileUrl(storageKey),
     storageKey,
   }, 201);
 });
@@ -933,11 +939,10 @@ flowchartsRouter.delete("/:id/images/:storageKey", async (c) => {
     throw new HTTPException(404, { message: "Image not found" });
   }
 
-  const bucket = "flowchart-assets";
-  const result = await supabaseAdmin.storage.from(bucket).remove([storageKey]);
-
-  if (result.error) {
-    console.error("Flowchart image delete error", result.error);
+  try {
+    await deleteLocalFile(storageKey);
+  } catch (error) {
+    console.error("Flowchart image delete error", error);
     throw new HTTPException(500, { message: "Failed to delete image" });
   }
 

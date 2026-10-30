@@ -1,7 +1,8 @@
-import { and, desc, eq, gte, ilike, lte, or } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNull, lte, or, sql } from "drizzle-orm";
 
 import { db } from "@/src/db";
-import { taskDependencies, tasks } from "@/src/db/schema";
+import { issueTypeValues, notifications, taskDependencies, tasks, workspaces } from "@/src/db/schema";
+import { formatIssueKey, parseIssueKey } from "@/src/lib/scrum";
 import type { TaskStatus } from "@/types/task-status";
 import {
   mergeTaskViewMetadata,
@@ -9,7 +10,16 @@ import {
   type TaskViewMetadata,
 } from "@/types/task-view-metadata";
 
-type CreateTaskInput = {
+export type IssueType = (typeof issueTypeValues)[number];
+
+type IssueFields = {
+  issueType?: IssueType;
+  parentId?: string | null;
+  sprintId?: string | null;
+  storyPoints?: number | null;
+};
+
+type CreateTaskInput = IssueFields & {
   workspaceId: string;
   creatorId: string;
   title: string;
@@ -23,13 +33,17 @@ type CreateTaskInput = {
 
 type ListTaskFilters = {
   status?: TaskStatus;
+  issueType?: IssueType;
+  parentId?: string;
+  /** A sprint id, or "backlog" for issues not in any sprint. */
+  sprintId?: string;
   assigneeId?: string;
   dueFrom?: Date;
   dueTo?: Date;
   search?: string;
 };
 
-type UpdateTaskInput = {
+type UpdateTaskInput = IssueFields & {
   title?: string;
   description?: string | null;
   assigneeId?: string | null;
@@ -47,11 +61,22 @@ function taskMetadataFallback(task: Pick<TaskRow, "createdAt" | "dueDate">): Par
   };
 }
 
-function normalizeTaskRecord(task: TaskRow): TaskRow {
+function normalizeTaskRecord(task: TaskRow, issueKeyPrefix: string) {
   return {
     ...task,
+    key: formatIssueKey(issueKeyPrefix, task.number),
     metadata: normalizeTaskViewMetadata(task.metadata, taskMetadataFallback(task)),
   };
+}
+
+export async function getIssueKeyPrefix(workspaceId: string) {
+  const [workspace] = await db
+    .select({ prefix: workspaces.issueKeyPrefix })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+
+  return workspace?.prefix ?? "ORB";
 }
 
 function getStatusTimestamps(status: TaskStatus, current: Pick<TaskRow, "startedAt" | "completedAt">) {
@@ -91,6 +116,20 @@ export async function listTasks(workspaceId: string, filters: ListTaskFilters = 
     whereClauses.push(eq(tasks.assigneeId, filters.assigneeId));
   }
 
+  if (filters.issueType) {
+    whereClauses.push(eq(tasks.issueType, filters.issueType));
+  }
+
+  if (filters.parentId) {
+    whereClauses.push(eq(tasks.parentId, filters.parentId));
+  }
+
+  if (filters.sprintId === "backlog") {
+    whereClauses.push(isNull(tasks.sprintId));
+  } else if (filters.sprintId) {
+    whereClauses.push(eq(tasks.sprintId, filters.sprintId));
+  }
+
   if (filters.dueFrom) {
     whereClauses.push(gte(tasks.dueDate, filters.dueFrom));
   }
@@ -99,9 +138,17 @@ export async function listTasks(workspaceId: string, filters: ListTaskFilters = 
     whereClauses.push(lte(tasks.dueDate, filters.dueTo));
   }
 
+  const prefix = await getIssueKeyPrefix(workspaceId);
+
   if (filters.search) {
     const query = `%${filters.search}%`;
-    const searchClause = or(ilike(tasks.title, query), ilike(tasks.description, query));
+    const issueKey = parseIssueKey(filters.search);
+    const searchClause = or(
+      ilike(tasks.title, query),
+      // description is jsonb; search its text form.
+      ilike(sql`${tasks.description}::text`, query),
+      issueKey && issueKey.prefix === prefix ? eq(tasks.number, issueKey.number) : undefined,
+    );
     if (searchClause) {
       whereClauses.push(searchClause);
     }
@@ -113,7 +160,7 @@ export async function listTasks(workspaceId: string, filters: ListTaskFilters = 
     .where(and(...whereClauses))
     .orderBy(desc(tasks.createdAt));
 
-  return rows.map(normalizeTaskRecord);
+  return rows.map((row) => normalizeTaskRecord(row, prefix));
 }
 
 export async function createTask(input: CreateTaskInput) {
@@ -121,22 +168,38 @@ export async function createTask(input: CreateTaskInput) {
     startDate: input.dueDate?.toISOString() ?? new Date().toISOString(),
   });
 
-  const [task] = await db
-    .insert(tasks)
-    .values({
-      workspaceId: input.workspaceId,
-      creatorId: input.creatorId,
-      title: input.title,
-      description: input.description,
-      assigneeId: input.assigneeId,
-      status: input.status ?? "todo",
-      priority: input.priority,
-      dueDate: input.dueDate,
-      metadata,
-    })
-    .returning();
+  const { task, prefix } = await db.transaction(async (tx) => {
+    // Atomically reserve the next issue number for this workspace.
+    const [workspace] = await tx
+      .update(workspaces)
+      .set({ issueCounter: sql`${workspaces.issueCounter} + 1` })
+      .where(eq(workspaces.id, input.workspaceId))
+      .returning({ number: workspaces.issueCounter, prefix: workspaces.issueKeyPrefix });
 
-  return normalizeTaskRecord(task);
+    const [created] = await tx
+      .insert(tasks)
+      .values({
+        workspaceId: input.workspaceId,
+        creatorId: input.creatorId,
+        title: input.title,
+        description: input.description,
+        assigneeId: input.assigneeId,
+        status: input.status ?? "todo",
+        priority: input.priority,
+        dueDate: input.dueDate,
+        number: workspace?.number,
+        issueType: input.issueType,
+        parentId: input.parentId,
+        sprintId: input.sprintId,
+        storyPoints: input.storyPoints,
+        metadata,
+      })
+      .returning();
+
+    return { task: created, prefix: workspace?.prefix ?? "ORB" };
+  });
+
+  return normalizeTaskRecord(task, prefix);
 }
 
 export async function getTaskById(taskId: string, workspaceId: string) {
@@ -146,7 +209,7 @@ export async function getTaskById(taskId: string, workspaceId: string) {
     .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
     .limit(1);
 
-  return task ? normalizeTaskRecord(task) : null;
+  return task ? normalizeTaskRecord(task, await getIssueKeyPrefix(workspaceId)) : null;
 }
 
 export async function updateTask(taskId: string, workspaceId: string, input: UpdateTaskInput) {
@@ -179,6 +242,10 @@ export async function updateTask(taskId: string, workspaceId: string, input: Upd
   if (input.priority !== undefined) updatePatch.priority = input.priority;
   if (input.dueDate !== undefined) updatePatch.dueDate = input.dueDate;
   if (metadata !== undefined) updatePatch.metadata = metadata;
+  if (input.issueType !== undefined) updatePatch.issueType = input.issueType;
+  if (input.parentId !== undefined) updatePatch.parentId = input.parentId;
+  if (input.sprintId !== undefined) updatePatch.sprintId = input.sprintId;
+  if (input.storyPoints !== undefined) updatePatch.storyPoints = input.storyPoints;
 
   const [updated] = await db
     .update(tasks)
@@ -186,7 +253,7 @@ export async function updateTask(taskId: string, workspaceId: string, input: Upd
     .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
     .returning();
 
-  return updated ? normalizeTaskRecord(updated) : null;
+  return updated ? normalizeTaskRecord(updated, await getIssueKeyPrefix(workspaceId)) : null;
 }
 
 export async function updateTaskStatus(taskId: string, workspaceId: string, status: TaskStatus) {
@@ -214,7 +281,7 @@ export async function updateTaskStatus(taskId: string, workspaceId: string, stat
     .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, workspaceId)))
     .returning();
 
-  return updated ? normalizeTaskRecord(updated) : null;
+  return updated ? normalizeTaskRecord(updated, await getIssueKeyPrefix(workspaceId)) : null;
 }
 
 export async function addTaskDependency(taskId: string, dependsOnTaskId: string) {
@@ -235,4 +302,25 @@ export async function addTaskDependency(taskId: string, dependsOnTaskId: string)
     .limit(1);
 
   return existing ?? null;
+}
+
+/** Notifies a user that an issue was assigned to them (never for self-assignment). */
+export async function notifyAssignment(input: {
+  workspaceId: string;
+  actorUserId: string;
+  assigneeId: string | null | undefined;
+  task: { id: string; title: string; key: string | null };
+}) {
+  if (!input.assigneeId || input.assigneeId === input.actorUserId) {
+    return;
+  }
+
+  await db.insert(notifications).values({
+    workspaceId: input.workspaceId,
+    userId: input.assigneeId,
+    type: "assignment",
+    title: `${input.task.key ? `${input.task.key} ` : ""}assigned to you`,
+    body: input.task.title,
+    link: `/tasks?taskId=${input.task.id}`,
+  });
 }

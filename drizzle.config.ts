@@ -1,9 +1,10 @@
-import type { Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
 
-export default {
+// Migrations are applied automatically at API startup (see src/db/index.ts).
+// `db:push` is only needed when pointing DATABASE_URL at an external Postgres.
+export default defineConfig({
   schema: "./src/db/schema.ts",
-  driver: "pg",
-  dbCredentials: {
-    connectionString: process.env.DATABASE_URL!,
-  },
-} satisfies Config;
+  out: "./drizzle",
+  dialect: "postgresql",
+  ...(process.env.DATABASE_URL ? { dbCredentials: { url: process.env.DATABASE_URL } } : {}),
+});

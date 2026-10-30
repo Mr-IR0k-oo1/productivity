@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { db } from "@/src/db";
 import { ideaDependencies, ideaVotes, ideas, tasks } from "@/src/db/schema";
+import { canDeleteOwned } from "@/src/lib/permissions";
 import { authMiddleware } from "@/src/middleware/auth";
 import { workspaceMiddleware } from "@/src/middleware/workspace";
 import type { WorkspaceBindings } from "@/src/types/bindings";
@@ -105,14 +106,21 @@ ideasRoute.delete("/:id", async (c) => {
   const ideaId = c.req.param("id");
   const workspaceId = c.get("workspaceId");
 
-  const [deleted] = await db
-    .delete(ideas)
+  const [existing] = await db
+    .select({ authorId: ideas.authorId })
+    .from(ideas)
     .where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)))
-    .returning({ id: ideas.id });
+    .limit(1);
 
-  if (!deleted) {
+  if (!existing) {
     return c.json({ error: "Idea not found" }, 404);
   }
+
+  if (!canDeleteOwned(c.get("workspaceRole"), existing.authorId, c.get("userId"))) {
+    return c.json({ error: "Only the author or an admin can delete this idea" }, 403);
+  }
+
+  await db.delete(ideas).where(and(eq(ideas.id, ideaId), eq(ideas.workspaceId, workspaceId)));
 
   return c.body(null, 204);
 });
