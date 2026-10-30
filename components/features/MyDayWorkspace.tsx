@@ -94,15 +94,15 @@ export function MyDayWorkspace() {
 
           <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
             <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Due today</p>
+              <p className="text-xs text-zinc-500">Due today</p>
               <p className="mt-1 text-2xl font-semibold text-zinc-100">{dueTodayCount}</p>
             </div>
             <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Overdue</p>
+              <p className="text-xs text-zinc-500">Overdue</p>
               <p className="mt-1 text-2xl font-semibold text-rose-200">{overdueCount}</p>
             </div>
             <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Timer</p>
+              <p className="text-xs text-zinc-500">Timer</p>
               <p className="mt-1 text-2xl font-semibold text-zinc-100">{runningEntry ? "Live" : "Idle"}</p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export function MyDayWorkspace() {
             {runningEntry ? (
               <>
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Session</p>
+                  <p className="text-xs text-zinc-500">Session</p>
                   <h3 className="mt-2 text-2xl font-semibold text-zinc-100">{runningEntry.description || "Focus session"}</h3>
                   <p className="mt-2 text-sm text-zinc-400">Started {formatDistanceToNow(parseISO(runningEntry.startedAt), { addSuffix: true })}</p>
                 </div>

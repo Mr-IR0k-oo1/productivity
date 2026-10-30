@@ -47,8 +47,8 @@ export function FocusTimerWidget() {
   return (
     <div className="orbit-card flex flex-col items-center p-6">
       <div className="flex w-full items-center justify-between">
-        <h3 className="text-sm font-semibold text-[var(--foreground)]">Focus Timer</h3>
-        <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--muted)]">Pomodoro</span>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">Focus timer</h3>
+        <span className="text-xs text-[var(--muted)]">25 minutes</span>
       </div>
 
       <div className="relative mt-6 flex items-center justify-center">
@@ -68,21 +68,15 @@ export function FocusTimerWidget() {
             cy="60"
             r="42"
             fill="none"
-            stroke="url(#timer-gradient)"
+            stroke="var(--color-accent)"
             strokeWidth="4"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             className="transition-[stroke-dashoffset] duration-1000 ease-linear"
           />
-          <defs>
-            <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#8b5cf6" />
-            </linearGradient>
-          </defs>
         </svg>
-        <span className="absolute text-2xl font-bold tabular-nums tracking-tight text-[var(--foreground)]">
+        <span className="absolute text-2xl font-semibold tabular-nums tracking-tight text-[var(--foreground)]">
           {formatTime(seconds)}
         </span>
       </div>
@@ -90,7 +84,7 @@ export function FocusTimerWidget() {
       <div className="mt-5 flex items-center gap-3">
         <button
           onClick={() => setIsRunning(!isRunning)}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 text-white shadow-lg shadow-blue-500/20 transition-all hover:shadow-blue-500/30 hover:brightness-110"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent)] text-[var(--color-on-accent)] transition-colors hover:bg-[var(--accent-strong)]"
           type="button"
           aria-label={isRunning ? "Pause" : "Start"}
         >

@@ -23,7 +23,7 @@ export function NodeStylePanel({ node }: NodePanelProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Appearance</div>
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Appearance</div>
 
         {"fill" in data && data.fill !== undefined && (
           <div className="space-y-1">
@@ -66,7 +66,7 @@ export function NodeStylePanel({ node }: NodePanelProps) {
 
       {"fontSize" in data && data.fontSize !== undefined && (
         <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Text</div>
+          <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Text</div>
           <label className="block space-y-1 text-xs text-[var(--color-text-secondary)]">
             <span>Font Size</span>
             <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export function NodeStylePanel({ node }: NodePanelProps) {
 
       {data.type === "sticky" && "color" in data && (
         <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Color</div>
+          <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Color</div>
           <div className="flex gap-2">
             {(["yellow", "pink", "blue", "green", "lavender"] as const).map((color) => (
               <button

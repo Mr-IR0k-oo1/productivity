@@ -106,7 +106,7 @@ export default function NodeLinkDialog({
         </Command.Empty>
         <Command.Group
           heading={`Available ${linkType}s`}
-          className="px-2 py-2 text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]"
+          className="px-2 py-2 text-xs font-medium text-[var(--color-text-secondary)]"
         />
         <Command.Item
           onSelect={() => {

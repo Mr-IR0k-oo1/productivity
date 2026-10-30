@@ -1,138 +1,95 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import LoginForm from "@/components/auth/LoginForm";
+import OAuthButtons from "@/components/auth/OAuthButtons";
 import RegisterForm from "@/components/auth/RegisterForm";
-import { useSessionContext } from "@/components/providers/SessionProvider";
-import { Button } from "@/components/ui/button";
-
-type AuthMode = "login" | "register";
+import { OrbitMark } from "@/components/brand/OrbitMark";
+import { fetchAuthConfig, type AuthConfig } from "@/lib/auth/client";
 
 type AuthRoutePageProps = {
-  mode: AuthMode;
+  mode: "login" | "register";
 };
 
-const callbackErrorMessages: Record<string, string> = {
-  oauth_failed: "OAuth sign-in failed. Please try again.",
-  oauth_bootstrap_failed: "Sign-in succeeded, but workspace setup failed. Please contact support.",
-  oauth_unavailable: "OAuth is not available right now. Check your Supabase client configuration.",
-};
-
-const queryNoticeMessages: Record<string, string> = {
-  check_email: "Account created. Check your inbox to confirm your email before signing in.",
-};
-
-function normalizeOAuthReason(error: string, reason: string | null) {
-  if (!reason) {
-    return null;
-  }
-
-  const lowered = reason.toLowerCase();
-
-  if (error === "oauth_bootstrap_failed" && lowered.includes("did not provide an email")) {
-    return "GitHub did not provide an email address. In GitHub Settings > Emails, add or verify an email and allow it for sign-in, then try again.";
-  }
-
-  if (lowered.includes("access denied") || lowered.includes("canceled")) {
-    return "OAuth sign-in was canceled. Please try again.";
-  }
-
-  if (lowered.includes("invalid flow state") || lowered.includes("code verifier") || lowered.includes("session")) {
-    return "OAuth session expired. Please try signing in again.";
-  }
-
-  return reason;
-}
-
-const copyByMode: Record<
-  AuthMode,
-  {
-    eyebrow: string;
-    title: string;
-    description: string;
-    alternateHref: string;
-    alternateLabel: string;
-    alternatePrompt: string;
-  }
-> = {
-  login: {
-    eyebrow: "Login",
-    title: "Welcome back",
-    description: "Sign in to your workspace and pick up where you left off.",
-    alternateHref: "/register",
-    alternateLabel: "Register",
-    alternatePrompt: "Need an account?",
-  },
-  register: {
-    eyebrow: "Register",
-    title: "Create your workspace",
-    description: "Start a new account and create the first workspace for your team.",
-    alternateHref: "/login",
-    alternateLabel: "Log in",
-    alternatePrompt: "Already have an account?",
-  },
+// Better Auth redirects back with ?error=<code> when an OAuth sign-in fails.
+const oauthErrorMessages: Record<string, string> = {
+  access_denied: "Sign-in was canceled.",
+  email_not_found: "That provider didn't share an email address. Add a verified email to your account there and try again.",
+  account_not_linked: "This email already has an account. Sign in with your password first.",
 };
 
 export default function AuthRoutePage({ mode }: AuthRoutePageProps) {
-  const { isReady, userId } = useSessionContext();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const copy = copyByMode[mode];
-  const isLogin = mode === "login";
-  const queryError = searchParams.get("error");
-  const queryNotice = searchParams.get("notice");
-  const queryReason = searchParams.get("reason")?.trim() || null;
-  const errorMessage = queryError
-    ? normalizeOAuthReason(queryError, queryReason) ?? callbackErrorMessages[queryError] ?? "Unable to complete sign in."
-    : null;
-  const noticeMessage = queryNotice ? queryNoticeMessages[queryNotice] ?? null : null;
+  const [config, setConfig] = useState<AuthConfig | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isReady && userId) {
-      router.replace("/dashboard");
+    const code = searchParams.get("error");
+    if (code) {
+      setError(oauthErrorMessages[code] ?? "Sign-in failed. Please try again.");
     }
-  }, [isReady, router, userId]);
+  }, [searchParams]);
+
+  useEffect(() => {
+    fetchAuthConfig()
+      .then((loaded) => {
+        // Single-user mode has nothing to sign in to.
+        if (!loaded.loginEnabled) {
+          router.replace("/dashboard");
+          return;
+        }
+        setConfig(loaded);
+      })
+      .catch((caught: unknown) => setError(caught instanceof Error ? caught.message : "Could not reach the Orbit API"));
+  }, [router]);
+
+  const isLogin = mode === "login";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--background)] p-6 text-[var(--foreground)]">
-      <div className="w-full max-w-md">
-        <div className="mb-10 flex justify-center">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent)]">
-              <span className="text-3xl font-bold text-white">O</span>
-            </div>
-            <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)]">Orbit</h1>
-          </div>
+    <main className="flex min-h-screen items-center justify-center bg-[var(--color-background)] px-4 py-12">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 text-center">
+          <OrbitMark className="mx-auto mb-4 h-11 w-11 rounded-xl" />
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+            {isLogin ? "Sign in to Orbit" : "Create your Orbit account"}
+          </h1>
         </div>
 
-        <div className="rounded-3xl border border-[color:var(--card-border)] bg-[var(--surface)] p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-xl">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">{copy.eyebrow}</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-[var(--foreground)]">{copy.title}</h2>
-            <p className="text-sm text-[var(--muted)]">{copy.description}</p>
-          </div>
-
-          {errorMessage ? (
-            <p className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{errorMessage}</p>
+        <div className="orbit-card grid gap-5 p-6">
+          {error ? (
+            <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {error}
+            </p>
           ) : null}
 
-          {noticeMessage ? (
-            <p className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">{noticeMessage}</p>
+          {config ? (
+            <>
+              <OAuthButtons providers={config.providers} onError={setError} />
+              {config.providers.length > 0 ? (
+                <div className="flex items-center gap-3 text-xs text-[var(--color-text-tertiary)]">
+                  <span className="h-px flex-1 bg-[var(--color-border-secondary)]" />
+                  or with email
+                  <span className="h-px flex-1 bg-[var(--color-border-secondary)]" />
+                </div>
+              ) : null}
+              {isLogin ? <LoginForm onError={setError} /> : <RegisterForm onError={setError} />}
+            </>
+          ) : !error ? (
+            <div className="h-48 animate-pulse rounded-lg bg-[var(--color-surface-hover)]" aria-busy="true" />
           ) : null}
-
-          <div className="mt-8">{isLogin ? <LoginForm showSocialLogin showRegisterPrompt={false} /> : <RegisterForm showLoginPrompt={false} />}</div>
-
-          <div className="mt-6 flex items-center justify-between gap-4 border-t border-[color:var(--card-border)] pt-6 text-sm">
-            <p className="text-[var(--muted)]">{copy.alternatePrompt}</p>
-            <Button asChild variant="secondary" size="sm">
-              <Link href={copy.alternateHref}>{copy.alternateLabel}</Link>
-            </Button>
-          </div>
         </div>
+
+        <p className="mt-6 text-center text-sm text-[var(--color-text-secondary)]">
+          {isLogin ? "New here? " : "Already have an account? "}
+          <Link href={isLogin ? "/register" : "/login"} className="font-medium text-[var(--color-accent)] hover:underline">
+            {isLogin ? "Create an account" : "Sign in"}
+          </Link>
+        </p>
       </div>
-    </div>
+    </main>
   );
 }

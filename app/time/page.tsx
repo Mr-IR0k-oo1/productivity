@@ -173,7 +173,7 @@ export default function TimePage() {
 
       {/* Live Timer */}
       <div className="rounded-xl border border-border bg-card p-4">
-        <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-3">
+        <div className="text-xs text-muted-foreground font-medium mb-3">
           Live timer
         </div>
         <div className="flex items-center gap-4 flex-wrap">

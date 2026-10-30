@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 type TaskCardProps = {
   title: string;
@@ -62,7 +63,7 @@ export function TaskCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
-          {assignee ? (
+          {assignee && assignee !== "Unassigned" ? (
             <div className="flex items-center gap-2 text-zinc-300">
               <Avatar className="h-6 w-6">
                 <AvatarFallback>{initials ?? assignee.slice(0, 2)}</AvatarFallback>
@@ -70,7 +71,9 @@ export function TaskCard({
               <span>{assignee}</span>
             </div>
           ) : null}
-          {dueDate ? <span className={cn(overdue && "text-rose-400")}>{dueDate}</span> : null}
+          {dueDate && !Number.isNaN(new Date(dueDate).getTime()) ? (
+            <span className={cn(overdue && "text-rose-500")}>Due {format(new Date(dueDate), "MMM d")}</span>
+          ) : null}
         </div>
 
         {labels.length > 0 ? (

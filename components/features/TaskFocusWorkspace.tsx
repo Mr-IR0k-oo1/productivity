@@ -276,15 +276,15 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
 
               <div className="grid gap-3 text-sm text-zinc-300 md:grid-cols-3">
                 <div className="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Due</p>
+                  <p className="text-xs text-zinc-500">Due</p>
                   <p className="mt-1 font-medium text-zinc-100">{dueLabel}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Focus mode</p>
+                  <p className="text-xs text-zinc-500">Focus mode</p>
                   <p className="mt-1 font-medium text-zinc-100">{mode === "focus" ? "Pomodoro focus block" : "Short break"}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">State</p>
+                  <p className="text-xs text-zinc-500">State</p>
                   <p className="mt-1 font-medium text-zinc-100">{isRunning ? "Timer running" : "Timer paused"}</p>
                 </div>
               </div>
@@ -294,7 +294,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
               <div className="space-y-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Task details</p>
+                    <p className="text-xs text-zinc-500">Task details</p>
                     <dl className="mt-3 space-y-3 text-sm text-zinc-300">
                       <div className="flex items-center justify-between gap-4">
                         <dt className="text-zinc-500">Task ID</dt>
@@ -316,7 +316,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                   </div>
 
                   <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Quick actions</p>
+                    <p className="text-xs text-zinc-500">Quick actions</p>
                     <div className="mt-3 space-y-2">
                       <Button
                         type="button"
@@ -390,7 +390,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
 
               <div className="space-y-4">
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Checklist</p>
+                  <p className="text-xs text-zinc-500">Checklist</p>
                   <div className="mt-3 space-y-3 text-sm text-zinc-300">
                     <div className="flex items-start gap-3 rounded-2xl border border-white/5 bg-white/5 p-3">
                       <Clock3 className="mt-0.5 h-4 w-4 text-emerald-300" />
@@ -410,7 +410,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                 </div>
 
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Navigation</p>
+                  <p className="text-xs text-zinc-500">Navigation</p>
                   <div className="mt-3 flex flex-col gap-2">
                     <Link href="/tasks" className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-zinc-100 transition-colors hover:bg-white/10">
                       <span className="flex items-center gap-2">
@@ -436,7 +436,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Pomodoro</p>
+                  <p className="text-xs text-zinc-500">Pomodoro</p>
                   <CardTitle className="text-base">{mode === "focus" ? "Focus block" : "Short break"}</CardTitle>
                 </div>
                 <Badge variant="default" className="border-white/10 bg-white/10 text-zinc-100">
@@ -446,7 +446,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-[1.75rem] border border-white/5 bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.18),_rgba(12,12,14,0.95)_55%)] p-5 text-center">
-                <p className="text-xs uppercase tracking-[0.35em] text-zinc-500">Time remaining</p>
+                <p className="text-xs text-zinc-500">Time remaining</p>
                 <div className="mt-4 text-5xl font-semibold tracking-tight text-white tabular-nums">{formatRemaining(remainingSeconds)}</div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                   <div

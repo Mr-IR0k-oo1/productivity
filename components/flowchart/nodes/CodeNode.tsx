@@ -55,7 +55,7 @@ function CodeNodeComponent({ id, data }: NodeProps<OrbitNode>) {
       onDoubleClick={() => setIsEditing(true)}
     >
       <NodeHandles />
-      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 text-xs uppercase tracking-[0.2em] text-zinc-400">
+      <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-2 text-xs text-zinc-400">
         <span>{data.language}</span>
         <button
           type="button"

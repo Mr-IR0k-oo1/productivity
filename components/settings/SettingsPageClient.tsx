@@ -33,7 +33,6 @@ import { useSessionContext } from "@/components/providers/SessionProvider";
 import { useUpdateWorkspaceSettingsMutation, useWorkspaceSettingsQuery, type WorkspaceMemberSummary } from "@/hooks/useWorkspaceSettings";
 import { fetchApiJson } from "@/lib/api/client";
 import { REMEMBER_ME_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
-import { supabaseClient as supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui-store";
 import type { WorkspaceRole } from "@/src/lib/workspace-access";
@@ -93,6 +92,7 @@ const roleOrder: Record<WorkspaceRole, number> = {
   owner: 0,
   admin: 1,
   member: 2,
+  viewer: 3,
 };
 
 const selectClassName =
@@ -159,11 +159,11 @@ function formatJoinedAt(value: string) {
 
 function getAssignableRoles(actorRole: WorkspaceRole | null | undefined) {
   if (actorRole === "owner") {
-    return ["owner", "admin", "member"] as const;
+    return ["owner", "admin", "member", "viewer"] as const;
   }
 
   if (actorRole === "admin") {
-    return ["admin", "member"] as const;
+    return ["admin", "member", "viewer"] as const;
   }
 
   return [] as const;
@@ -479,7 +479,7 @@ export default function SettingsPageClient() {
     setBanner(null);
 
     try {
-      const payload = await fetchApiJson<{ data: { user: { email: string } } }>("/api/workspace/members", {
+      const payload = await fetchApiJson<{ data: { user?: { email: string }; invite?: { email: string } } }>("/api/workspace/members", {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -490,7 +490,14 @@ export default function SettingsPageClient() {
 
       setInviteEmail("");
       setInviteRole("member");
-      setBanner({ kind: "success", message: `${payload.data.user.email} now has access to this workspace.` });
+      setBanner(
+        payload.data.user
+          ? { kind: "success", message: `${payload.data.user.email} now has access to this workspace.` }
+          : {
+              kind: "success",
+              message: `Invite saved. ${payload.data.invite?.email ?? email} joins automatically after creating an account with that email.`,
+            },
+      );
       await refetch();
     } catch (inviteError) {
       setBanner({
@@ -586,10 +593,6 @@ export default function SettingsPageClient() {
       });
     } catch {
       // Ignore cookie clearing failures and continue with the client sign-out.
-    }
-
-    if (supabase) {
-      await supabase.auth.signOut();
     }
 
     if (typeof window !== "undefined") {
@@ -1562,7 +1565,7 @@ export default function SettingsPageClient() {
       <section className="rounded-3xl border border-[color:var(--card-border)] bg-[var(--surface)] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-xl">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">Settings</p>
+            <p className="text-xs text-[var(--muted)]">Settings</p>
             <div className="flex items-center gap-3">
               <Settings2 className="h-7 w-7 text-[var(--accent)]" />
               <h1 className="text-3xl font-semibold tracking-tight text-[var(--foreground)]">Workspace control center</h1>
@@ -1586,15 +1589,15 @@ export default function SettingsPageClient() {
 
           <div className="flex flex-wrap gap-3 text-sm">
             <div className="rounded-2xl border border-[color:var(--card-border)] bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Role</p>
+              <p className="text-xs text-[var(--muted)]">Role</p>
               <p className="mt-1 font-medium text-[var(--foreground)]">{roleLabel(currentMembership)}</p>
             </div>
             <div className="rounded-2xl border border-[color:var(--card-border)] bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Workspace</p>
+              <p className="text-xs text-[var(--muted)]">Workspace</p>
               <p className="mt-1 font-medium text-[var(--foreground)]">{currentWorkspace.slug}</p>
             </div>
             <div className="rounded-2xl border border-[color:var(--card-border)] bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Dirty sections</p>
+              <p className="text-xs text-[var(--muted)]">Dirty sections</p>
               <p className="mt-1 font-medium text-[var(--foreground)]">{dirtySections.length}</p>
             </div>
           </div>

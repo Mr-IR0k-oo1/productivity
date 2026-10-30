@@ -65,97 +65,6 @@ const statusColumns: Array<{ id: IdeaStatus; label: string }> = [
   { id: "converted", label: "Converted" },
 ];
 
-const initialIdeas: IdeaRecord[] = [
-  {
-    id: "idea-1",
-    title: "AI standup summaries",
-    summary: "Generate concise standup notes from completed tasks and calendar events.",
-    content:
-      "Use task transitions, comments, and time entries to create per-team daily recaps. Add export to Slack and email.",
-    status: "validated",
-    author: "Arun",
-    tags: ["AI", "Automation", "Ops"],
-    votes: 9,
-    votedByMe: true,
-    impact: 8,
-    createdAt: "Apr 13",
-    relatedIdeaIds: ["idea-3"],
-    comments: [
-      { id: "c-1", author: "Bala", message: "Would save us 20 minutes every morning.", timestamp: "2h ago" },
-      { id: "c-2", author: "Dev", message: "Need confidence scoring in output.", timestamp: "58m ago" },
-    ],
-    dependencies: [],
-  },
-  {
-    id: "idea-2",
-    title: "Focus debt heatmap",
-    summary: "Visualize meeting-heavy weeks against deep work availability.",
-    content:
-      "Compute focus debt from calendar blocks and task completion delays. Show heat by team, by role, and by sprint.",
-    status: "draft",
-    author: "Chitra",
-    tags: ["Analytics", "Calendar"],
-    votes: 4,
-    votedByMe: false,
-    impact: 7,
-    createdAt: "Apr 12",
-    relatedIdeaIds: ["idea-1", "idea-4"],
-    comments: [{ id: "c-3", author: "Arun", message: "Design can lead visual language.", timestamp: "1d ago" }],
-    dependencies: [],
-  },
-  {
-    id: "idea-3",
-    title: "Task to retro signal extractor",
-    summary: "Auto-detect recurring sprint blockers from comments and dependencies.",
-    content:
-      "Cluster blocked tasks and repeated comment terms to suggest retro topics with owners and confidence indicators.",
-    status: "draft",
-    author: "Bala",
-    tags: ["AI", "Tasks", "Quality"],
-    votes: 6,
-    votedByMe: false,
-    impact: 9,
-    createdAt: "Apr 11",
-    relatedIdeaIds: ["idea-1"],
-    comments: [{ id: "c-4", author: "Dev", message: "Could pair with dependency graph.", timestamp: "8h ago" }],
-    dependencies: [],
-  },
-  {
-    id: "idea-4",
-    title: "Pipeline handoff checklist templates",
-    summary: "Reusable handoff templates for design, engineering, and QA checkpoints.",
-    content:
-      "Attach milestone templates to ideas or tasks and pre-fill review gates with role-specific steps.",
-    status: "converted",
-    author: "Arun",
-    tags: ["Templates", "Workflow"],
-    votes: 11,
-    votedByMe: true,
-    impact: 6,
-    createdAt: "Apr 10",
-    convertedTaskId: "task-idea-4",
-    relatedIdeaIds: ["idea-2"],
-    comments: [{ id: "c-5", author: "Chitra", message: "This is already in sprint backlog.", timestamp: "3d ago" }],
-    dependencies: [],
-  },
-  {
-    id: "idea-5",
-    title: "Deprecated integrations cleanup",
-    summary: "Retire outdated connectors and migrate remaining workspaces.",
-    content:
-      "Mark sunset date in app, show migration wizard, and archive old integration docs automatically.",
-    status: "archived",
-    author: "Dev",
-    tags: ["Maintenance"],
-    votes: 2,
-    votedByMe: false,
-    impact: 3,
-    createdAt: "Apr 09",
-    relatedIdeaIds: [],
-    comments: [],
-    dependencies: [],
-  },
-];
 
 function IdeaLoadingSkeleton() {
   return (
@@ -868,7 +777,7 @@ function BoardView({
         return (
           <section key={column.id} className="space-y-3 rounded-xl border border-zinc-900 bg-zinc-950/40 p-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">{column.label}</h2>
+              <h2 className="text-sm font-semibold text-zinc-400">{column.label}</h2>
               <Badge variant="default">{columnIdeas.length}</Badge>
             </div>
             <div className="space-y-3">
@@ -1005,7 +914,7 @@ function MindMapView({ ideas, onOpen }: { ideas: IdeaRecord[]; onOpen: (id: stri
           {statusColumns.map((column, index) => (
             <div
               key={column.id}
-              className="absolute top-3 text-xs uppercase tracking-[0.18em] text-zinc-600"
+              className="absolute top-3 text-xs text-zinc-600"
               style={{ left: `${90 + index * 280}px` }}
             >
               {column.label}
@@ -1247,7 +1156,7 @@ export function IdeaWorkspace() {
         <CardContent className="space-y-4 p-4 md:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Ideas</p>
+              <p className="text-xs text-zinc-500">Ideas</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-100">Idea workspace</h1>
               <p className="mt-2 max-w-2xl text-sm text-zinc-400">
                 Capture, validate, discuss, and convert high-value ideas into executable work.
@@ -1327,7 +1236,7 @@ export function IdeaWorkspace() {
             <p className="text-sm text-zinc-400">Active Ideas</p>
             <CardTitle className="text-3xl">{ideas.filter((idea) => idea.status !== "archived").length}</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-emerald-400">+2 this week</CardContent>
+          <CardContent className="text-sm text-zinc-400">{ideas.length} in total</CardContent>
         </Card>
         <Card className="border-zinc-900 bg-zinc-950/50">
           <CardHeader className="pb-3">
@@ -1420,25 +1329,6 @@ export function IdeaWorkspace() {
             </CardContent>
           </Card>
 
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Signals</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-zinc-300">
-              <div className="flex items-start gap-2 rounded-md border border-zinc-900 bg-zinc-950/60 p-3">
-                <Sparkles className="mt-0.5 h-4 w-4 text-emerald-400" />
-                <p>Most-voted idea is ready for implementation this sprint.</p>
-              </div>
-              <div className="flex items-start gap-2 rounded-md border border-zinc-900 bg-zinc-950/60 p-3">
-                <Target className="mt-0.5 h-4 w-4 text-blue-400" />
-                <p>Two draft ideas can be merged based on linked graph overlap.</p>
-              </div>
-              <div className="flex items-start gap-2 rounded-md border border-zinc-900 bg-zinc-950/60 p-3">
-                <Lightbulb className="mt-0.5 h-4 w-4 text-amber-400" />
-                <p>Consider moving archived maintenance ideas to a quarterly track.</p>
-              </div>
-            </CardContent>
-          </Card>
         </aside>
       </div>
 

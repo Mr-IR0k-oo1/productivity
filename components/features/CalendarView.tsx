@@ -131,7 +131,6 @@ type CalendarEvent = {
   creatorId?: string;
 };
 
-const initialDate = new Date("2026-04-14T09:00:00");
 
 const eventKinds: Record<EventKind, { label: string; className: string }> = {
   meeting: { label: "Meeting", className: "border-blue-900 bg-blue-950/60 text-blue-200" },
@@ -148,115 +147,6 @@ const sourceFilters = [
   { label: "Deadlines", color: "bg-rose-400" },
 ];
 
-const teamAvailability = [
-  { name: "Alice", role: "Owner", status: "In focus" },
-  { name: "Bala", role: "Admin", status: "In review" },
-  { name: "Chitra", role: "Design", status: "Available" },
-  { name: "Dev", role: "Engineering", status: "Away" },
-];
-
-const quickActions = ["Create event", "Schedule 1:1", "Block focus time", "Sync calendars"];
-
-const sampleEvents: CalendarEvent[] = [
-  {
-    id: "ev-1",
-    title: "Founder standup",
-    start: new Date("2026-04-14T09:00:00"),
-    end: new Date("2026-04-14T09:30:00"),
-    kind: "meeting",
-    project: "Orbit Core",
-    owner: "Alice",
-    location: "Zoom",
-    notes: "Review blockers, calendar sync, and support queue for the week.",
-    attendees: ["AK", "BM", "CR"],
-    chipClassName: eventKinds.meeting.className,
-    dotClassName: "bg-blue-500",
-  },
-  {
-    id: "ev-2",
-    title: "Product deep work block",
-    start: new Date("2026-04-14T10:00:00"),
-    end: new Date("2026-04-14T12:00:00"),
-    kind: "focus",
-    project: "Dashboard v2",
-    owner: "Bala",
-    location: "Workspace",
-    notes: "No meetings. Ship the dashboard layout, stats cards, and export panel.",
-    attendees: ["BM"],
-    chipClassName: eventKinds.focus.className,
-    dotClassName: "bg-emerald-500",
-  },
-  {
-    id: "ev-3",
-    title: "Design review",
-    start: new Date("2026-04-14T13:00:00"),
-    end: new Date("2026-04-14T13:45:00"),
-    kind: "review",
-    project: "Calendar workspace",
-    owner: "Chitra",
-    location: "Figma",
-    notes: "Validate spacing, event density, and the modal detail experience.",
-    attendees: ["CR", "AK"],
-    chipClassName: eventKinds.review.className,
-    dotClassName: "bg-zinc-400",
-  },
-  {
-    id: "ev-4",
-    title: "Billing API deadline",
-    start: new Date("2026-04-15T16:00:00"),
-    end: new Date("2026-04-15T17:00:00"),
-    kind: "deadline",
-    project: "Payments",
-    owner: "Dev",
-    location: "Launch board",
-    notes: "Hard deadline for the retry logic rollout and QA handoff.",
-    attendees: ["DS"],
-    chipClassName: eventKinds.deadline.className,
-    dotClassName: "bg-amber-500",
-  },
-  {
-    id: "ev-5",
-    title: "Customer call: Northwind",
-    start: new Date("2026-04-16T15:30:00"),
-    end: new Date("2026-04-16T16:15:00"),
-    kind: "meeting",
-    project: "Growth",
-    owner: "Alice",
-    location: "Google Meet",
-    notes: "Discuss roadmap, onboarding, and calendar integration feedback.",
-    attendees: ["AK", "NW"],
-    chipClassName: eventKinds.meeting.className,
-    dotClassName: "bg-blue-500",
-  },
-  {
-    id: "ev-6",
-    title: "Travel to client site",
-    start: new Date("2026-04-18T08:00:00"),
-    end: new Date("2026-04-18T10:30:00"),
-    kind: "travel",
-    project: "Field ops",
-    owner: "Dev",
-    location: "Hyderabad",
-    notes: "Travel block for onsite workshop and stakeholder interview.",
-    attendees: ["DS"],
-    chipClassName: eventKinds.travel.className,
-    dotClassName: "bg-violet-500",
-  },
-  {
-    id: "ev-7",
-    title: "Sprint planning",
-    start: new Date("2026-04-21T11:00:00"),
-    end: new Date("2026-04-21T12:00:00"),
-    kind: "meeting",
-    project: "Platform",
-    owner: "Bala",
-    location: "Conference room",
-    notes: "Prioritize calendar, reports, and time-tracking follow-ups.",
-    attendees: ["BM", "CR", "DS"],
-    chipClassName: eventKinds.meeting.className,
-    dotClassName: "bg-blue-500",
-  },
-];
 
 function minutesBetween(start: Date, end: Date) {
   return Math.max(15, Math.round((end.getTime() - start.getTime()) / 60000));
@@ -325,31 +215,31 @@ function EventModal({ event, onClose, onEdit, onDelete, onExport }: { event: Cal
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Time</p>
+                  <p className="text-xs text-zinc-500">Time</p>
                   <p className="mt-1 text-sm text-zinc-200">{eventTimeLabel(event)}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Owner</p>
+                  <p className="text-xs text-zinc-500">Owner</p>
                   <p className="mt-1 text-sm text-zinc-200">{event.owner}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Location</p>
+                  <p className="text-xs text-zinc-500">Location</p>
                   <p className="mt-1 text-sm text-zinc-200">{event.location}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Duration</p>
+                  <p className="text-xs text-zinc-500">Duration</p>
                   <p className="mt-1 text-sm text-zinc-200">{minutesBetween(event.start, event.end)} minutes</p>
                 </div>
               </div>
             </div>
 
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Notes</p>
+              <p className="text-xs text-zinc-500">Notes</p>
               <p className="mt-2 text-sm leading-6 text-zinc-300">{event.notes}</p>
             </div>
 
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Attendees</p>
+              <p className="text-xs text-zinc-500">Attendees</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {event.attendees.map((attendee) => (
                   <Badge key={attendee} variant="default">
@@ -518,8 +408,8 @@ export function CalendarView() {
   const showEmptyState = calendarQuery.isSuccess && calendarQuery.data?.length === 0;
 
   const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
-  const [viewDate, setViewDate] = useState(initialDate);
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [viewDate, setViewDate] = useState(() => new Date());
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -689,10 +579,7 @@ END:VCALENDAR`;
     }));
   }, [calendarQuery.data]);
 
-  const allEvents = useMemo(() => {
-    if (apiEvents.length > 0) return apiEvents;
-    return sampleEvents;
-  }, [apiEvents]);
+  const allEvents = apiEvents;
 
   const visibleEvents = useMemo(() => {
     return allEvents.filter((event) => {
@@ -759,7 +646,7 @@ END:VCALENDAR`;
         <Card className="border-zinc-900 bg-zinc-950/60">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 md:p-6">
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Calendar</p>
+              <p className="text-xs text-zinc-500">Calendar</p>
               <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-100">Team schedule</h1>
               <p className="mt-2 max-w-2xl text-sm text-zinc-400">
                 Month, week, day, and agenda views for meetings, deadlines, focus blocks, and travel.
@@ -907,7 +794,7 @@ END:VCALENDAR`;
                 const event = visibleEvents.find(e => e.id === active.id);
                 if (event) handleDragStart(event);
               }}>
-                <div className="grid grid-cols-7 gap-2 text-xs uppercase tracking-wide text-zinc-500">
+                <div className="grid grid-cols-7 gap-2 text-xs text-zinc-500">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                     <div key={day} className="px-2 pb-2">
                       {day}
@@ -1093,9 +980,9 @@ END:VCALENDAR`;
             <CardTitle className="text-base">Mini month</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="grid grid-cols-7 gap-1 text-[10px] uppercase tracking-wide text-zinc-500">
-              {["M", "T", "W", "T", "F", "S", "S"].map((day) => (
-                <div key={day} className="text-center">
+            <div className="grid grid-cols-7 gap-1 text-[10px] text-zinc-500">
+              {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
+                <div key={index} className="text-center">
                   {day}
                 </div>
               ))}
@@ -1123,28 +1010,6 @@ END:VCALENDAR`;
 
         <Card className="border-zinc-900 bg-zinc-950/60">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Team availability</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {teamAvailability.map((member) => (
-              <div key={member.name} className="flex items-center gap-3 rounded-lg border border-zinc-900 bg-zinc-950/50 p-3">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>{member.name.slice(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-zinc-200">{member.name}</p>
-                  <p className="text-xs text-zinc-500">{member.role}</p>
-                </div>
-                <Badge variant={member.status === "Available" ? "success" : member.status === "Away" ? "warning" : "default"}>
-                  {member.status}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="border-zinc-900 bg-zinc-950/60">
-          <CardHeader className="pb-3">
             <CardTitle className="text-base">Event summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-zinc-400">
@@ -1167,23 +1032,6 @@ END:VCALENDAR`;
           </CardContent>
         </Card>
 
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Quick add</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {quickActions.map((action) => (
-                <button
-                  key={action}
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border border-zinc-900 bg-zinc-950/50 px-3 py-2 text-left text-sm text-zinc-200 transition-colors hover:border-zinc-700"
-                >
-                  <span>{action}</span>
-                  <Plus className="h-4 w-4 text-zinc-500" />
-                </button>
-              ))}
-            </CardContent>
-          </Card>
 
       </aside>
 

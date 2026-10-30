@@ -78,7 +78,7 @@ function DroppableColumn({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">{title}</h2>
+        <h2 className="text-sm font-semibold text-zinc-400">{title}</h2>
         <Badge variant="default">{count}</Badge>
       </div>
       <div className="space-y-3">{children}</div>

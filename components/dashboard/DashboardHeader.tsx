@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Zap } from "lucide-react";
+
+import { useProfileQuery } from "@/hooks/useProfile";
 
 function useGreeting() {
   const [greeting, setGreeting] = useState("Good morning");
@@ -36,31 +37,24 @@ function useDateString() {
 export function DashboardHeader() {
   const greeting = useGreeting();
   const dateStr = useDateString();
+  const profile = useProfileQuery().data;
+  const firstName = profile?.fullName?.trim().split(/\s+/)[0];
 
   return (
-    <section className="orbit-card orbit-card-glow overflow-hidden p-6">
-      <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-[var(--accent)]">
-            <Zap className="h-4 w-4" />
-            <span className="text-xs font-medium uppercase tracking-wider">{dateStr}</span>
-          </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--foreground)] md:text-3xl">
-            {greeting}, founder
-          </h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Here&apos;s what&apos;s happening across your workspace today.
-          </p>
-        </div>
-
-        <Link
-          href="/my-day"
-          className="group inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-violet-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-500/20 transition-all hover:shadow-blue-500/30 hover:brightness-110 md:self-start"
-        >
-          Open My Day
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </Link>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="text-sm text-[var(--muted)]">{dateStr}</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
+          {firstName ? `${greeting}, ${firstName}` : greeting}
+        </h1>
       </div>
-    </section>
+
+      <Link
+        href="/my-day"
+        className="inline-flex h-9 items-center rounded-md border border-[color:var(--card-border)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-hover)] sm:self-start"
+      >
+        Plan my day
+      </Link>
+    </header>
   );
 }

@@ -38,7 +38,7 @@ export function useFlowchartAutosave(flowchartId: string | null) {
       clearTimeout(timerRef.current);
     }
 
-    timerRef.current = setTimout(() => {
+    timerRef.current = setTimeout(() => {
       const canvasState = getCanvasSnapshot();
       const stateString = JSON.stringify(canvasState);
 

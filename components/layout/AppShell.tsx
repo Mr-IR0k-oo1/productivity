@@ -1,10 +1,12 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import { CommandPalette } from "@/components/layout/CommandPalette";
+import { useSessionContext } from "@/components/providers/SessionProvider";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 type AppShellProps = {
@@ -15,6 +17,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/my-day": "My Day",
   "/ideas": "Ideas",
+  "/backlog": "Backlog",
   "/tasks": "Tasks",
   "/calendar": "Calendar",
   "/flowcharts": "Flowcharts",
@@ -42,7 +45,18 @@ export default function AppShell({ children }: AppShellProps) {
   const isFlowchartEditorRoute = /^\/flowcharts\/[^/]+$/.test(pathname);
   const isPublicFlowchartRoute = /^\/f\/[^/]+$/.test(pathname);
 
+  const router = useRouter();
+  const { needsLogin } = useSessionContext();
+  const isPublicRoute =
+    pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/register") || pathname.startsWith("/auth") || isPublicFlowchartRoute;
+
   useKeyboardShortcuts(true);
+
+  useEffect(() => {
+    if (needsLogin && !isPublicRoute) {
+      router.replace("/login");
+    }
+  }, [isPublicRoute, needsLogin, router]);
 
   if (
     pathname === "/" ||
@@ -64,7 +78,8 @@ export default function AppShell({ children }: AppShellProps) {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopNav pageTitle={pageTitle} />
-        <main className="flex-1 overflow-y-auto px-6 py-5">
+        <CommandPalette />
+        <main className="flex-1 overflow-y-auto bg-[var(--background)] px-4 py-6 sm:px-8">
           {children}
         </main>
       </div>

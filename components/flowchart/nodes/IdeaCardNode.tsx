@@ -29,7 +29,7 @@ function IdeaCardNodeComponent({ data }: NodeProps<OrbitNode>) {
       <div className="mb-2 flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 text-amber-300">
           <Lightbulb className="h-4 w-4" />
-          <span className="text-xs font-semibold uppercase tracking-[0.18em]">Idea</span>
+          <span className="text-xs font-semibold">Idea</span>
         </div>
         <Badge variant="warning" className="capitalize">
           {data.ideaStatus}

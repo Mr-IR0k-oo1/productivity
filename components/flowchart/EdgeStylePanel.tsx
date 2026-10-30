@@ -22,7 +22,7 @@ export function EdgeStylePanel({ edge }: EdgePanelProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Label</div>
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Label</div>
         <Input
           value={data?.label ?? ""}
           onChange={(e) => handleUpdate("label", e.target.value)}
@@ -31,7 +31,7 @@ export function EdgeStylePanel({ edge }: EdgePanelProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Style</div>
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Style</div>
         <div className="grid grid-cols-3 gap-2">
           {(["straight", "curved", "orthogonal"] as const).map((style) => (
             <button
@@ -51,7 +51,7 @@ export function EdgeStylePanel({ edge }: EdgePanelProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">
           Line Style
         </div>
         <div className="grid grid-cols-3 gap-2">
@@ -73,7 +73,7 @@ export function EdgeStylePanel({ edge }: EdgePanelProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Color</div>
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Color</div>
         <ColorPicker
           value={data?.color ?? "var(--color-text-secondary)"}
           onChange={(color) => handleUpdate("color", color)}
@@ -81,7 +81,7 @@ export function EdgeStylePanel({ edge }: EdgePanelProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">
           Stroke Width
         </div>
         <div className="flex gap-1">
@@ -103,7 +103,7 @@ export function EdgeStylePanel({ edge }: EdgePanelProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">Start Arrow</div>
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">Start Arrow</div>
         <div className="grid grid-cols-3 gap-2">
           {(["none", "open", "filled"] as const).map((arrow) => (
             <button
@@ -123,7 +123,7 @@ export function EdgeStylePanel({ edge }: EdgePanelProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">End Arrow</div>
+        <div className="text-xs font-semibold text-[var(--color-text-secondary)]">End Arrow</div>
         <div className="grid grid-cols-3 gap-2">
           {(["none", "open", "filled"] as const).map((arrow) => (
             <button

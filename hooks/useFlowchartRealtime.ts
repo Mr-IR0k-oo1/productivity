@@ -4,11 +4,46 @@ import type { ReactFlowInstance } from "@xyflow/react";
 import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
-import { supabaseClient } from "@/lib/supabase/client";
 import { useFlowchartStore } from "@/stores/flowchartStore";
 import type { CanvasOp, CursorPosition, OrbitEdge, OrbitNode } from "@/types/flowchart";
 
 const CURSOR_THROTTLE_MS = 60;
+
+type BroadcastHandler = (message: { payload: unknown }) => void;
+
+/**
+ * Same-machine collaboration: syncs canvas edits and cursors between open tabs via the
+ * browser's BroadcastChannel. Mirrors the small channel API this hook was written against.
+ */
+class LocalCanvasChannel {
+  private readonly channel: BroadcastChannel;
+  private readonly handlers = new Map<string, BroadcastHandler[]>();
+
+  constructor(name: string) {
+    this.channel = new BroadcastChannel(name);
+    this.channel.onmessage = (event: MessageEvent<{ event: string; payload: unknown }>) => {
+      this.handlers.get(event.data.event)?.forEach((handler) => handler({ payload: event.data.payload }));
+    };
+  }
+
+  on(_type: "broadcast", filter: { event: string }, handler: BroadcastHandler) {
+    this.handlers.set(filter.event, [...(this.handlers.get(filter.event) ?? []), handler]);
+    return this;
+  }
+
+  subscribe(callback: (status: "SUBSCRIBED" | "CHANNEL_ERROR") => void) {
+    callback("SUBSCRIBED");
+    return this;
+  }
+
+  async send(message: { type: "broadcast"; event: string; payload: unknown }) {
+    this.channel.postMessage({ event: message.event, payload: message.payload });
+  }
+
+  async unsubscribe() {
+    this.channel.close();
+  }
+}
 
 type RealtimeOptions = {
   flowchartId: string | null;
@@ -20,7 +55,7 @@ type RealtimeOptions = {
 
 export function useFlowchartRealtime({
   flowchartId,
-  userId,
+  userId: accountUserId,
   userName,
   avatarColor,
   reactFlow,
@@ -36,22 +71,20 @@ export function useFlowchartRealtime({
   const removeRemoteCursor = useFlowchartStore((state) => state.removeRemoteCursor);
   const nodeMoveTsRef = useRef(new Map<string, number>());
   const cursorThrottleRef = useRef<number>(0);
-  const channelRef = useRef<ReturnType<NonNullable<typeof supabaseClient>["channel"]> | null>(null);
+  const channelRef = useRef<LocalCanvasChannel | null>(null);
+  // One id per tab, so the same person in two tabs still sees their own edits sync.
+  const tabIdRef = useRef<string | null>(null);
+  tabIdRef.current ??= typeof crypto !== "undefined" ? crypto.randomUUID() : String(Math.random());
+  const userId = accountUserId ? `${accountUserId}:${tabIdRef.current}` : null;
 
   const channelName = useMemo(() => (flowchartId ? `flowchart:${flowchartId}` : null), [flowchartId]);
 
   useEffect(() => {
-    if (!channelName || !supabaseClient || !userId) {
+    if (!channelName || !userId || typeof BroadcastChannel === "undefined") {
       return;
     }
 
-    const channel = supabaseClient.channel(channelName, {
-      config: {
-        broadcast: {
-          self: false,
-        },
-      },
-    });
+    const channel = new LocalCanvasChannel(channelName);
     channelRef.current = channel;
 
     channel.on("broadcast", { event: "CANVAS_OP" }, ({ payload }) => {
@@ -232,7 +265,7 @@ export function useFlowchartRealtime({
   ]);
 
   const broadcastCanvasOp = (op: Omit<CanvasOp, "ts" | "userId">) => {
-    if (!channelName || !supabaseClient || !userId) {
+    if (!channelName || !userId) {
       return;
     }
 

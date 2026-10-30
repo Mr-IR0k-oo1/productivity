@@ -4,12 +4,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { fetchApiJson } from "@/lib/api/client";
-import { supabaseClient } from "@/lib/supabase/client";
 import type { TaskStatus } from "@/types/task-status";
 import { normalizeTaskViewMetadata, type TaskViewMetadata } from "@/types/task-view-metadata";
 
+export type IssueType = "epic" | "story" | "task" | "bug";
+
+export type IssueFields = {
+  issueType?: IssueType;
+  parentId?: string | null;
+  sprintId?: string | null;
+  storyPoints?: number | null;
+};
+
 export type TaskDTO = {
   id: string;
+  /** Human-readable issue key such as ORB-42 (absent on optimistic rows). */
+  key?: string | null;
+  issueType?: IssueType;
+  parentId?: string | null;
+  sprintId?: string | null;
+  storyPoints?: number | null;
   title: string;
   description: Record<string, unknown> | string | null;
   assigneeId: string | null;
@@ -23,13 +37,16 @@ export type TaskDTO = {
 
 export type TaskFilters = {
   status?: TaskDTO["status"];
+  issueType?: IssueType;
+  /** A sprint id, or "backlog" for issues outside any sprint. */
+  sprintId?: string;
   assigneeId?: string;
   dueFrom?: string;
   dueTo?: string;
   search?: string;
 };
 
-export type UpdateTaskPayload = {
+export type UpdateTaskPayload = IssueFields & {
   id: string;
   title?: string;
   description?: Record<string, unknown> | string | null;
@@ -50,6 +67,8 @@ async function fetchFilteredTasks(workspaceId: string, authToken: string | null,
   if (filters.dueFrom) searchParams.set("dueFrom", filters.dueFrom);
   if (filters.dueTo) searchParams.set("dueTo", filters.dueTo);
   if (filters.search) searchParams.set("search", filters.search);
+  if (filters.issueType) searchParams.set("issueType", filters.issueType);
+  if (filters.sprintId) searchParams.set("sprintId", filters.sprintId);
 
   const suffix = searchParams.toString();
   const path = suffix ? `/api/tasks?${suffix}` : "/api/tasks";
@@ -92,7 +111,7 @@ export function useCreateTaskMutation() {
   const queryKey = [...tasksQueryKey(workspaceId), userId ?? "anonymous"];
 
   return useMutation({
-    mutationFn: async (payload: {
+    mutationFn: async (payload: IssueFields & {
       title: string;
       description?: string;
       assigneeId?: string;
@@ -269,27 +288,4 @@ export function useAddTaskDependencyMutation() {
       queryClient.invalidateQueries({ queryKey: queryPrefix });
     },
   });
-}
-
-export function subscribeToTaskChanges(workspaceId: string, onChange: () => void) {
-  if (!supabaseClient) {
-    return () => undefined;
-  }
-
-  const channel = supabaseClient
-    .channel(`workspace:${workspaceId}:tasks`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "tasks",
-      },
-      () => onChange(),
-    )
-    .subscribe();
-
-  return () => {
-    void supabaseClient?.removeChannel(channel);
-  };
 }

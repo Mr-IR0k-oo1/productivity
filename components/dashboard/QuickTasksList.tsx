@@ -127,9 +127,9 @@ export function QuickTasksList() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`rounded-md border px-2 py-0.5 text-xs font-medium uppercase tracking-wide ${priorityClasses(task.priority)}`}
+                    className={`rounded-md border px-2 py-0.5 text-xs font-medium ${priorityClasses(task.priority)}`}
                   >
-                    {task.priority}
+                    <span className="capitalize">{task.priority}</span>
                   </span>
                   <span className="text-xs text-[var(--muted)]">
                     {task.dueLabel}

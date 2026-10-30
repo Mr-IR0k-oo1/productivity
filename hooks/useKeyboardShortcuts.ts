@@ -1,5 +1,6 @@
 "use client";
 
+import { useUIStore } from "@/stores/ui-store";
 import { useEffect, useCallback, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
@@ -45,7 +46,7 @@ export function useKeyboardShortcuts(enabled = true) {
 
       if (ctrl && key === "k") {
         event.preventDefault();
-        searchInputRef.current?.focus();
+        useUIStore.getState().setSearchOpen(true);
         return;
       }
 

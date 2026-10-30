@@ -58,6 +58,7 @@ const roleOrder: Record<WorkspaceRole, number> = {
   owner: 0,
   admin: 1,
   member: 2,
+  viewer: 3,
 };
 
 function roleLabel(role: WorkspaceRole | string) {
@@ -93,10 +94,10 @@ function formatJoinedAt(value: string) {
 
 function getAssignableRoles(actorRole: WorkspaceRole) {
   if (actorRole === "owner") {
-    return ["owner", "admin", "member"] as const;
+    return ["owner", "admin", "member", "viewer"] as const;
   }
 
-  return ["admin", "member"] as const;
+  return ["admin", "member", "viewer"] as const;
 }
 
 export default function AdminPanel() {
@@ -132,7 +133,7 @@ export default function AdminPanel() {
       return;
     }
 
-    if (workspaceRole === "member") {
+    if (workspaceRole === "member" || workspaceRole === "viewer") {
       router.replace("/dashboard");
       return;
     }
@@ -154,7 +155,7 @@ export default function AdminPanel() {
           return;
         }
 
-        if (!profilePayload.data.membership.isActive || profilePayload.data.membership.role === "member") {
+        if (!profilePayload.data.membership.isActive || profilePayload.data.membership.role === "member" || profilePayload.data.membership.role === "viewer") {
           router.replace("/dashboard");
           return;
         }
@@ -339,7 +340,7 @@ export default function AdminPanel() {
       <section className="rounded-3xl border border-[color:var(--card-border)] bg-[var(--surface)] p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-xl">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <p className="text-xs uppercase tracking-[0.28em] text-[var(--muted)]">Admin</p>
+            <p className="text-xs text-[var(--muted)]">Admin</p>
             <div className="flex items-center gap-3">
               <ShieldCheck className="h-7 w-7 text-[var(--accent)]" />
               <h1 className="text-3xl font-semibold tracking-tight text-[var(--foreground)]">Workspace members</h1>
@@ -352,11 +353,11 @@ export default function AdminPanel() {
 
           <div className="flex flex-wrap gap-3 text-sm">
             <div className="rounded-2xl border border-[color:var(--card-border)] bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Role</p>
+              <p className="text-xs text-[var(--muted)]">Role</p>
               <p className="mt-1 font-medium text-[var(--foreground)]">{actorRoleLabel}</p>
             </div>
             <div className="rounded-2xl border border-[color:var(--card-border)] bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Workspace</p>
+              <p className="text-xs text-[var(--muted)]">Workspace</p>
               <p className="mt-1 font-medium text-[var(--foreground)]">{profile?.workspace.slug ?? workspaceId}</p>
             </div>
           </div>
@@ -497,7 +498,7 @@ export default function AdminPanel() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Role</label>
+                      <label className="text-xs text-[var(--muted)]">Role</label>
                       <select
                         value={member.role}
                         onChange={(event) => void updateMemberRole(member.user.id, event.target.value as WorkspaceRole)}
@@ -513,7 +514,7 @@ export default function AdminPanel() {
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs uppercase tracking-[0.22em] text-[var(--muted)]">Status</label>
+                      <label className="text-xs text-[var(--muted)]">Status</label>
                       <div className="flex items-center gap-2">
                         <Badge variant={member.isActive ? "success" : "warning"}>{member.isActive ? "Enabled" : "Disabled"}</Badge>
                       </div>

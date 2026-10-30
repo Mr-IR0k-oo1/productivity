@@ -4,12 +4,13 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 
 import { WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
 import { fetchApiJson } from "@/lib/api/client";
-import { supabaseClient } from "@/lib/supabase/client";
+import { ApiError } from "@/lib/queryClient";
 import type { WorkspaceRole } from "@/src/lib/workspace-access";
 
 const defaultWorkspaceId = process.env.NEXT_PUBLIC_DEFAULT_WORKSPACE_ID?.trim() || "";
-const isAuthBypassEnabled = process.env.NEXT_PUBLIC_ORBIT_DISABLE_AUTH === "true";
-const authBypassToken = "dev-auth-bypass";
+// Requests authenticate with the session cookie (or as the local user when login is off);
+// this placeholder only marks the session as resolved for hooks that check authToken.
+const cookieSessionToken = "session";
 
 type WorkspaceListResponse = {
   data: Array<{
@@ -46,6 +47,8 @@ type SessionContextValue = {
   userId: string | null;
   workspaceRole: WorkspaceRole | null;
   isReady: boolean;
+  /** True when login is on and there is no signed-in session. */
+  needsLogin: boolean;
   setWorkspaceId: (workspaceId: string) => void;
 };
 
@@ -65,7 +68,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [hasResolvedInitialAuth, setHasResolvedInitialAuth] = useState(!isAuthBypassEnabled);
+  const [hasResolvedInitialAuth, setHasResolvedInitialAuth] = useState(false);
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   useEffect(() => {
     const storedWorkspaceId = readWorkspaceId();
@@ -85,84 +89,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     window.addEventListener("storage", onStorage);
 
-    if (isAuthBypassEnabled) {
-      setIsReady(false);
-
-      void fetchApiJson<AuthSessionResponse>("/api/auth/session", {
-        session: { authToken: authBypassToken },
-      })
-        .then((payload) => {
-          if (!isActive) {
-            return;
-          }
-
-          const resolvedUserId = payload.data.authUserId?.trim() || null;
-          setAuthToken(resolvedUserId ? authBypassToken : null);
-          setUserId(resolvedUserId);
-        })
-        .catch(() => {
-          if (!isActive) {
-            return;
-          }
-
-          setAuthToken(null);
-          setUserId(null);
-        })
-        .finally(() => {
-          if (!isActive) {
-            return;
-          }
-
-          setHasResolvedInitialAuth(true);
-        });
-
-      return () => {
-        isActive = false;
-        window.removeEventListener("storage", onStorage);
-      };
-    }
-
-    if (!supabaseClient) {
-      setWorkspaceRole(null);
-      setHasResolvedInitialAuth(true);
-      setIsReady(true);
-      return () => {
-        isActive = false;
-        window.removeEventListener("storage", onStorage);
-      };
-    }
-
-    void supabaseClient.auth
-      .getSession()
-      .then(({ data }) => {
+    void fetchApiJson<AuthSessionResponse>("/api/auth/session", { session: {} })
+      .then((payload) => {
         if (!isActive) {
           return;
         }
 
-        setAuthToken(data.session?.access_token ?? null);
-        setUserId(data.session?.user.id ?? null);
-        setHasResolvedInitialAuth(true);
-
-        if (!data.session) {
-          setWorkspaceRole(null);
-          setIsReady(true);
-        }
+        const resolvedUserId = payload.data.authUserId?.trim() || null;
+        setAuthToken(resolvedUserId ? cookieSessionToken : null);
+        setUserId(resolvedUserId);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (!isActive) {
+          return;
+        }
+
+        setAuthToken(null);
+        setUserId(null);
+        setNeedsLogin(error instanceof ApiError && error.status === 401);
+      })
+      .finally(() => {
         if (isActive) {
           setHasResolvedInitialAuth(true);
-          setIsReady(true);
         }
       });
 
-    const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-      setAuthToken(session?.access_token ?? null);
-      setUserId(session?.user.id ?? null);
-    });
-
     return () => {
       isActive = false;
-      data.subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
     };
   }, []);
@@ -306,11 +259,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       userId,
       workspaceRole,
       isReady,
+      needsLogin,
       setWorkspaceId: (nextWorkspaceId: string) => {
         setWorkspaceIdState(nextWorkspaceId.trim() || defaultWorkspaceId);
       },
     }),
-    [authToken, isReady, userId, workspaceId, workspaceRole],
+    [authToken, isReady, needsLogin, userId, workspaceId, workspaceRole],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -113,7 +113,8 @@ function mapTaskDTOToRecord(
     assigneeId: task.assigneeId,
     assignee: assigneeName,
     initials: assigneeName.slice(0, 2).toUpperCase(),
-    dueDate: task.dueDate || task.createdAt,
+    // Empty when unset; every view treats an invalid date as "no due date".
+    dueDate: task.dueDate ?? "",
     priority: priorityMap[task.priority] || "Medium",
     labels: metadata.labels,
     status: task.status,
@@ -244,7 +245,7 @@ const TaskToolbar = memo(function TaskToolbar({
       <CardContent className="space-y-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Tasks</p>
+            <p className="text-xs text-zinc-500">Tasks</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-100">Task workspace</h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
               Manage tasks across Kanban, list, calendar, and gantt views from one workspace.
@@ -458,14 +459,14 @@ function TaskDetailPanel({
             <div className="grid gap-3 md:grid-cols-2">
               <Card className="border-zinc-900 bg-zinc-950/60">
                 <CardContent className="space-y-2 p-4">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Assignee</p>
+                  <p className="text-xs text-zinc-500">Assignee</p>
                   <p className="text-sm text-zinc-200">{task.assignee}</p>
                   <p className="text-xs text-zinc-500">Due {due.label}</p>
                 </CardContent>
               </Card>
               <Card className="border-zinc-900 bg-zinc-950/60">
                 <CardContent className="space-y-2 p-4">
-                  <p className="text-xs uppercase tracking-wide text-zinc-500">Progress</p>
+                  <p className="text-xs text-zinc-500">Progress</p>
                   <p className="text-sm text-zinc-200">{task.subtasksDone}/{task.subtasksTotal} subtasks</p>
                   <div className="h-2 rounded-full bg-zinc-900">
                     <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${task.progress}%` }} />
@@ -599,7 +600,7 @@ function TaskCreateModal({
       <div className="w-full max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
         <div className="flex items-start justify-between gap-4 border-b border-zinc-900 p-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-zinc-500">Create</p>
+            <p className="text-xs text-zinc-500">Create</p>
             <h2 className="mt-1 text-2xl font-semibold text-zinc-100">New task</h2>
           </div>
           <button type="button" onClick={onClose} className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900">
@@ -788,7 +789,7 @@ function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: 
         <CardTitle className="text-xl">Calendar view</CardTitle>
       </CardHeader>
       <CardContent className="p-4 md:p-6">
-        <div className="grid grid-cols-7 gap-2 text-xs uppercase tracking-wide text-zinc-500">
+        <div className="grid grid-cols-7 gap-2 text-xs text-zinc-500">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
             <div key={day} className="px-2 pb-2">
               {day}
@@ -857,7 +858,7 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
         <CardTitle className="text-xl">Gantt view</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-4 md:p-6">
-        <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-4 text-xs uppercase tracking-wide text-zinc-500">
+        <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-4 text-xs text-zinc-500">
           <div>Task</div>
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: 7 }, (_, index) => addDays(minStart, index)).map((day) => (

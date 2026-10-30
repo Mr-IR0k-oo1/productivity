@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing/LandingPage";
 
 export const metadata: Metadata = {
-  title: "Orbit | Launch your work",
-  description: "A space-themed launchpad for ideas, tasks, and flowcharts.",
+  title: "Orbit — issue tracking you host yourself",
+  description:
+    "Sprints, backlog, board, ideas and flowcharts for startups and growing companies. Self-hosted, with roles and single sign-on.",
 };
 
 export default function HomePage() {

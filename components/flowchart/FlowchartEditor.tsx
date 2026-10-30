@@ -373,7 +373,7 @@ export default function FlowchartEditor({ flowchartId, publicToken }: FlowchartE
               ) : selectedNode ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+                    <div className="text-xs font-semibold text-[var(--color-text-secondary)]">
                       Appearance
                     </div>
                     {"fill" in selectedNode.data ? (
@@ -407,7 +407,7 @@ export default function FlowchartEditor({ flowchartId, publicToken }: FlowchartE
                   </div>
                   {"fontSize" in selectedNode.data ? (
                     <div className="space-y-2">
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+                      <div className="text-xs font-semibold text-[var(--color-text-secondary)]">
                         Text
                       </div>
                       <label className="block space-y-1 text-xs text-[var(--color-text-secondary)]">
