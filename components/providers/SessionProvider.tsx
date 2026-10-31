@@ -4,12 +4,10 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useState
 
 import { WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
 import { fetchApiJson } from "@/lib/api/client";
-import { ApiError } from "@/lib/queryClient";
 import type { WorkspaceRole } from "@/src/lib/workspace-access";
 
 const defaultWorkspaceId = process.env.NEXT_PUBLIC_DEFAULT_WORKSPACE_ID?.trim() || "";
-// Requests authenticate with the session cookie (or as the local user when login is off);
-// this placeholder only marks the session as resolved for hooks that check authToken.
+// Every request runs as the local user; this placeholder only marks the session as resolved for hooks that check authToken.
 const cookieSessionToken = "session";
 
 type WorkspaceListResponse = {
@@ -47,8 +45,6 @@ type SessionContextValue = {
   userId: string | null;
   workspaceRole: WorkspaceRole | null;
   isReady: boolean;
-  /** True when login is on and there is no signed-in session. */
-  needsLogin: boolean;
   setWorkspaceId: (workspaceId: string) => void;
 };
 
@@ -69,7 +65,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [hasResolvedInitialAuth, setHasResolvedInitialAuth] = useState(false);
-  const [needsLogin, setNeedsLogin] = useState(false);
 
   useEffect(() => {
     const storedWorkspaceId = readWorkspaceId();
@@ -99,14 +94,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setAuthToken(resolvedUserId ? cookieSessionToken : null);
         setUserId(resolvedUserId);
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         if (!isActive) {
           return;
         }
 
         setAuthToken(null);
         setUserId(null);
-        setNeedsLogin(error instanceof ApiError && error.status === 401);
       })
       .finally(() => {
         if (isActive) {
@@ -259,12 +253,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       userId,
       workspaceRole,
       isReady,
-      needsLogin,
       setWorkspaceId: (nextWorkspaceId: string) => {
         setWorkspaceIdState(nextWorkspaceId.trim() || defaultWorkspaceId);
       },
     }),
-    [authToken, isReady, needsLogin, userId, workspaceId, workspaceRole],
+    [authToken, isReady, userId, workspaceId, workspaceRole],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

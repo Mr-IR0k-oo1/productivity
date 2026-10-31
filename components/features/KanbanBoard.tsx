@@ -73,12 +73,12 @@ function DroppableColumn({
     <section
       ref={setNodeRef}
       className={cn(
-        "space-y-3 rounded-xl border bg-zinc-950/50 p-3 transition-colors",
-        isOver ? "border-zinc-700" : "border-zinc-900",
+        "space-y-3 rounded-xl border bg-[var(--color-surface)] p-3 transition-colors",
+        isOver ? "border-[var(--color-border-tertiary)]" : "border-[var(--color-border-secondary)]",
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-zinc-400">{title}</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text-secondary)]">{title}</h2>
         <Badge variant="default">{count}</Badge>
       </div>
       <div className="space-y-3">{children}</div>
@@ -126,7 +126,7 @@ function DraggableTaskCard({
           onClick={onSelect}
           className={cn(
             "flex h-7 w-7 items-center justify-center rounded-md border transition-colors",
-            selected ? "border-zinc-700 bg-zinc-900 text-zinc-100" : "border-zinc-900 bg-zinc-950 text-zinc-500 hover:text-zinc-200",
+            selected ? "border-[var(--color-border-tertiary)] bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]" : "border-[var(--color-border-secondary)] bg-[var(--color-surface)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]",
           )}
           aria-label={`Select ${task.title}`}
         >
@@ -136,7 +136,7 @@ function DraggableTaskCard({
           type="button"
           {...attributes}
           {...listeners}
-          className="rounded-md border border-zinc-900 bg-zinc-950 px-2 py-1 text-zinc-500 hover:text-zinc-200"
+          className="rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-2 py-1 text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)]"
           aria-label={`Drag ${task.title}`}
         >
           <GripVertical className="h-4 w-4" />

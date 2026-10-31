@@ -1,8 +1,8 @@
 # Orbit
 
-Self-hosted issue tracking and planning for startups and growing companies: backlog and sprints, a board, epics and story points, burndown and velocity, ideas, flowcharts, calendar and time tracking.
+Orbit is a [Quantrix Studio](https://quantrix.studio) product. Planning and issue tracking for product teams: backlog and sprints, a board, epics and story points, burndown and velocity, ideas, flowcharts, calendar and time tracking.
 
-Everything runs on your own machine. No Supabase, Vercel or other hosted service is required.
+For development, everything runs locally with an embedded database; no hosted service is required.
 
 ## Quick start
 
@@ -18,7 +18,7 @@ npm run build
 npm start
 ```
 
-With no configuration Orbit runs as a single user, with a built-in Postgres-compatible database (PGlite) stored in `.orbit-data/`. Migrations run automatically on start.
+With no configuration the app runs as a single user, with a built-in Postgres-compatible database (PGlite) stored in `.orbit-data/`. Migrations run automatically on start.
 
 ## Team sign-in
 
@@ -41,6 +41,16 @@ Auth is handled by [Better Auth](https://better-auth.com), with sessions in http
 
 Rules live in `src/lib/permissions.ts` and are enforced by the API. Inviting an email with no account creates a pending invite, which is applied when that person signs up.
 
+## API
+
+Create a key in **Settings → Advanced / Developer → API keys**, then send it as a bearer token:
+
+```bash
+curl -H "Authorization: Bearer orb_…" http://localhost:8787/api/tasks
+```
+
+A key acts as the person who made it, in that workspace only, and never with more than their role allows. "Read only" keys can only make `GET` requests. Keys can expire, are revoked from the same screen, and stop working if their owner leaves the workspace. Only a SHA-256 hash of each key is stored.
+
 ## Configuration
 
 See `env.example`. The main switches:
@@ -52,7 +62,7 @@ See `env.example`. The main switches:
 | `ORBIT_DATA_DIR` | Where the built-in database and uploads live (default `.orbit-data`) |
 | `APP_URL` | Public URL, used for OAuth callbacks |
 
-Back up Orbit by stopping it and copying `ORBIT_DATA_DIR`.
+Back up a local install by stopping it and copying `ORBIT_DATA_DIR`.
 
 ## Development
 
@@ -70,7 +80,6 @@ npm run db:generate   # after changing src/db/schema.ts
 
 ## Still to do
 
-- Ideas: replace prompt-based editing with a form, and connect idea comments and dependency links to the existing API endpoints.
-- Tasks: replace the prompt used to add a task dependency.
+- Ideas: tags, impact and the "related ideas" mind map are still client-only; idea-to-task dependency links have no API yet.
 - Typed issue links (blocks, relates to, duplicates), watchers, saved filters, custom workflows and releases.
 - End-to-end tests and CI.

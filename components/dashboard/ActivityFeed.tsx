@@ -2,31 +2,27 @@
 
 import { formatDistanceToNowStrict, parseISO } from "date-fns";
 import { useMemo } from "react";
-import { Activity } from "lucide-react";
+import { Activity, CircleDot, Lightbulb, Timer } from "lucide-react";
 
-import { ActivityItem } from "@/components/common/ActivityItem";
-
-import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { TableSkeletonRow } from "@/components/ui/skeleton";
 import { useIdeasQuery } from "@/hooks/useIdeas";
 import { useTasksQuery } from "@/hooks/useTasks";
 import { useTimeEntriesQuery } from "@/hooks/useTimeEntries";
+import { cn } from "@/lib/utils";
 
-interface ActivityEvent {
-  user: string;
-  text: string;
-  timestamp: string;
-}
+type ActivityKind = "issue" | "idea" | "time";
 
-function toRelativeTimestamp(value: string): string {
+const ICONS = { issue: CircleDot, idea: Lightbulb, time: Timer } as const;
+
+const KIND_STYLES: Record<ActivityKind, { bg: string; text: string }> = {
+  issue: { bg: "bg-indigo-500/10 border-indigo-500/20", text: "text-indigo-500 dark:text-indigo-400" },
+  idea: { bg: "bg-amber-500/10 border-amber-500/20", text: "text-amber-500 dark:text-amber-400" },
+  time: { bg: "bg-emerald-500/10 border-emerald-500/20", text: "text-emerald-500 dark:text-emerald-400" },
+};
+
+function ago(value: string) {
   const parsed = parseISO(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return "just now";
-  }
-
-  return `${formatDistanceToNowStrict(parsed)} ago`;
+  return Number.isNaN(parsed.getTime()) ? "just now" : `${formatDistanceToNowStrict(parsed)} ago`;
 }
 
 export function ActivityFeed() {
@@ -37,82 +33,101 @@ export function ActivityFeed() {
   const loading = tasksQuery.isLoading || ideasQuery.isLoading || timeEntriesQuery.isLoading;
   const error = tasksQuery.error ?? ideasQuery.error ?? timeEntriesQuery.error;
 
-  const activity = useMemo<ActivityEvent[]>(() => {
-    const taskEvents = (tasksQuery.data ?? []).map((task) => ({
-      user: "TS",
-      text: `Task updated: ${task.title}`,
-      at: task.updatedAt,
-    }));
+  const activity = useMemo(() => {
+    const events: Array<{ id: string; kind: ActivityKind; verb: string; subject: string; at: string }> = [
+      ...(tasksQuery.data ?? []).map((task) => ({
+        id: `t-${task.id}`,
+        kind: "issue" as const,
+        verb: task.status === "done" ? "Completed" : "Updated",
+        subject: task.key ? `${task.key} ${task.title}` : task.title,
+        at: task.updatedAt,
+      })),
+      ...(ideasQuery.data ?? []).map((idea) => ({
+        id: `i-${idea.id}`,
+        kind: "idea" as const,
+        verb: "New idea",
+        subject: idea.title,
+        at: idea.createdAt,
+      })),
+      ...(timeEntriesQuery.data ?? []).map((entry) => ({
+        id: `e-${entry.id}`,
+        kind: "time" as const,
+        verb: entry.isRunning ? "Timer running" : "Logged time",
+        subject: entry.description?.trim() || "Work session",
+        at: entry.createdAt,
+      })),
+    ];
 
-    const ideaEvents = (ideasQuery.data ?? []).map((idea) => ({
-      user: "ID",
-      text: `Idea captured: ${idea.title}`,
-      at: idea.createdAt,
-    }));
-
-    const timeEvents = (timeEntriesQuery.data ?? []).map((entry) => ({
-      user: "TM",
-      text: entry.isRunning
-        ? `Timer started: ${entry.description?.trim() || "Focus session"}`
-        : `Time logged: ${entry.description?.trim() || "Work session"}`,
-      at: entry.createdAt,
-    }));
-
-    return [...taskEvents, ...ideaEvents, ...timeEvents]
-      .sort((left, right) => new Date(right.at).getTime() - new Date(left.at).getTime())
-      .slice(0, 6)
-      .map((event) => ({
-        user: event.user,
-        text: event.text,
-        timestamp: toRelativeTimestamp(event.at),
-      }));
+    return events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 6);
   }, [ideasQuery.data, tasksQuery.data, timeEntriesQuery.data]);
 
   return (
-    <div className="orbit-card overflow-hidden">
-      <div className="border-b border-[color:var(--card-border)] px-5 py-4">
-        <h3 className="text-sm font-semibold text-[var(--foreground)]">Recent Activity</h3>
-        <p className="mt-0.5 text-xs text-[var(--muted)]">
-          Latest updates from your workspace
-        </p>
+    <section className="orbit-card flex flex-col p-5" aria-labelledby="activity-heading">
+      <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-3">
+        <div className="flex items-center gap-2">
+          <Activity className="h-4 w-4 text-[var(--color-accent)]" />
+          <h2 id="activity-heading" className="text-base font-semibold text-[var(--color-text-primary)]">
+            Recent activity
+          </h2>
+        </div>
       </div>
-      <div className="p-5">
-        {error ? (
+
+      {error ? (
+        <div className="mt-4">
           <ErrorState
-            title="Activity Failed"
-            message={error instanceof Error ? error.message : "Failed to load activity"}
-            onRetry={() => {
-              void Promise.all([tasksQuery.refetch(), ideasQuery.refetch(), timeEntriesQuery.refetch()]);
-            }}
-            minHeight="min-h-[200px]"
+            title="Couldn't load activity"
+            message={error instanceof Error ? error.message : "Recent activity didn't load."}
+            onRetry={() => void Promise.all([tasksQuery.refetch(), ideasQuery.refetch(), timeEntriesQuery.refetch()])}
+            minHeight="min-h-[160px]"
           />
-        ) : loading ? (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <TableSkeletonRow key={i} />
-            ))}
-          </div>
-        ) : activity.length === 0 ? (
-          <EmptyState
-            icon={<Activity className="h-8 w-8" />}
-            title="No activity yet"
-            description="When your team takes action, you'll see it here"
-            minHeight="min-h-[200px]"
-          />
-        ) : (
-          <div className="space-y-2">
-            {activity.map((item, index) => (
-              <ActivityItem
-                key={`${item.user}-${index}`}
-                user={item.user}
-                text={item.text}
-                timestamp={item.timestamp}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+        </div>
+      ) : loading ? (
+        <div className="mt-4 space-y-2.5" aria-busy="true">
+          {[0, 1, 2].map((key) => (
+            <div key={key} className="h-10 animate-pulse rounded-xl bg-[var(--color-surface-hover)]" />
+          ))}
+        </div>
+      ) : activity.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+          <p className="text-sm text-[var(--color-text-secondary)]">Changes to issues, ideas and time will stream here.</p>
+        </div>
+      ) : (
+        <ol className="mt-4 space-y-2.5">
+          {activity.map((item) => {
+            const Icon = ICONS[item.kind];
+            const style = KIND_STYLES[item.kind];
+
+            return (
+              <li
+                key={item.id}
+                className="flex items-center justify-between gap-3 rounded-xl p-2 transition-colors hover:bg-[var(--color-surface-hover)]"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+                      style.bg,
+                    )}
+                  >
+                    <Icon className={cn("h-4 w-4", style.text)} aria-hidden="true" />
+                  </div>
+                  <p className="min-w-0 truncate text-xs text-[var(--color-text-secondary)]">
+                    <span className="font-semibold text-[var(--color-text-primary)]">{item.verb}</span>{" "}
+                    <span className="truncate">{item.subject}</span>
+                  </p>
+                </div>
+
+                <time
+                  dateTime={item.at}
+                  className="shrink-0 text-[11px] tabular-nums text-[var(--color-text-tertiary)]"
+                >
+                  {ago(item.at)}
+                </time>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
   );
 }
-

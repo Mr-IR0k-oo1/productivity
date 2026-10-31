@@ -62,21 +62,21 @@ type EventKind = "meeting" | "focus" | "deadline" | "review" | "travel";
 function CalendarLoadingSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-6">
+      <div className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-6">
         <div className="space-y-4">
-          <div className="h-8 w-32 rounded bg-zinc-800" />
-          <div className="h-4 w-48 rounded bg-zinc-800" />
+          <div className="h-8 w-32 rounded bg-[var(--color-border-secondary)]" />
+          <div className="h-4 w-48 rounded bg-[var(--color-border-secondary)]" />
           <div className="flex gap-2">
-            <div className="h-8 w-20 rounded bg-zinc-800" />
-            <div className="h-8 w-20 rounded bg-zinc-800" />
-            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-[var(--color-border-secondary)]" />
+            <div className="h-8 w-20 rounded bg-[var(--color-border-secondary)]" />
+            <div className="h-8 w-20 rounded bg-[var(--color-border-secondary)]" />
           </div>
         </div>
       </div>
-      <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-6">
+      <div className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-6">
         <div className="grid grid-cols-7 gap-px">
           {Array.from({ length: 35 }).map((_, i) => (
-            <div key={i} className="aspect-square rounded bg-zinc-800/50" />
+            <div key={i} className="aspect-square rounded bg-[var(--color-border-secondary)]" />
           ))}
         </div>
       </div>
@@ -86,23 +86,23 @@ function CalendarLoadingSkeleton() {
 
 function CalendarEmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/20 py-16 text-center">
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--color-border-secondary)] bg-[var(--color-surface)] py-16 text-center">
       <div className="space-y-4">
         <div className="flex justify-center">
-          <div className="rounded-full bg-zinc-900 p-4">
-            <svg className="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="rounded-full bg-[var(--color-surface-hover)] p-4">
+            <svg className="h-8 w-8 text-[var(--color-text-tertiary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-zinc-200">No events scheduled</h3>
-          <p className="mt-1 text-sm text-zinc-500">Create your first calendar event</p>
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">No events scheduled</h3>
+          <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">Create your first calendar event</p>
         </div>
         <button
           onClick={onCreate}
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-[var(--color-on-accent)] transition-colors hover:bg-[var(--color-accent-strong)]"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -133,11 +133,11 @@ type CalendarEvent = {
 
 
 const eventKinds: Record<EventKind, { label: string; className: string }> = {
-  meeting: { label: "Meeting", className: "border-blue-900 bg-blue-950/60 text-blue-200" },
-  focus: { label: "Focus", className: "border-emerald-900 bg-emerald-950/60 text-emerald-200" },
-  deadline: { label: "Deadline", className: "border-amber-900 bg-amber-950/60 text-amber-200" },
-  review: { label: "Review", className: "border-zinc-800 bg-zinc-900 text-zinc-200" },
-  travel: { label: "Travel", className: "border-violet-900 bg-violet-950/60 text-violet-200" },
+  meeting: { label: "Meeting", className: "border-[var(--color-info)]/30 bg-[var(--color-info)]/10 text-[var(--color-info)]" },
+  focus: { label: "Focus", className: "border-[var(--color-success)]/30 bg-[var(--color-success)]/10 text-[var(--color-success)]" },
+  deadline: { label: "Deadline", className: "border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 text-[var(--color-warning)]" },
+  review: { label: "Review", className: "border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]" },
+  travel: { label: "Travel", className: "border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 text-[var(--color-accent)]" },
 };
 
 const sourceFilters = [
@@ -173,18 +173,18 @@ function CalendarChip({ event, onClick }: { event: CalendarEvent; onClick: () =>
       type="button"
       onClick={onClick}
       className={cn(
-        "group w-full rounded-lg border px-3 py-2 text-left transition-all hover:-translate-y-0.5 hover:border-zinc-700",
+        "group w-full rounded-lg border px-3 py-2 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-tertiary)]",
         event.chipClassName,
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-zinc-100">{event.title}</p>
-          <p className="mt-1 text-xs text-zinc-400">{eventTimeLabel(event)}</p>
+          <p className="text-sm font-semibold text-[var(--color-text-primary)]">{event.title}</p>
+          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{eventTimeLabel(event)}</p>
         </div>
         <span className={cn("mt-0.5 h-2.5 w-2.5 rounded-full", event.dotClassName)} />
       </div>
-      <p className="mt-2 text-xs text-zinc-500">{event.project}</p>
+      <p className="mt-2 text-xs text-[var(--color-text-tertiary)]">{event.project}</p>
     </button>
   );
 }
@@ -192,19 +192,19 @@ function CalendarChip({ event, onClick }: { event: CalendarEvent; onClick: () =>
 function EventModal({ event, onClose, onEdit, onDelete, onExport }: { event: CalendarEvent; onClose: () => void; onEdit: (event: CalendarEvent) => void; onDelete: (eventId: string) => void; onExport: (event: CalendarEvent) => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-900 p-6">
+      <div className="w-full max-w-2xl rounded-2xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] shadow-2xl shadow-black/40">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-secondary)] p-6">
           <div>
             <Badge variant={event.kind === "deadline" ? "warning" : event.kind === "focus" ? "success" : "default"}>
               {eventKinds[event.kind].label}
             </Badge>
-            <h2 className="mt-3 text-2xl font-semibold text-zinc-100">{event.title}</h2>
-            <p className="mt-2 text-sm text-zinc-400">{event.project}</p>
+            <h2 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">{event.title}</h2>
+            <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{event.project}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
+            className="rounded-full border border-[var(--color-border-secondary)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
           >
             Close
           </button>
@@ -212,34 +212,34 @@ function EventModal({ event, onClose, onEdit, onDelete, onExport }: { event: Cal
 
         <div className="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="space-y-4">
-            <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
+            <div className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <p className="text-xs text-zinc-500">Time</p>
-                  <p className="mt-1 text-sm text-zinc-200">{eventTimeLabel(event)}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Time</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-primary)]">{eventTimeLabel(event)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Owner</p>
-                  <p className="mt-1 text-sm text-zinc-200">{event.owner}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Owner</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-primary)]">{event.owner}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Location</p>
-                  <p className="mt-1 text-sm text-zinc-200">{event.location}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Location</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-primary)]">{event.location}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-zinc-500">Duration</p>
-                  <p className="mt-1 text-sm text-zinc-200">{minutesBetween(event.start, event.end)} minutes</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Duration</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-primary)]">{minutesBetween(event.start, event.end)} minutes</p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
-              <p className="text-xs text-zinc-500">Notes</p>
-              <p className="mt-2 text-sm leading-6 text-zinc-300">{event.notes}</p>
+            <div className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-4">
+              <p className="text-xs text-[var(--color-text-tertiary)]">Notes</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">{event.notes}</p>
             </div>
 
-            <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-4">
-              <p className="text-xs text-zinc-500">Attendees</p>
+            <div className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-4">
+              <p className="text-xs text-[var(--color-text-tertiary)]">Attendees</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {event.attendees.map((attendee) => (
                   <Badge key={attendee} variant="default">
@@ -251,7 +251,7 @@ function EventModal({ event, onClose, onEdit, onDelete, onExport }: { event: Cal
           </div>
 
           <div className="space-y-3">
-            <Card className="border-zinc-900 bg-zinc-950/60">
+            <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Actions</CardTitle>
               </CardHeader>
@@ -268,29 +268,29 @@ function EventModal({ event, onClose, onEdit, onDelete, onExport }: { event: Cal
                   <Download className="h-4 w-4" />
                   Export .ics
                 </Button>
-                <Button className="w-full justify-start bg-red-900/50 text-red-200 hover:bg-red-900" variant="secondary" onClick={() => onDelete(event.id)}>
+                <Button className="w-full justify-start bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20" variant="secondary" onClick={() => onDelete(event.id)}>
                   <Trash2 className="h-4 w-4" />
                   Delete event
                 </Button>
               </CardContent>
             </Card>
 
-            <Card className="border-zinc-900 bg-zinc-950/60">
+            <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Metadata</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-zinc-400">
+              <CardContent className="space-y-2 text-sm text-[var(--color-text-secondary)]">
                 <div className="flex items-center justify-between">
                   <span>Sync status</span>
                   <span className="text-emerald-400">Linked</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Kind</span>
-                  <span className="text-zinc-200">{eventKinds[event.kind].label}</span>
+                  <span className="text-[var(--color-text-primary)]">{eventKinds[event.kind].label}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Source</span>
-                  <span className="text-zinc-200">Orbit</span>
+                  <span className="text-[var(--color-text-primary)]">Orbit</span>
                 </div>
               </CardContent>
             </Card>
@@ -376,22 +376,22 @@ function DroppableDayCell({
       onMouseUp={onDrop}
       className={cn(
         "min-h-[150px] rounded-xl border p-3 text-left transition-colors",
-        isSelected ? "border-zinc-700 bg-zinc-900/80" : "border-zinc-900 bg-zinc-950/40 hover:border-zinc-700",
+        isSelected ? "border-[var(--color-border-tertiary)] bg-[var(--color-surface-hover)]" : "border-[var(--color-border-secondary)] bg-[var(--color-surface)] hover:border-[var(--color-border-tertiary)]",
         !isCurrentMonth && "opacity-45",
-        isOver && "border-emerald-500 bg-emerald-950/30",
+        isOver && "border-emerald-500 bg-[var(--color-success)]/10",
       )}
     >
       <div className="flex items-center justify-between gap-2">
         <span
           className={cn(
             "flex h-7 w-7 items-center justify-center rounded-full text-sm",
-            isToday(day) ? "bg-zinc-100 text-zinc-900" : "text-zinc-200",
+            isToday(day) ? "bg-[var(--color-accent)] text-[var(--color-on-accent)]" : "text-[var(--color-text-primary)]",
           )}
         >
           {format(day, "d")}
         </span>
         {dayEvents.length > 0 ? (
-          <span className="text-xs text-zinc-500">{dayEvents.length} items</span>
+          <span className="text-xs text-[var(--color-text-tertiary)]">{dayEvents.length} items</span>
         ) : null}
       </div>
       <div className="mt-3 space-y-2">{children}</div>
@@ -502,7 +502,7 @@ END:VEVENT`;
 
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Orbit//Productivity//EN
+PRODID:-//Quantrix Studio//Orbit//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 ${icsEvents}
@@ -531,7 +531,7 @@ END:VCALENDAR`;
     const uid = `${event.id}@productivity`;
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Orbit//Productivity//EN
+PRODID:-//Quantrix Studio//Orbit//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 BEGIN:VEVENT
@@ -573,7 +573,7 @@ END:VCALENDAR`;
       notes: apiEvent.description || "",
       attendees: [],
       chipClassName: eventKinds[apiEvent.kind || "meeting"].className,
-      dotClassName: apiEvent.kind === "meeting" ? "bg-blue-500" : apiEvent.kind === "focus" ? "bg-emerald-500" : apiEvent.kind === "deadline" ? "bg-amber-500" : apiEvent.kind === "travel" ? "bg-violet-500" : "bg-zinc-400",
+      dotClassName: apiEvent.kind === "meeting" ? "bg-blue-500" : apiEvent.kind === "focus" ? "bg-emerald-500" : apiEvent.kind === "deadline" ? "bg-amber-500" : apiEvent.kind === "travel" ? "bg-violet-500" : "bg-[var(--color-text-tertiary)]",
       description: apiEvent.description || "",
       creatorId: apiEvent.creatorId,
     }));
@@ -643,12 +643,12 @@ END:VCALENDAR`;
           <CalendarEmptyState onCreate={() => setIsCreateOpen(true)} />
         ) : (
           <>
-        <Card className="border-zinc-900 bg-zinc-950/60">
+        <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 md:p-6">
             <div>
-              <p className="text-xs text-zinc-500">Calendar</p>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-100">Team schedule</h1>
-              <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+              <p className="text-xs text-[var(--color-text-tertiary)]">Calendar</p>
+              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">Team schedule</h1>
+              <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">
                 Month, week, day, and agenda views for meetings, deadlines, focus blocks, and travel.
               </p>
             </div>
@@ -670,7 +670,7 @@ END:VCALENDAR`;
           </CardContent>
         </Card>
 
-        <Card className="border-zinc-900 bg-zinc-950/60">
+        <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
           <CardContent className="flex flex-wrap items-center gap-3 p-4 md:p-6">
             <div className="flex flex-1 flex-wrap items-center gap-2">
               {(["month", "week", "day", "agenda"] as CalendarViewMode[]).map((mode) => (
@@ -681,8 +681,8 @@ END:VCALENDAR`;
                   className={cn(
                     "rounded-md border px-3 py-2 text-sm capitalize transition-colors",
                     viewMode === mode
-                      ? "border-zinc-700 bg-zinc-900 text-zinc-100"
-                      : "border-zinc-900 bg-zinc-950 text-zinc-400 hover:text-zinc-200",
+                      ? "border-[var(--color-border-tertiary)] bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                      : "border-[var(--color-border-secondary)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]",
                   )}
                 >
                   {mode}
@@ -692,7 +692,7 @@ END:VCALENDAR`;
 
             <div className="grid w-full gap-3 md:w-auto md:min-w-[280px] md:grid-cols-[1fr_auto]">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+                <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[var(--color-text-tertiary)]" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -705,14 +705,14 @@ END:VCALENDAR`;
                   <Filter className="h-4 w-4" />
                   Filters
                   {sourceFilters.length > 0 && (
-                    <span className="ml-1.5 rounded-full bg-zinc-700 px-1.5 py-0.5 text-xs">
+                    <span className="ml-1.5 rounded-full bg-[var(--color-border-tertiary)] px-1.5 py-0.5 text-xs">
                       {sourceFilters.length}
                     </span>
                   )}
                 </Button>
                 {showFilters && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-zinc-800 bg-zinc-950 p-3 shadow-xl">
-                    <p className="mb-2 text-sm font-medium text-zinc-200">Sources</p>
+                  <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-3 shadow-xl">
+                    <p className="mb-2 text-sm font-medium text-[var(--color-text-primary)]">Sources</p>
                     <div className="space-y-2">
                       {[
                         { label: "Team calendar", color: "bg-blue-400" },
@@ -725,10 +725,10 @@ END:VCALENDAR`;
                             type="checkbox"
                             checked={sourceFilters.includes(filter.label)}
                             onChange={() => toggleSourceFilter(filter.label)}
-                            className="h-4 w-4 rounded border-zinc-700 bg-zinc-900"
+                            className="h-4 w-4 rounded border-[var(--color-border-tertiary)] bg-[var(--color-surface-hover)]"
                           />
                           <span className={cn("h-2 w-2 rounded-full", filter.color)} />
-                          <span className="text-sm text-zinc-300">{filter.label}</span>
+                          <span className="text-sm text-[var(--color-text-secondary)]">{filter.label}</span>
                         </label>
                       ))}
                     </div>
@@ -736,7 +736,7 @@ END:VCALENDAR`;
                       <button
                         type="button"
                         onClick={() => setSourceFilters([])}
-                        className="mt-3 w-full text-xs text-zinc-400 hover:text-zinc-200"
+                        className="mt-3 w-full text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                       >
                         Clear all filters
                       </button>
@@ -750,7 +750,7 @@ END:VCALENDAR`;
               <select
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value as EventKind | "all")}
-                className="h-9 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
+                className="h-9 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-primary)]"
               >
                 <option value="all">All types</option>
                 <option value="meeting">Meeting</option>
@@ -759,7 +759,7 @@ END:VCALENDAR`;
                 <option value="review">Review</option>
                 <option value="travel">Travel</option>
               </select>
-              <label className="flex items-center gap-2 rounded-md border border-zinc-900 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">
+              <label className="flex items-center gap-2 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)]">
                 <input
                   type="checkbox"
                   checked={showMyOnly}
@@ -776,14 +776,14 @@ END:VCALENDAR`;
         </Card>
 
         {viewMode === "month" ? (
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="border-b border-zinc-900 pb-4">
+          <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+            <CardHeader className="border-b border-[var(--color-border-secondary)] pb-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <CardTitle className="text-xl">{format(viewDate, "MMMM yyyy")}</CardTitle>
-                  <p className="mt-1 text-sm text-zinc-400">Monthly overview with event density and focus blocks.</p>
+                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Monthly overview with event density and focus blocks.</p>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-zinc-500">
+                <div className="flex items-center gap-2 text-sm text-[var(--color-text-tertiary)]">
                   <Sparkles className="h-4 w-4 text-emerald-400" />
                   Drag-ready blocks and modal details
                 </div>
@@ -794,7 +794,7 @@ END:VCALENDAR`;
                 const event = visibleEvents.find(e => e.id === active.id);
                 if (event) handleDragStart(event);
               }}>
-                <div className="grid grid-cols-7 gap-2 text-xs text-zinc-500">
+                <div className="grid grid-cols-7 gap-2 text-xs text-[var(--color-text-tertiary)]">
                   {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                     <div key={day} className="px-2 pb-2">
                       {day}
@@ -824,7 +824,7 @@ END:VCALENDAR`;
                             onSelect={() => setSelectedEvent(event)}
                           />
                         ))}
-                        {dayEvents.length > 3 ? <p className="text-xs text-zinc-500">+{dayEvents.length - 3} more</p> : null}
+                        {dayEvents.length > 3 ? <p className="text-xs text-[var(--color-text-tertiary)]">+{dayEvents.length - 3} more</p> : null}
                       </DroppableDayCell>
                     );
                   })}
@@ -848,8 +848,8 @@ END:VCALENDAR`;
         ) : null}
 
         {viewMode === "week" ? (
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="border-b border-zinc-900 pb-4">
+          <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+            <CardHeader className="border-b border-[var(--color-border-secondary)] pb-4">
               <CardTitle className="text-xl">Week of {format(weekStart, "MMM d")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4 md:p-6">
@@ -862,24 +862,24 @@ END:VCALENDAR`;
                     className={cn(
                       "rounded-xl border p-3 text-left transition-colors",
                       isSameDay(day, selectedDate)
-                        ? "border-zinc-700 bg-zinc-900/80"
-                        : "border-zinc-900 bg-zinc-950/40 hover:border-zinc-700",
+                        ? "border-[var(--color-border-tertiary)] bg-[var(--color-surface-hover)]"
+                        : "border-[var(--color-border-secondary)] bg-[var(--color-surface)] hover:border-[var(--color-border-tertiary)]",
                     )}
                   >
-                    <p className="text-sm font-medium text-zinc-100">{format(day, "EEE")}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{format(day, "MMM d")}</p>
-                    <p className="mt-3 text-lg font-semibold text-zinc-100">{getDayEvents(visibleEvents, day).length} events</p>
+                    <p className="text-sm font-medium text-[var(--color-text-primary)]">{format(day, "EEE")}</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">{format(day, "MMM d")}</p>
+                    <p className="mt-3 text-lg font-semibold text-[var(--color-text-primary)]">{getDayEvents(visibleEvents, day).length} events</p>
                   </button>
                 ))}
               </div>
 
               <div className="grid gap-3">
                 {weekEvents.map((event) => (
-                  <div key={event.id} className="rounded-xl border border-zinc-900 bg-zinc-950/40 p-4">
+                  <div key={event.id} className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-zinc-100">{event.title}</p>
-                        <p className="mt-1 text-xs text-zinc-500">
+                        <p className="text-sm font-semibold text-[var(--color-text-primary)]">{event.title}</p>
+                        <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                           {format(event.start, "EEE, MMM d")} • {eventTimeLabel(event)}
                         </p>
                       </div>
@@ -895,27 +895,27 @@ END:VCALENDAR`;
         ) : null}
 
         {viewMode === "day" ? (
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="border-b border-zinc-900 pb-4">
+          <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+            <CardHeader className="border-b border-[var(--color-border-secondary)] pb-4">
               <CardTitle className="text-xl">{format(selectedDate, "EEEE, MMMM d")}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 p-4 md:p-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-              <div className="space-y-3 rounded-xl border border-zinc-900 bg-zinc-950/40 p-4">
-                <p className="text-sm font-medium text-zinc-200">Selected day</p>
-                <p className="text-3xl font-semibold text-zinc-100">{selectedDayEvents.length}</p>
-                <p className="text-sm text-zinc-400">events scheduled</p>
+              <div className="space-y-3 rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-4">
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">Selected day</p>
+                <p className="text-3xl font-semibold text-[var(--color-text-primary)]">{selectedDayEvents.length}</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">events scheduled</p>
                 <div className="pt-2">
-                  <div className="space-y-2 text-sm text-zinc-300">
+                  <div className="space-y-2 text-sm text-[var(--color-text-secondary)]">
                     <div className="flex items-center gap-2">
-                      <Clock3 className="h-4 w-4 text-zinc-500" />
+                      <Clock3 className="h-4 w-4 text-[var(--color-text-tertiary)]" />
                       {format(selectedDate, "h:mm a")}
                     </div>
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-zinc-500" />
+                      <MapPin className="h-4 w-4 text-[var(--color-text-tertiary)]" />
                       {selectedDayEvents[0]?.location ?? "No location yet"}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-zinc-500" />
+                      <Users className="h-4 w-4 text-[var(--color-text-tertiary)]" />
                       {selectedDayEvents[0]?.attendees.length ?? 0} attendees
                     </div>
                   </div>
@@ -928,7 +928,7 @@ END:VCALENDAR`;
                     <CalendarChip key={event.id} event={event} onClick={() => setSelectedEvent(event)} />
                   ))
                 ) : (
-                  <div className="rounded-xl border border-dashed border-zinc-800 p-6 text-sm text-zinc-500">
+                  <div className="rounded-xl border border-dashed border-[var(--color-border-secondary)] p-6 text-sm text-[var(--color-text-tertiary)]">
                     No events for this day.
                   </div>
                 )}
@@ -938,8 +938,8 @@ END:VCALENDAR`;
         ) : null}
 
         {viewMode === "agenda" ? (
-          <Card className="border-zinc-900 bg-zinc-950/60">
-            <CardHeader className="border-b border-zinc-900 pb-4">
+          <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+            <CardHeader className="border-b border-[var(--color-border-secondary)] pb-4">
               <CardTitle className="text-xl">Agenda</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 p-4 md:p-6">
@@ -948,23 +948,23 @@ END:VCALENDAR`;
                   key={event.id}
                   type="button"
                   onClick={() => setSelectedEvent(event)}
-                  className="flex w-full items-center gap-4 rounded-xl border border-zinc-900 bg-zinc-950/40 p-4 text-left transition-colors hover:border-zinc-700"
+                  className="flex w-full items-center gap-4 rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-4 text-left transition-colors hover:border-[var(--color-border-tertiary)]"
                 >
                   <div className={cn("h-10 w-10 rounded-full", event.dotClassName)} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-zinc-100">{event.title}</p>
+                      <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{event.title}</p>
                       <Badge
                         variant={event.kind === "deadline" ? "warning" : event.kind === "focus" ? "success" : "default"}
                       >
                         {eventKinds[event.kind].label}
                       </Badge>
                     </div>
-                    <p className="mt-1 text-xs text-zinc-500">
+                    <p className="mt-1 text-xs text-[var(--color-text-tertiary)]">
                       {format(event.start, "EEE, MMM d")} • {eventTimeLabel(event)} • {event.project}
                     </p>
                   </div>
-                  <MoreHorizontal className="h-4 w-4 text-zinc-500" />
+                  <MoreHorizontal className="h-4 w-4 text-[var(--color-text-tertiary)]" />
                 </button>
               ))}
             </CardContent>
@@ -975,12 +975,12 @@ END:VCALENDAR`;
       </div>
 
       <aside className="space-y-4">
-        <Card className="border-zinc-900 bg-zinc-950/60">
+        <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Mini month</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="grid grid-cols-7 gap-1 text-[10px] text-zinc-500">
+            <div className="grid grid-cols-7 gap-1 text-[10px] text-[var(--color-text-tertiary)]">
               {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
                 <div key={index} className="text-center">
                   {day}
@@ -996,8 +996,8 @@ END:VCALENDAR`;
                   className={cn(
                     "flex h-8 items-center justify-center rounded-md text-xs transition-colors",
                     isSameDay(day, selectedDate)
-                      ? "bg-zinc-100 text-zinc-900"
-                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100",
+                      ? "bg-[var(--color-accent)] text-[var(--color-on-accent)]"
+                      : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]",
                     !isSameMonth(day, viewDate) && "opacity-35",
                   )}
                 >
@@ -1008,26 +1008,26 @@ END:VCALENDAR`;
           </CardContent>
         </Card>
 
-        <Card className="border-zinc-900 bg-zinc-950/60">
+        <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Event summary</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-zinc-400">
+          <CardContent className="space-y-3 text-sm text-[var(--color-text-secondary)]">
             <div className="flex items-center justify-between">
               <span>Selected date</span>
-              <span className="text-zinc-100">{format(selectedDate, "MMM d")}</span>
+              <span className="text-[var(--color-text-primary)]">{format(selectedDate, "MMM d")}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Total events</span>
-              <span className="text-zinc-100">{visibleEvents.length}</span>
+              <span className="text-[var(--color-text-primary)]">{visibleEvents.length}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Focus blocks</span>
-              <span className="text-zinc-100">{visibleEvents.filter((event) => event.kind === "focus").length}</span>
+              <span className="text-[var(--color-text-primary)]">{visibleEvents.filter((event) => event.kind === "focus").length}</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Deadlines</span>
-              <span className="text-zinc-100">{visibleEvents.filter((event) => event.kind === "deadline").length}</span>
+              <span className="text-[var(--color-text-primary)]">{visibleEvents.filter((event) => event.kind === "deadline").length}</span>
             </div>
           </CardContent>
         </Card>

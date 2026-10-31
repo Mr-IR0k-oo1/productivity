@@ -23,11 +23,11 @@ import attachmentsRoute from "@/src/routes/attachments";
 import flowchartsRoute from "@/src/routes/flowcharts";
 import sprintsRoute from "@/src/routes/sprints";
 import profileRoute from "@/src/routes/profile";
+import apiKeysRoute from "@/src/routes/api-keys";
 import notificationsRoute from "@/src/routes/notifications";
 import searchRoute from "@/src/routes/search";
 import { healthRouter, structuredLogger } from "@/src/routes/health";
 import { dbReady } from "@/src/db";
-import { identity } from "@/src/lib/identity";
 
 const app = new Hono();
 
@@ -64,11 +64,6 @@ app.get("/", (c) => c.json({ ok: true, service: "Orbit API" }));
 
 app.route("/api/health", healthRouter);
 app.route("/api/auth", authRoute);
-// Better Auth handles the rest of /api/auth/* (sign-in, sign-up, OAuth callbacks).
-if (identity) {
-  const handler = identity.handler;
-  app.on(["GET", "POST"], "/api/auth/*", (c) => handler(c.req.raw));
-}
 app.route("/api/workspace", workspaceRoute);
 app.route("/api/settings", settingsRoute);
 app.route("/api/ideas", ideasRoute);
@@ -84,6 +79,7 @@ app.route("/api/attachments", attachmentsRoute);
 app.route("/api/flowcharts", flowchartsRoute);
 app.route("/api/sprints", sprintsRoute);
 app.route("/api/profile", profileRoute);
+app.route("/api/api-keys", apiKeysRoute);
 app.route("/api/notifications", notificationsRoute);
 app.route("/api/search", searchRoute);
 

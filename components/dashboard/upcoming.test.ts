@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildUpcoming } from "@/components/dashboard/upcoming";
+import { buildUpcoming, groupByDay } from "@/components/dashboard/upcoming";
 
 const now = new Date("2026-10-30T09:00:00Z");
 
@@ -35,5 +35,22 @@ describe("buildUpcoming", () => {
   it("caps the number of items", () => {
     const events = Array.from({ length: 8 }, (_, i) => ({ id: `e${i}`, title: `E${i}`, startsAt: `2026-10-31T1${i}:00:00Z` }));
     expect(buildUpcoming(events, [], now, { limit: 3 })).toHaveLength(3);
+  });
+});
+
+describe("groupByDay", () => {
+  const now = new Date("2026-10-31T09:00:00");
+  const item = (id: string, at: string) => ({ id, title: id, at: new Date(at), type: "event" as const, href: "/calendar" });
+
+  it("labels today, tomorrow and later days and groups same-day items", () => {
+    const groups = groupByDay(
+      [item("a", "2026-10-31T10:00:00"), item("b", "2026-10-31T15:00:00"), item("c", "2026-11-01T09:00:00"), item("d", "2026-11-03T09:00:00")],
+      now,
+    );
+    expect(groups.map((g) => [g.label, g.items.map((i) => i.id)])).toEqual([
+      ["Today", ["a", "b"]],
+      ["Tomorrow", ["c"]],
+      ["Tuesday, Nov 3", ["d"]],
+    ]);
   });
 });

@@ -39,7 +39,7 @@ export function canDeleteOwned(role: WorkspaceRole | null | undefined, ownerUser
 }
 
 // Writes a viewer may still make: they only touch the viewer's own state.
-const VIEWER_ALLOWED_WRITES = [/^\/api\/notifications(\/|$)/, /^\/api\/workspace\/switch\//];
+const VIEWER_ALLOWED_WRITES = [/^\/api\/notifications(\/|$)/, /^\/api\/workspace\/switch\//, /^\/api\/api-keys(\/|$)/];
 
 export function isWriteAllowedForRole(role: WorkspaceRole, method: string, path: string) {
   if (["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) {
@@ -47,4 +47,14 @@ export function isWriteAllowedForRole(role: WorkspaceRole, method: string, path:
   }
 
   return can(role, "write") || VIEWER_ALLOWED_WRITES.some((pattern) => pattern.test(path));
+}
+
+/** People manage their own API keys; admins and owners can also revoke anyone's in the workspace. */
+export function canManageApiKey(role: WorkspaceRole | null | undefined, keyOwnerUserId: string, actorUserId: string) {
+  return keyOwnerUserId === actorUserId || can(role, "manageMembers");
+}
+
+/** Viewers may only hold read keys; anyone who can write may choose either scope. */
+export function canCreateApiKeyScope(role: WorkspaceRole | null | undefined, scope: "read" | "write") {
+  return scope === "read" ? Boolean(role) : can(role, "write");
 }

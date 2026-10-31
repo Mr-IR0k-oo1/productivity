@@ -2,82 +2,107 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { format, isToday, isTomorrow } from "date-fns";
-import { ArrowRight, Calendar, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { CalendarDays, ChevronRight } from "lucide-react";
 
-import { buildUpcoming } from "@/components/dashboard/upcoming";
+import { buildUpcoming, groupByDay } from "@/components/dashboard/upcoming";
 import { useCalendarQuery } from "@/hooks/useCalendar";
 import { useTasksQuery } from "@/hooks/useTasks";
-
-function formatWhen(date: Date) {
-  const time = format(date, "h:mm a");
-  if (isToday(date)) return `Today, ${time}`;
-  if (isTomorrow(date)) return `Tomorrow, ${time}`;
-  return format(date, "EEE MMM d, h:mm a");
-}
+import { cn } from "@/lib/utils";
 
 export function UpcomingWidget() {
   const calendarQuery = useCalendarQuery();
   const tasksQuery = useTasksQuery();
 
-  const items = useMemo(
-    () => buildUpcoming(calendarQuery.data ?? [], tasksQuery.data ?? []),
+  const groups = useMemo(
+    () => groupByDay(buildUpcoming(calendarQuery.data ?? [], tasksQuery.data ?? [], new Date(), { limit: 6 })),
     [calendarQuery.data, tasksQuery.data],
   );
   const isLoading = calendarQuery.isLoading || tasksQuery.isLoading;
 
   return (
-    <div className="orbit-card p-5">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[var(--foreground)]">Coming up</h3>
+    <section className="orbit-card flex flex-col p-5" aria-labelledby="upcoming-heading">
+      <div className="flex items-center justify-between border-b border-[var(--color-border-secondary)] pb-3">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-[var(--color-accent)]" />
+          <h2 id="upcoming-heading" className="text-base font-semibold text-[var(--color-text-primary)]">
+            Next 7 days
+          </h2>
+        </div>
         <Link
           href="/calendar"
-          className="group flex items-center gap-1 text-xs text-[var(--accent)] transition-colors hover:text-[var(--foreground)]"
+          className="group flex items-center gap-1 text-xs font-medium text-[var(--color-accent)] hover:underline"
         >
-          Calendar
-          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+          <span>Calendar</span>
+          <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
 
       {isLoading ? (
         <div className="mt-4 space-y-2.5" aria-busy="true">
           {[0, 1, 2].map((key) => (
-            <div key={key} className="h-[52px] animate-pulse rounded-lg bg-[var(--surface-strong)]" />
+            <div key={key} className="h-10 animate-pulse rounded-xl bg-[var(--color-surface-hover)]" />
           ))}
         </div>
-      ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <Calendar className="h-8 w-8 text-[var(--muted)]" aria-hidden="true" />
-          <p className="mt-2 text-sm text-[var(--muted)]">Nothing scheduled in the next 7 days</p>
+      ) : groups.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+          <p className="text-sm text-[var(--color-text-secondary)]">No scheduled events or deadlines this week.</p>
+          <Link
+            href="/calendar"
+            className="mt-3 text-xs font-semibold text-[var(--color-accent)] hover:underline"
+          >
+            Open Calendar view →
+          </Link>
         </div>
       ) : (
-        <ul className="mt-4 space-y-2.5">
-          {items.map((item) => (
-            <li key={item.id}>
-              <Link
-                href={item.href}
-                className="flex items-center gap-3 rounded-lg border border-[color:var(--card-border)] bg-[var(--surface-strong)] px-3 py-2.5 transition-colors hover:border-[var(--border-tertiary)]"
-              >
-                <span
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                    item.type === "event" ? "bg-blue-500/10 text-blue-400" : "bg-amber-500/10 text-amber-400"
-                  }`}
-                  aria-hidden="true"
-                >
-                  {item.type === "event" ? <Calendar className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+        <ol className="mt-4 space-y-4">
+          {groups.map((group) => (
+            <li key={group.label} className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-tertiary)]">
+                  {group.label}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium text-[var(--foreground)]">{item.title}</span>
-                  <span className="block text-[11px] text-[var(--muted)]">
-                    {item.type === "deadline" ? "Due " : ""}
-                    {formatWhen(item.at)}
-                  </span>
-                </span>
-              </Link>
+                <div className="h-px flex-1 bg-[var(--color-border-secondary)]" />
+              </div>
+
+              <ul className="space-y-1">
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={item.href}
+                      className="group flex items-center justify-between gap-3 rounded-xl px-2.5 py-2 transition-all hover:bg-[var(--color-surface-hover)]"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span
+                          className={cn(
+                            "h-2 w-2 shrink-0 rounded-full",
+                            item.type === "event"
+                              ? "bg-[var(--color-info)] shadow-[0_0_6px_var(--color-info)]"
+                              : "bg-[var(--color-warning)] shadow-[0_0_6px_var(--color-warning)]",
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate text-sm font-medium text-[var(--color-text-primary)] group-hover:text-[var(--color-accent)] transition-colors">
+                          {item.type === "deadline" ? (
+                            <span className="text-xs text-[var(--color-text-tertiary)] font-normal mr-1.5">
+                              Due:
+                            </span>
+                          ) : null}
+                          {item.title}
+                        </span>
+                      </div>
+
+                      <span className="shrink-0 rounded-md bg-[var(--color-surface-strong)] px-2 py-0.5 text-xs font-mono tabular-nums text-[var(--color-text-secondary)] border border-[var(--color-border-secondary)]">
+                        {format(item.at, "h:mm a")}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </li>
           ))}
-        </ul>
+        </ol>
       )}
-    </div>
+    </section>
   );
 }

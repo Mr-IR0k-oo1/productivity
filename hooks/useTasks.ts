@@ -31,6 +31,7 @@ export type TaskDTO = {
   priority: number;
   dueDate: string | null;
   metadata: TaskViewMetadata;
+  projectId?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -40,6 +41,7 @@ export type TaskFilters = {
   issueType?: IssueType;
   /** A sprint id, or "backlog" for issues outside any sprint. */
   sprintId?: string;
+  projectId?: string;
   assigneeId?: string;
   dueFrom?: string;
   dueTo?: string;
@@ -51,6 +53,7 @@ export type UpdateTaskPayload = IssueFields & {
   title?: string;
   description?: Record<string, unknown> | string | null;
   assigneeId?: string | null;
+  projectId?: string | null;
   status?: TaskStatus;
   priority?: number;
   dueDate?: string | null;
@@ -64,6 +67,7 @@ async function fetchFilteredTasks(workspaceId: string, authToken: string | null,
 
   if (filters.status) searchParams.set("status", filters.status);
   if (filters.assigneeId) searchParams.set("assigneeId", filters.assigneeId);
+  if (filters.projectId) searchParams.set("projectId", filters.projectId);
   if (filters.dueFrom) searchParams.set("dueFrom", filters.dueFrom);
   if (filters.dueTo) searchParams.set("dueTo", filters.dueTo);
   if (filters.search) searchParams.set("search", filters.search);
@@ -115,6 +119,7 @@ export function useCreateTaskMutation() {
       title: string;
       description?: string;
       assigneeId?: string;
+      projectId?: string | null;
       status?: TaskStatus;
       priority?: number;
       dueDate?: string;

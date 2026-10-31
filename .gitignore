@@ -18,3 +18,6 @@ pnpm-lock.yaml
 # Local data (embedded database + uploads)
 .orbit-data
 .vs
+
+# Rust build output
+/target

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { can, canDeleteOwned, isWriteAllowedForRole } from "@/src/lib/permissions";
+import { can, canCreateApiKeyScope, canDeleteOwned, canManageApiKey, isWriteAllowedForRole } from "@/src/lib/permissions";
 
 describe("can", () => {
   it("lets viewers do nothing that changes data", () => {
@@ -64,5 +64,22 @@ describe("isWriteAllowedForRole", () => {
 
   it("allows member writes", () => {
     expect(isWriteAllowedForRole("member", "POST", "/api/tasks")).toBe(true);
+  });
+});
+
+describe("API key permissions", () => {
+  it("lets viewers create and manage their own read keys", () => {
+    expect(isWriteAllowedForRole("viewer", "POST", "/api/api-keys")).toBe(true);
+    expect(canCreateApiKeyScope("viewer", "read")).toBe(true);
+    expect(canCreateApiKeyScope("viewer", "write")).toBe(false);
+    expect(canCreateApiKeyScope("member", "write")).toBe(true);
+    expect(canCreateApiKeyScope(null, "read")).toBe(false);
+  });
+
+  it("lets owners of a key, or admins, revoke it", () => {
+    expect(canManageApiKey("member", "u1", "u1")).toBe(true);
+    expect(canManageApiKey("member", "u1", "u2")).toBe(false);
+    expect(canManageApiKey("admin", "u1", "u2")).toBe(true);
+    expect(canManageApiKey("viewer", "u1", "u2")).toBe(false);
   });
 });

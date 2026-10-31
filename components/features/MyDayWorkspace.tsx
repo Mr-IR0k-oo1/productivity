@@ -22,9 +22,9 @@ function priorityLabel(priority: number) {
 }
 
 function priorityClass(priority: number) {
-  if (priority === 1) return "border-rose-500/30 bg-rose-500/10 text-rose-200";
-  if (priority === 3) return "border-sky-500/30 bg-sky-500/10 text-sky-200";
-  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+  if (priority === 1) return "border-rose-500/30 bg-rose-500/10 text-[var(--color-error)]";
+  if (priority === 3) return "border-sky-500/30 bg-sky-500/10 text-[var(--color-info)]";
+  return "border-emerald-500/30 bg-emerald-500/10 text-[var(--color-success)]";
 }
 
 function formatDueLabel(dueDate: string | null) {
@@ -81,29 +81,29 @@ export function MyDayWorkspace() {
       <section className="rounded-[2rem] border border-[color:var(--card-border)] bg-[radial-gradient(circle_at_top_left,_rgba(34,197,94,0.14),_transparent_30%),linear-gradient(135deg,_rgba(12,12,14,0.96),_rgba(6,6,8,0.98))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.25)]">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-3">
-            <Badge variant="default" className="border-white/10 bg-white/10 text-zinc-100">
+            <Badge variant="default" className="border-white/10 bg-white/10 text-[var(--color-text-primary)]">
               My Day
             </Badge>
             <div>
               <h1 className="text-4xl font-semibold tracking-tight text-[var(--foreground)] md:text-5xl">Start with the work that matters most.</h1>
-              <p className="mt-2 max-w-3xl text-sm text-zinc-300 md:text-base">
+              <p className="mt-2 max-w-3xl text-sm text-[var(--color-text-secondary)] md:text-base">
                 Tasks assigned to you that are due today or already overdue, plus the timer that is currently running.
               </p>
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
-            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              <p className="text-xs text-zinc-500">Due today</p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">{dueTodayCount}</p>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+              <p className="text-xs text-[var(--color-text-tertiary)]">Due today</p>
+              <p className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">{dueTodayCount}</p>
             </div>
-            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              <p className="text-xs text-zinc-500">Overdue</p>
-              <p className="mt-1 text-2xl font-semibold text-rose-200">{overdueCount}</p>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+              <p className="text-xs text-[var(--color-text-tertiary)]">Overdue</p>
+              <p className="mt-1 text-2xl font-semibold text-[var(--color-error)]">{overdueCount}</p>
             </div>
-            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-zinc-300">
-              <p className="text-xs text-zinc-500">Timer</p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-100">{runningEntry ? "Live" : "Idle"}</p>
+            <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+              <p className="text-xs text-[var(--color-text-tertiary)]">Timer</p>
+              <p className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">{runningEntry ? "Live" : "Idle"}</p>
             </div>
           </div>
         </div>
@@ -115,9 +115,9 @@ export function MyDayWorkspace() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-base">Active timer</CardTitle>
-                <p className="text-sm text-zinc-400">What is currently on the clock.</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">What is currently on the clock.</p>
               </div>
-              <Badge variant="default" className="border-white/10 bg-white/10 text-zinc-100">
+              <Badge variant="default" className="border-white/10 bg-white/10 text-[var(--color-text-primary)]">
                 <Clock3 className="mr-1 h-3.5 w-3.5" />
                 {runningEntry ? "Running" : "Paused"}
               </Badge>
@@ -127,9 +127,9 @@ export function MyDayWorkspace() {
             {runningEntry ? (
               <>
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                  <p className="text-xs text-zinc-500">Session</p>
-                  <h3 className="mt-2 text-2xl font-semibold text-zinc-100">{runningEntry.description || "Focus session"}</h3>
-                  <p className="mt-2 text-sm text-zinc-400">Started {formatDistanceToNow(parseISO(runningEntry.startedAt), { addSuffix: true })}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Session</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">{runningEntry.description || "Focus session"}</h3>
+                  <p className="mt-2 text-sm text-[var(--color-text-secondary)]">Started {formatDistanceToNow(parseISO(runningEntry.startedAt), { addSuffix: true })}</p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -163,7 +163,7 @@ export function MyDayWorkspace() {
           <CardHeader className="flex-row items-center justify-between">
             <div>
               <CardTitle className="text-base">Today&apos;s priorities</CardTitle>
-              <p className="text-sm text-zinc-400">Only what needs attention now.</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">Only what needs attention now.</p>
             </div>
             <Button variant="secondary" asChild>
               <Link href="/tasks">
@@ -202,7 +202,7 @@ export function MyDayWorkspace() {
                             <Badge variant="default" className={cn("border", priorityClass(task.priority))}>
                               {priorityLabel(task.priority)}
                             </Badge>
-                            <Badge variant="default" className={cn("border", overdue ? "border-rose-500/30 bg-rose-500/10 text-rose-200" : "border-white/10 bg-white/10 text-zinc-100")}>
+                            <Badge variant="default" className={cn("border", overdue ? "border-rose-500/30 bg-rose-500/10 text-[var(--color-error)]" : "border-white/10 bg-white/10 text-[var(--color-text-primary)]")}>
                               {overdue ? (
                                 <span className="flex items-center gap-1">
                                   <TriangleAlert className="h-3.5 w-3.5" />
@@ -212,21 +212,21 @@ export function MyDayWorkspace() {
                                 "Due today"
                               )}
                             </Badge>
-                            <Badge variant="default" className="border-white/10 bg-white/10 text-zinc-100">
+                            <Badge variant="default" className="border-white/10 bg-white/10 text-[var(--color-text-primary)]">
                               {task.status.replace(/_/g, " ")}
                             </Badge>
                           </div>
 
                           <div>
-                            <h3 className="text-xl font-semibold text-zinc-100">{task.title}</h3>
-                            <p className="mt-1 max-w-3xl text-sm text-zinc-400">
+                            <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">{task.title}</h3>
+                            <p className="mt-1 max-w-3xl text-sm text-[var(--color-text-secondary)]">
                               {(typeof task.description === 'string' ? task.description : null) || "No description yet."}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex flex-col items-start gap-3 md:items-end">
-                          <div className="text-sm text-zinc-400">
+                          <div className="text-sm text-[var(--color-text-secondary)]">
                             <p>{formatDueLabel(task.dueDate)}</p>
                           </div>
                           <Button asChild className="md:w-auto">
@@ -247,7 +247,7 @@ export function MyDayWorkspace() {
       </div>
 
       {tasksQuery.error ? (
-        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-[var(--color-error)]">
           {tasksQuery.error instanceof Error ? tasksQuery.error.message : "Failed to load today&apos;s tasks."}
         </div>
       ) : null}

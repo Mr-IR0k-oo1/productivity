@@ -119,7 +119,7 @@ export function CommandPalette() {
               ) : null}
 
               {results.isError ? (
-                <p className="px-3 py-6 text-center text-sm text-red-400">Search failed. Check that the Orbit API is running.</p>
+                <p className="px-3 py-6 text-center text-sm text-red-400">Search failed. Check your connection and try again.</p>
               ) : null}
 
               {debouncedQuery && data && !hasResults ? (

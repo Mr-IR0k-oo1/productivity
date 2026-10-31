@@ -92,7 +92,7 @@ export function EventForm({
           value={form.title}
           onChange={(e) => set("title", e.target.value)}
           placeholder="Event title"
-          className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+          className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         />
       </div>
 
@@ -102,7 +102,7 @@ export function EventForm({
         <select
           value={form.kind ?? ""}
           onChange={(e) => set("kind", (e.target.value as EventKind) || null)}
-          className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+          className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         >
           <option value="">Select type</option>
           {KIND_OPTIONS.map((o) => (
@@ -122,7 +122,7 @@ export function EventForm({
             type="datetime-local"
             value={formatDatetimeLocal(form.startsAt)}
             onChange={(e) => set("startsAt", parseDatetimeLocal(e.target.value))}
-            className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
         </div>
         <div>
@@ -132,7 +132,7 @@ export function EventForm({
             type="datetime-local"
             value={formatDatetimeLocal(form.endsAt)}
             onChange={(e) => set("endsAt", parseDatetimeLocal(e.target.value))}
-            className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           />
         </div>
       </div>
@@ -145,7 +145,7 @@ export function EventForm({
           value={(form.location as string) ?? ""}
           onChange={(e) => set("location", e.target.value)}
           placeholder="Location, address, or video link"
-          className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+          className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         />
       </div>
 
@@ -157,7 +157,7 @@ export function EventForm({
           value={(form.project as string) ?? ""}
           onChange={(e) => set("project", e.target.value)}
           placeholder="Project name or context"
-          className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+          className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
         />
       </div>
 
@@ -168,7 +168,7 @@ export function EventForm({
           <select
             value={form.taskId ?? ""}
             onChange={(e) => set("taskId", e.target.value || null)}
-            className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500"
+            className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]"
           >
             <option value="">None</option>
             {tasks.map((t) => (
@@ -188,7 +188,7 @@ export function EventForm({
           value={(form.description as string) ?? ""}
           onChange={(e) => set("description", e.target.value)}
           placeholder="Optional notes or agenda"
-          className="w-full px-3 py-2 rounded-md bg-zinc-900/50 border border-zinc-700 text-sm focus:outline-none focus:ring-1 focus:ring-zinc-500 resize-none"
+          className="w-full px-3 py-2 rounded-md bg-[var(--color-surface-hover)] border border-[var(--color-border-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)] resize-none"
         />
       </div>
 
@@ -198,7 +198,7 @@ export function EventForm({
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="px-4 py-2 text-sm rounded-md border border-zinc-700 hover:bg-zinc-900 transition-colors disabled:opacity-50"
+          className="px-4 py-2 text-sm rounded-md border border-[var(--color-border-tertiary)] hover:bg-[var(--color-surface-hover)] transition-colors disabled:opacity-50"
         >
           Cancel
         </button>

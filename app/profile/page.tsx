@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProfileQuery, useUpdateProfileMutation } from "@/hooks/useProfile";
-import { authClient, fetchAuthConfig } from "@/lib/auth/client";
 
 const MAX_PHOTO_BYTES = 500 * 1024;
 
@@ -141,80 +140,7 @@ function ProfileDetails() {
   );
 }
 
-function PasswordSection() {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-
-    if (newPassword.length < 8) {
-      toast.error("Use at least 8 characters for your new password");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast.error("New passwords don't match");
-      return;
-    }
-
-    setSaving(true);
-    const { error } = await authClient.changePassword({ currentPassword, newPassword, revokeOtherSessions: true });
-    setSaving(false);
-
-    if (error) {
-      toast.error(error.message ?? "Could not change your password");
-      return;
-    }
-
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
-    toast.success("Password changed. Other devices were signed out.");
-  };
-
-  return (
-    <section className="orbit-card p-6" aria-labelledby="password-heading">
-      <h2 id="password-heading" className="text-base font-semibold text-[var(--color-text-primary)]">
-        Password
-      </h2>
-      <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-        Only for accounts that sign in with email. GitHub, Google, Microsoft and Apple accounts are managed by that provider.
-      </p>
-      <form onSubmit={submit} className="mt-5 grid gap-4 sm:grid-cols-3">
-        <label className="grid gap-1.5 text-sm text-[var(--color-text-secondary)]">
-          Current password
-          <Input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" required />
-        </label>
-        <label className="grid gap-1.5 text-sm text-[var(--color-text-secondary)]">
-          New password
-          <Input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" minLength={8} required />
-        </label>
-        <label className="grid gap-1.5 text-sm text-[var(--color-text-secondary)]">
-          Confirm new password
-          <Input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" minLength={8} required />
-        </label>
-        <div className="flex justify-end sm:col-span-3">
-          <Button type="submit" variant="secondary" disabled={saving}>
-            {saving ? "Updating…" : "Update password"}
-          </Button>
-        </div>
-      </form>
-    </section>
-  );
-}
-
 export default function ProfilePage() {
-  const [loginEnabled, setLoginEnabled] = useState(false);
-
-  useEffect(() => {
-    fetchAuthConfig()
-      .then((config) => setLoginEnabled(config.loginEnabled))
-      .catch(() => setLoginEnabled(false));
-  }, []);
-
   return (
     <div className="mx-auto max-w-3xl space-y-5 page-animate">
       <header>
@@ -222,7 +148,6 @@ export default function ProfilePage() {
         <p className="mt-1 text-sm text-[var(--color-text-secondary)]">How you appear to people in your workspace.</p>
       </header>
       <ProfileDetails />
-      {loginEnabled ? <PasswordSection /> : null}
     </div>
   );
 }

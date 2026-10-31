@@ -55,7 +55,7 @@ export function RichTextEditor({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={`${minHeight} rounded-lg border border-zinc-800 bg-zinc-950 p-3 prose prose-invert max-w-none`}>
+        <div className={`${minHeight} rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-3 prose prose-invert max-w-none`}>
           <EditorContent editor={editor} />
         </div>
         {editor && !readOnly && (
@@ -65,8 +65,8 @@ export function RichTextEditor({
               disabled={!editor.can().chain().focus().toggleBold().run()}
               className={`px-2 py-1 text-sm rounded ${
                 editor.isActive("bold")
-                  ? "bg-zinc-700 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-[var(--color-border-tertiary)] text-white"
+                  : "bg-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               Bold
@@ -76,8 +76,8 @@ export function RichTextEditor({
               disabled={!editor.can().chain().focus().toggleItalic().run()}
               className={`px-2 py-1 text-sm rounded ${
                 editor.isActive("italic")
-                  ? "bg-zinc-700 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-[var(--color-border-tertiary)] text-white"
+                  : "bg-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               Italic
@@ -87,8 +87,8 @@ export function RichTextEditor({
               disabled={!editor.can().chain().focus().toggleHeading({ level: 2 }).run()}
               className={`px-2 py-1 text-sm rounded ${
                 editor.isActive("heading", { level: 2 })
-                  ? "bg-zinc-700 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-[var(--color-border-tertiary)] text-white"
+                  : "bg-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               H2
@@ -98,8 +98,8 @@ export function RichTextEditor({
               disabled={!editor.can().chain().focus().toggleBulletList().run()}
               className={`px-2 py-1 text-sm rounded ${
                 editor.isActive("bulletList")
-                  ? "bg-zinc-700 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-[var(--color-border-tertiary)] text-white"
+                  : "bg-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               Bullet List
@@ -109,8 +109,8 @@ export function RichTextEditor({
               disabled={!editor.can().chain().focus().toggleCodeBlock().run()}
               className={`px-2 py-1 text-sm rounded ${
                 editor.isActive("codeBlock")
-                  ? "bg-zinc-700 text-white"
-                  : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                  ? "bg-[var(--color-border-tertiary)] text-white"
+                  : "bg-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
               }`}
             >
               Code

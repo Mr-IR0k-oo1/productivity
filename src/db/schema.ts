@@ -10,6 +10,7 @@ import {
   real,
   text,
   timestamp,
+  uniqueIndex,
   unique,
   uuid,
   varchar,
@@ -512,6 +513,37 @@ export const flowchartAccess = pgTable(
   }),
 );
 
+// API keys: each belongs to one user in one workspace and acts with that user's role,
+// narrowed by its scope. Only a SHA-256 hash of the key is stored.
+export const apiKeyScopeValues = ["read", "write"] as const;
+export const apiKeyScopeEnum = pgEnum("api_key_scope", apiKeyScopeValues);
+
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    /** First characters of the key, shown in the UI so people can tell keys apart. */
+    prefix: varchar("prefix", { length: 16 }).notNull(),
+    keyHash: varchar("key_hash", { length: 64 }).notNull(),
+    scope: apiKeyScopeEnum("scope").default("read").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    keyHashIdx: uniqueIndex("idx_api_keys_key_hash").on(table.keyHash),
+    workspaceUserIdx: index("idx_api_keys_workspace_user").on(table.workspaceId, table.userId),
+  }),
+);
+
 // ==================== NEW TABLES ====================
 
 export const notifications = pgTable(
@@ -634,7 +666,7 @@ export const reactions = pgTable(
   }),
 );
 
-// ===== Better Auth (self-hosted login; only used when BETTER_AUTH_SECRET is set) =====
+// ===== Former login tables (login was removed; kept so existing rows are not dropped) =====
 // Field names follow Better Auth's core schema. ids are UUIDs so users.authUserId can reference them.
 
 export const authUsers = pgTable("auth_users", {

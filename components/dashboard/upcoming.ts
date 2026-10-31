@@ -1,3 +1,5 @@
+import { format, isSameDay, addDays } from "date-fns";
+
 import type { CalendarEventDTO } from "@/hooks/useCalendar";
 import type { TaskDTO } from "@/hooks/useTasks";
 
@@ -31,4 +33,22 @@ export function buildUpcoming(
     .filter((item) => inWindow(item.at));
 
   return [...eventItems, ...deadlineItems].sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, limit);
+}
+
+function dayLabel(date: Date, now: Date) {
+  if (isSameDay(date, now)) return "Today";
+  if (isSameDay(date, addDays(now, 1))) return "Tomorrow";
+  return format(date, "EEEE, MMM d");
+}
+
+/** Consecutive items on the same day share one heading; items must already be sorted by time. */
+export function groupByDay(items: UpcomingItem[], now = new Date()) {
+  const groups: Array<{ label: string; items: UpcomingItem[] }> = [];
+  for (const item of items) {
+    const label = dayLabel(item.at, now);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(item);
+    else groups.push({ label, items: [item] });
+  }
+  return groups;
 }

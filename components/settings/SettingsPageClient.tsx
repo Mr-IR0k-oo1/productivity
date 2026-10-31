@@ -7,7 +7,6 @@ import {
   CalendarDays,
   Code2,
   Download,
-  LogOut,
   Palette,
   RefreshCw,
   Save,
@@ -27,12 +26,13 @@ import { type ChangeEvent, type ReactNode, type FormEvent, useEffect, useMemo, u
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { useUpdateWorkspaceSettingsMutation, useWorkspaceSettingsQuery, type WorkspaceMemberSummary } from "@/hooks/useWorkspaceSettings";
 import { fetchApiJson } from "@/lib/api/client";
-import { REMEMBER_ME_STORAGE_KEY, WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
+import { WORKSPACE_STORAGE_KEY } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/stores/ui-store";
 import type { WorkspaceRole } from "@/src/lib/workspace-access";
@@ -167,15 +167,6 @@ function getAssignableRoles(actorRole: WorkspaceRole | null | undefined) {
   }
 
   return [] as const;
-}
-
-function generateSecret(prefix: string) {
-  const randomPart =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID().replace(/-/g, "")
-      : `${Date.now()}${Math.random().toString(36).slice(2)}`.replace(/-/g, "");
-
-  return `${prefix}_${randomPart.slice(0, 24)}`;
 }
 
 function downloadJson(filename: string, payload: unknown) {
@@ -585,25 +576,6 @@ export default function SettingsPageClient() {
     }
   };
 
-  const handleWorkspaceLogout = async () => {
-    try {
-      await fetchApiJson("/api/auth/logout", {
-        method: "POST",
-        session: {},
-      });
-    } catch {
-      // Ignore cookie clearing failures and continue with the client sign-out.
-    }
-
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem(REMEMBER_ME_STORAGE_KEY);
-      window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
-    }
-
-    router.replace("/login");
-    router.refresh();
-  };
-
   const handleDeleteWorkspace = async () => {
     if (!window.confirm("Delete this workspace? This cannot be undone.")) {
       return;
@@ -622,7 +594,9 @@ export default function SettingsPageClient() {
         session: { workspaceId, authToken },
       });
 
-      await handleWorkspaceLogout();
+      // The session falls back to another workspace the user belongs to.
+      window.localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+      window.location.assign("/dashboard");
     } catch (deleteError) {
       setBanner({
         kind: "error",
@@ -1369,14 +1343,6 @@ export default function SettingsPageClient() {
             onChange={(checked) => updateSection("security", (current) => ({ ...current, twoFactorAuthentication: checked }))}
           />
 
-          <div className="rounded-2xl border border-[color:var(--card-border)] bg-[var(--surface-strong)] p-4">
-            <p className="text-sm font-medium text-[var(--foreground)]">Session Management</p>
-            <p className="text-xs text-[var(--muted)]">Clear the current browser session and sign out of the workspace.</p>
-            <Button type="button" variant="secondary" className="mt-3" onClick={() => void handleWorkspaceLogout()}>
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <Button type="button" variant="secondary" onClick={handleExportWorkspace}>
@@ -1466,33 +1432,7 @@ export default function SettingsPageClient() {
 
     return (
       <SectionCard title="Advanced / Developer" description="Programmatic and audit-level controls." footer={renderSaveFooter("advanced")}>
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
-          <Input readOnly value={advanced.apiKey} />
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() =>
-              updateSection("advanced", (current) => ({
-                ...current,
-                apiKey: generateSecret("pf_api_live"),
-              }))
-            }
-          >
-            Generate
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() =>
-              updateSection("advanced", (current) => ({
-                ...current,
-                apiKey: generateSecret("pf_api_revoked"),
-              }))
-            }
-          >
-            Revoke
-          </Button>
-        </div>
+        <ApiKeysPanel />
 
         <div className="grid gap-3 md:grid-cols-2">
           <Input
@@ -1601,6 +1541,42 @@ export default function SettingsPageClient() {
               <p className="mt-1 font-medium text-[var(--foreground)]">{dirtySections.length}</p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[color:var(--card-border)] pt-4">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Enterprise Governance:
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/settings/roles")}
+            className="h-8 gap-1.5 text-xs font-medium rounded-xl border-[color:var(--card-border)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]"
+          >
+            <Shield className="h-3.5 w-3.5 text-purple-400" />
+            <span>Roles & Permissions Matrix</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/settings/audit")}
+            className="h-8 gap-1.5 text-xs font-medium rounded-xl border-[color:var(--card-border)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]"
+          >
+            <Shield className="h-3.5 w-3.5 text-blue-400" />
+            <span>Audit Trail & Security</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/settings/billing")}
+            className="h-8 gap-1.5 text-xs font-medium rounded-xl border-[color:var(--card-border)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]"
+          >
+            <Shield className="h-3.5 w-3.5 text-amber-400" />
+            <span>Billing & Seat Allocation</span>
+          </Button>
         </div>
       </section>
 

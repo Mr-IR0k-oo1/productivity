@@ -29,6 +29,13 @@
       "when": 1793377597471,
       "tag": "0003_access_control",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793449821926,
+      "tag": "0004_api_keys",
+      "breakpoints": true
     }
   ]
 }

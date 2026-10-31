@@ -25,6 +25,7 @@ type CreateTaskInput = IssueFields & {
   title: string;
   description?: string;
   assigneeId?: string;
+  projectId?: string;
   status?: TaskStatus;
   priority?: number;
   dueDate?: Date;
@@ -35,6 +36,7 @@ type ListTaskFilters = {
   status?: TaskStatus;
   issueType?: IssueType;
   parentId?: string;
+  projectId?: string;
   /** A sprint id, or "backlog" for issues not in any sprint. */
   sprintId?: string;
   assigneeId?: string;
@@ -47,6 +49,7 @@ type UpdateTaskInput = IssueFields & {
   title?: string;
   description?: string | null;
   assigneeId?: string | null;
+  projectId?: string | null;
   status?: TaskStatus;
   priority?: number;
   dueDate?: Date | null;
@@ -124,6 +127,10 @@ export async function listTasks(workspaceId: string, filters: ListTaskFilters = 
     whereClauses.push(eq(tasks.parentId, filters.parentId));
   }
 
+  if (filters.projectId) {
+    whereClauses.push(eq(tasks.projectId, filters.projectId));
+  }
+
   if (filters.sprintId === "backlog") {
     whereClauses.push(isNull(tasks.sprintId));
   } else if (filters.sprintId) {
@@ -184,6 +191,7 @@ export async function createTask(input: CreateTaskInput) {
         title: input.title,
         description: input.description,
         assigneeId: input.assigneeId,
+        projectId: input.projectId,
         status: input.status ?? "todo",
         priority: input.priority,
         dueDate: input.dueDate,
@@ -235,6 +243,7 @@ export async function updateTask(taskId: string, workspaceId: string, input: Upd
   if (input.title !== undefined) updatePatch.title = input.title;
   if (input.description !== undefined) updatePatch.description = input.description;
   if (input.assigneeId !== undefined) updatePatch.assigneeId = input.assigneeId;
+  if (input.projectId !== undefined) updatePatch.projectId = input.projectId;
   if (input.status !== undefined) {
     updatePatch.status = input.status;
     Object.assign(updatePatch, getStatusTimestamps(input.status, existing));

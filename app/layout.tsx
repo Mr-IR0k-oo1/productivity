@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Unbounded } from "next/font/google";
 import { Suspense } from "react";
 
 import AppShell from "@/components/layout/AppShell";
@@ -14,6 +14,13 @@ const plexSans = IBM_Plex_Sans({
   display: "swap",
 });
 
+const unbounded = Unbounded({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-unbounded",
+  display: "swap",
+});
+
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
@@ -22,7 +29,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "Orbit — issue tracking you host yourself", template: "%s · Orbit" },
+  title: { default: "Orbit by Quantrix Studio", template: "%s · Orbit" },
   description: "Sprints, backlogs, boards, ideas and flowcharts for startups and growing companies. Self-hosted, with single sign-on and roles.",
 };
 
@@ -70,7 +77,7 @@ function LoadingShell() {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`} data-theme="light" suppressHydrationWarning>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} ${unbounded.variable}`} data-theme="light" suppressHydrationWarning>
       <body className="bg-[var(--background)] font-sans text-[var(--foreground)] antialiased">
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
         <Providers>

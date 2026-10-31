@@ -17,13 +17,13 @@ export function QuickTasks() {
   ];
 
   return (
-    <Card className="transition-colors hover:border-zinc-700">
+    <Card className="transition-colors hover:border-[var(--color-border-tertiary)]">
       <CardHeader>
         <CardTitle>Quick Tasks</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {isLoading ? (
-          <p className="text-sm text-zinc-500">Loading...</p>
+          <p className="text-sm text-[var(--color-text-tertiary)]">Loading...</p>
         ) : (
           quickTasks.map((task) => (
             <TaskItem key={task.title} {...task} />

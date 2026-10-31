@@ -56,20 +56,20 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
     { value: "meeting", label: "Meeting", color: "bg-blue-500" },
     { value: "focus", label: "Focus", color: "bg-emerald-500" },
     { value: "deadline", label: "Deadline", color: "bg-amber-500" },
-    { value: "review", label: "Review", color: "bg-zinc-500" },
+    { value: "review", label: "Review", color: "bg-[var(--color-text-tertiary)]" },
     { value: "travel", label: "Travel", color: "bg-violet-500" },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <Card className="w-full max-w-lg border-zinc-800 bg-zinc-950">
-        <CardHeader className="border-b border-zinc-900">
+      <Card className="w-full max-w-lg border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+        <CardHeader className="border-b border-[var(--color-border-secondary)]">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl">Create Event</CardTitle>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full p-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded-full p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-primary)]"
             >
               <X className="h-5 w-5" />
             </button>
@@ -87,7 +87,7 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-sm text-zinc-400">Date</label>
+              <label className="mb-1.5 block text-sm text-[var(--color-text-secondary)]">Date</label>
               <Input
                 type="date"
                 value={date}
@@ -96,11 +96,11 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm text-zinc-400">Type</label>
+              <label className="mb-1.5 block text-sm text-[var(--color-text-secondary)]">Type</label>
               <select
                 value={kind}
                 onChange={(e) => setKind(e.target.value as EventKind)}
-                className="h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100"
+                className="h-10 w-full rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)] px-3 text-sm text-[var(--color-text-primary)]"
               >
                 {eventKinds.map((k) => (
                   <option key={k.value} value={k.value}>
@@ -113,7 +113,7 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-sm text-zinc-400">Start time</label>
+              <label className="mb-1.5 block text-sm text-[var(--color-text-secondary)]">Start time</label>
               <Input
                 type="time"
                 value={startTime}
@@ -122,7 +122,7 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm text-zinc-400">End time</label>
+              <label className="mb-1.5 block text-sm text-[var(--color-text-secondary)]">End time</label>
               <Input
                 type="time"
                 value={endTime}
@@ -134,7 +134,7 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1.5 block text-sm text-zinc-400">Project</label>
+              <label className="mb-1.5 block text-sm text-[var(--color-text-secondary)]">Project</label>
               <Input
                 placeholder="Project name"
                 value={project}
@@ -143,7 +143,7 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm text-zinc-400">Location</label>
+              <label className="mb-1.5 block text-sm text-[var(--color-text-secondary)]">Location</label>
               <Input
                 placeholder="Location or Zoom"
                 value={location}
@@ -154,16 +154,16 @@ export function CreateEventModal({ onClose, onCreate, initialDate }: CreateEvent
           </div>
 
           <div>
-            <label className="mb-1.5 block text-sm text-zinc-400">Description</label>
+            <label className="mb-1.5 block text-sm text-[var(--color-text-secondary)]">Description</label>
             <textarea
               placeholder="Add notes or details..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[80px] w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+              className="min-h-[80px] w-full rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-zinc-900 pt-4">
+          <div className="flex justify-end gap-2 border-t border-[var(--color-border-secondary)] pt-4">
             <Button variant="secondary" onClick={onClose}>
               Cancel
             </Button>

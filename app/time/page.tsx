@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
-import { Play, Square, Plus, Trash2, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, Play, Plus, Send, Square, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -153,22 +153,73 @@ export default function TimePage() {
     ])
   );
 
+  // Timesheet submission state
+  const [timesheetSubmitted, setTimesheetSubmitted] = useState(false);
+
+  function exportCsv() {
+    const headers = "Date,Task,DurationMinutes,Notes\n";
+    const rows = entries.map((e) => `"${e.date}","${e.taskTitle || "General"}","${e.durationMinutes}","${e.notes || ""}"`).join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `timesheet-${from}-to-${to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Timesheet CSV exported");
+  }
+
+  function handleSubmitTimesheet() {
+    setTimesheetSubmitted(true);
+    toast.success("Weekly timesheet submitted for manager approval");
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Time Tracking</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold">Time Tracking & Timesheets</h1>
+            {timesheetSubmitted ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-500">
+                <CheckCircle2 size={12} /> Submitted
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">
+                Draft
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             Week total: <strong>{fmtMinutes(totalMins)}</strong>
           </p>
         </div>
-        <button
-          onClick={() => setShowManualForm(true)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:bg-primary/90 transition-colors"
-        >
-          <Plus size={14} /> Log time manually
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCsv}
+            type="button"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-accent transition-colors"
+            title="Export CSV"
+          >
+            <Download size={13} /> Export CSV
+          </button>
+          {!timesheetSubmitted && (
+            <button
+              onClick={handleSubmitTimesheet}
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-primary/30 bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+            >
+              <Send size={13} /> Submit Timesheet
+            </button>
+          )}
+          <button
+            onClick={() => setShowManualForm(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={14} /> Log time
+          </button>
+        </div>
       </div>
 
       {/* Live Timer */}

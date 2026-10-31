@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, memo } from "react";
+import { type FormEvent, useEffect, useMemo, useState, memo } from "react";
 import {
   addDays,
   differenceInCalendarDays,
@@ -38,6 +38,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   useAddTaskDependencyMutation,
@@ -182,10 +183,10 @@ const TaskStats = memo(function TaskStats({ tasks }: { tasks: TaskRecord[] }) {
   return (
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {stats.map((stat) => (
-        <Card key={stat.title} className="border-zinc-900 bg-zinc-950/50">
+        <Card key={stat.title} className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
           <CardHeader className="pb-3">
-            <p className="text-sm text-zinc-400">{stat.title}</p>
-            <CardTitle className="text-3xl font-semibold text-zinc-100">{stat.value}</CardTitle>
+            <p className="text-sm text-[var(--color-text-secondary)]">{stat.title}</p>
+            <CardTitle className="text-3xl font-semibold text-[var(--color-text-primary)]">{stat.value}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={cn("text-sm", stat.positive === false ? "text-rose-400" : "text-emerald-400")}>{stat.trend}</p>
@@ -241,13 +242,13 @@ const TaskToolbar = memo(function TaskToolbar({
 }) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   return (
-    <Card className="border-zinc-900 bg-zinc-950/60">
+    <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
       <CardContent className="space-y-4 p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs text-zinc-500">Tasks</p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-zinc-100">Task workspace</h1>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+            <p className="text-xs text-[var(--color-text-tertiary)]">Tasks</p>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">Task workspace</h1>
+            <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">
               Manage tasks across Kanban, list, calendar, and gantt views from one workspace.
             </p>
           </div>
@@ -275,8 +276,8 @@ const TaskToolbar = memo(function TaskToolbar({
                 className={cn(
                   "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
                   active
-                    ? "border-zinc-700 bg-zinc-900 text-zinc-100"
-                    : "border-zinc-900 bg-zinc-950 text-zinc-400 hover:border-zinc-800 hover:text-zinc-200",
+                    ? "border-[var(--color-border-tertiary)] bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]"
+                    : "border-[var(--color-border-secondary)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-tertiary)] hover:text-[var(--color-text-primary)]",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -288,7 +289,7 @@ const TaskToolbar = memo(function TaskToolbar({
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="relative min-w-[220px] flex-1 md:min-w-[320px]">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[var(--color-text-tertiary)]" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -304,7 +305,7 @@ const TaskToolbar = memo(function TaskToolbar({
             <Filter className="h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
-              <span className="ml-1.5 rounded-full bg-zinc-700 px-1.5 py-0.5 text-xs">
+              <span className="ml-1.5 rounded-full bg-[var(--color-border-tertiary)] px-1.5 py-0.5 text-xs">
                 {activeFilterCount}
               </span>
             )}
@@ -312,7 +313,7 @@ const TaskToolbar = memo(function TaskToolbar({
         </div>
 
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_repeat(4,minmax(0,170px))]">
-          <label className="flex items-center gap-2 rounded-md border border-zinc-900 bg-zinc-950 px-3 py-2 text-sm text-zinc-300">
+          <label className="flex items-center gap-2 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)]">
             <input
               type="checkbox"
               checked={myTasksOnly}
@@ -323,7 +324,7 @@ const TaskToolbar = memo(function TaskToolbar({
           <select
             value={priorityFilter}
             onChange={(event) => setPriorityFilter(event.target.value)}
-            className="h-10 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
+            className="h-10 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-primary)]"
           >
             {priorityOptions.map((option) => (
               <option key={option} value={option}>
@@ -334,7 +335,7 @@ const TaskToolbar = memo(function TaskToolbar({
           <select
             value={assigneeFilter}
             onChange={(event) => setAssigneeFilter(event.target.value)}
-            className="h-10 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
+            className="h-10 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-primary)]"
           >
             {assigneeOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -345,7 +346,7 @@ const TaskToolbar = memo(function TaskToolbar({
           <select
             value={dueFilter}
             onChange={(event) => setDueFilter(event.target.value as DueFilter)}
-            className="h-10 rounded-md border border-zinc-800 bg-zinc-950 px-3 text-sm text-zinc-100"
+            className="h-10 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-3 text-sm text-[var(--color-text-primary)]"
           >
             <option value="all">All Due Dates</option>
             <option value="mine">My Tasks</option>
@@ -355,8 +356,8 @@ const TaskToolbar = memo(function TaskToolbar({
         </div>
 
         {selectedCount > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-900 bg-zinc-950/80 px-3 py-2">
-            <p className="text-sm text-zinc-300">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface)] px-3 py-2">
+            <p className="text-sm text-[var(--color-text-secondary)]">
               {selectedCount} task{selectedCount === 1 ? "" : "s"} selected
             </p>
             <div className="flex flex-wrap items-center gap-2">
@@ -371,7 +372,7 @@ const TaskToolbar = memo(function TaskToolbar({
                   Bulk Status
                 </Button>
                 {showStatusDropdown && (
-                  <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-zinc-800 bg-zinc-900 p-1 shadow-xl">
+                  <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)] p-1 shadow-xl">
                     {(["todo", "in_progress", "review", "done"] as TaskStatus[]).map((status) => (
                       <button
                         key={status}
@@ -380,7 +381,7 @@ const TaskToolbar = memo(function TaskToolbar({
                           onBulkStatusChange(status);
                           setShowStatusDropdown(false);
                         }}
-                        className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800"
+                        className="w-full rounded-md px-3 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
                       >
                         {status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                       </button>
@@ -392,7 +393,7 @@ const TaskToolbar = memo(function TaskToolbar({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="border-red-900 text-red-200"
+                className="border-[var(--color-error)]/30 text-[var(--color-error)]"
                 onClick={onBulkDelete}
               >
                 <Trash2 className="h-4 w-4" />
@@ -427,8 +428,8 @@ function TaskDetailPanel({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-900 p-6">
+      <div className="w-full max-w-3xl rounded-2xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] shadow-2xl shadow-black/40">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-secondary)] p-6">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={task.priority === "High" ? "warning" : task.priority === "Low" ? "default" : "success"}>
@@ -436,9 +437,9 @@ function TaskDetailPanel({
               </Badge>
               <Badge variant="default">{task.status.replace("_", " ")}</Badge>
             </div>
-            <h2 className="mt-3 text-2xl font-semibold text-zinc-100">{task.title}</h2>
+            <h2 className="mt-3 text-2xl font-semibold text-[var(--color-text-primary)]">{task.title}</h2>
             {typeof task.description === "string" ? (
-              <p className="mt-2 text-sm text-zinc-400">{task.description}</p>
+              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{task.description}</p>
             ) : (
               <div className="mt-4">
                 <TaskDescriptionEditor taskId={task.id} initialContent={task.description} readOnly />
@@ -448,7 +449,7 @@ function TaskDetailPanel({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900"
+            className="rounded-full border border-[var(--color-border-secondary)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
           >
             Close
           </button>
@@ -457,33 +458,33 @@ function TaskDetailPanel({
         <div className="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_260px]">
           <div className="space-y-4">
             <div className="grid gap-3 md:grid-cols-2">
-              <Card className="border-zinc-900 bg-zinc-950/60">
+              <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
                 <CardContent className="space-y-2 p-4">
-                  <p className="text-xs text-zinc-500">Assignee</p>
-                  <p className="text-sm text-zinc-200">{task.assignee}</p>
-                  <p className="text-xs text-zinc-500">Due {due.label}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Assignee</p>
+                  <p className="text-sm text-[var(--color-text-primary)]">{task.assignee}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Due {due.label}</p>
                 </CardContent>
               </Card>
-              <Card className="border-zinc-900 bg-zinc-950/60">
+              <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
                 <CardContent className="space-y-2 p-4">
-                  <p className="text-xs text-zinc-500">Progress</p>
-                  <p className="text-sm text-zinc-200">{task.subtasksDone}/{task.subtasksTotal} subtasks</p>
-                  <div className="h-2 rounded-full bg-zinc-900">
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Progress</p>
+                  <p className="text-sm text-[var(--color-text-primary)]">{task.subtasksDone}/{task.subtasksTotal} subtasks</p>
+                  <div className="h-2 rounded-full bg-[var(--color-surface-hover)]">
                     <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${task.progress}%` }} />
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="border-zinc-900 bg-zinc-950/60">
+            <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
               <CardContent className="space-y-3 p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-zinc-200">Subtasks</p>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">Subtasks</p>
                   <Badge variant="default">{task.subtasksDone}/{task.subtasksTotal}</Badge>
                 </div>
-                <div className="space-y-2 text-sm text-zinc-400">
+                <div className="space-y-2 text-sm text-[var(--color-text-secondary)]">
                   {Array.from({ length: task.subtasksTotal }).map((_, index) => (
-                    <label key={index} className="flex items-center gap-2 rounded-md border border-zinc-900 px-3 py-2">
+                    <label key={index} className="flex items-center gap-2 rounded-md border border-[var(--color-border-secondary)] px-3 py-2">
                       <input type="checkbox" defaultChecked={index < task.subtasksDone} />
                       Subtask {index + 1}
                     </label>
@@ -492,10 +493,10 @@ function TaskDetailPanel({
               </CardContent>
             </Card>
 
-            <Card className="border-zinc-900 bg-zinc-950/60">
+            <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
               <CardContent className="space-y-3 p-4">
-                <p className="text-sm font-medium text-zinc-200">Comments + Activity</p>
-                <div className="space-y-2 text-sm text-zinc-400">
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">Comments + Activity</p>
+                <div className="space-y-2 text-sm text-[var(--color-text-secondary)]">
                   <p>Activity syncs from live task updates and collaboration actions.</p>
                   <p>Use Focus Mode for deep work and return here to manage dependencies.</p>
                 </div>
@@ -504,7 +505,7 @@ function TaskDetailPanel({
           </div>
 
           <div className="space-y-3">
-            <Card className="border-zinc-900 bg-zinc-950/60">
+            <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Quick Actions</CardTitle>
               </CardHeader>
@@ -529,30 +530,30 @@ function TaskDetailPanel({
               </CardContent>
             </Card>
 
-            <Card className="border-zinc-900 bg-zinc-950/60">
+            <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Metadata</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-zinc-400">
+              <CardContent className="space-y-2 text-sm text-[var(--color-text-secondary)]">
                 <div className="flex items-center justify-between">
                   <span>Estimate</span>
-                  <span className="text-zinc-100">{task.estimateHours}h</span>
+                  <span className="text-[var(--color-text-primary)]">{task.estimateHours}h</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Due</span>
-                  <span className={cn(due.overdue ? "text-rose-400" : "text-zinc-100")}>{due.label}</span>
+                  <span className={cn(due.overdue ? "text-rose-400" : "text-[var(--color-text-primary)]")}>{due.label}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Recurring</span>
-                  <span className="text-zinc-100">{task.recurring ? "Yes" : "No"}</span>
+                  <span className="text-[var(--color-text-primary)]">{task.recurring ? "Yes" : "No"}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Dependency</span>
-                  <span className="text-zinc-100">{task.dependency ?? "None"}</span>
+                  <span className="text-[var(--color-text-primary)]">{task.dependency ?? "None"}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Milestone</span>
-                  <span className="text-zinc-100">{task.isMilestone ? "Yes" : "No"}</span>
+                  <span className="text-[var(--color-text-primary)]">{task.isMilestone ? "Yes" : "No"}</span>
                 </div>
               </CardContent>
             </Card>
@@ -597,13 +598,13 @@ function TaskCreateModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl shadow-black/40">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-900 p-6">
+      <div className="w-full max-w-2xl rounded-2xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] shadow-2xl shadow-black/40">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border-secondary)] p-6">
           <div>
-            <p className="text-xs text-zinc-500">Create</p>
-            <h2 className="mt-1 text-2xl font-semibold text-zinc-100">New task</h2>
+            <p className="text-xs text-[var(--color-text-tertiary)]">Create</p>
+            <h2 className="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">New task</h2>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full border border-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900">
+          <button type="button" onClick={onClose} className="rounded-full border border-[var(--color-border-secondary)] px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]">
             Close
           </button>
         </div>
@@ -626,7 +627,7 @@ function TaskCreateModal({
               setPriority(e.target.value as TaskPriority);
               setErrorMessage(null);
             }}
-            className="h-10 rounded-md border border-zinc-800 bg-zinc-900 px-3 text-sm text-zinc-100"
+            className="h-10 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)] px-3 text-sm text-[var(--color-text-primary)]"
           >
             <option value="High">High Priority</option>
             <option value="Medium">Medium Priority</option>
@@ -643,7 +644,7 @@ function TaskCreateModal({
           />
           <div className="md:col-span-2">
             <textarea
-              className="min-h-[120px] w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-zinc-600"
+              className="min-h-[120px] w-full rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-tertiary)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               placeholder="Description"
               value={description}
               onChange={(e) => {
@@ -656,13 +657,13 @@ function TaskCreateModal({
 
         {errorMessage ? (
           <div className="px-6 pb-2">
-            <div className="rounded-lg border border-rose-900/60 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
+            <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 px-3 py-2 text-sm text-[var(--color-error)]">
               {errorMessage}
             </div>
           </div>
         ) : null}
 
-        <div className="flex items-center justify-end gap-2 border-t border-zinc-900 p-6">
+        <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border-secondary)] p-6">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
@@ -687,13 +688,13 @@ const ListView = memo(function ListView({
   onOpenTask: (task: TaskRecord) => void;
 }) {
   return (
-    <Card className="border-zinc-900 bg-zinc-950/60">
-      <CardHeader className="border-b border-zinc-900 pb-4">
+    <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+      <CardHeader className="border-b border-[var(--color-border-secondary)] pb-4">
         <CardTitle className="text-xl">List view</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
         <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="bg-zinc-950/70 text-zinc-500">
+          <thead className="bg-[var(--color-surface)] text-[var(--color-text-tertiary)]">
             <tr>
               <th className="px-4 py-3">Select</th>
               <th className="px-4 py-3">Task Title</th>
@@ -710,7 +711,7 @@ const ListView = memo(function ListView({
               const due = formatDueDate(task.dueDate);
 
               return (
-                <tr key={task.id} className="border-t border-zinc-900 text-zinc-200">
+                <tr key={task.id} className="border-t border-[var(--color-border-secondary)] text-[var(--color-text-primary)]">
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -719,9 +720,9 @@ const ListView = memo(function ListView({
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => onOpenTask(task)} className="text-left hover:text-zinc-100">
+                    <button type="button" onClick={() => onOpenTask(task)} className="text-left hover:text-[var(--color-text-primary)]">
                       <p className="font-medium">{task.title}</p>
-                      <p className="text-xs text-zinc-500">{task.labels.join(" - ")}</p>
+                      <p className="text-xs text-[var(--color-text-tertiary)]">{task.labels.join(" - ")}</p>
                     </button>
                   </td>
                   <td className="px-4 py-3">
@@ -738,17 +739,17 @@ const ListView = memo(function ListView({
                     </Badge>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={cn(due.overdue ? "text-rose-400" : "text-zinc-200")}>{due.label}</span>
+                    <span className={cn(due.overdue ? "text-rose-400" : "text-[var(--color-text-primary)]")}>{due.label}</span>
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant="default">{task.status.replace("_", " ")}</Badge>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-24 rounded-full bg-zinc-900">
+                      <div className="h-2 w-24 rounded-full bg-[var(--color-surface-hover)]">
                         <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${task.progress}%` }} />
                       </div>
-                      <span className="text-xs text-zinc-500">{task.progress}%</span>
+                      <span className="text-xs text-[var(--color-text-tertiary)]">{task.progress}%</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -784,12 +785,12 @@ function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: 
   }
 
   return (
-    <Card className="border-zinc-900 bg-zinc-950/60">
-      <CardHeader className="border-b border-zinc-900 pb-4">
+    <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+      <CardHeader className="border-b border-[var(--color-border-secondary)] pb-4">
         <CardTitle className="text-xl">Calendar view</CardTitle>
       </CardHeader>
       <CardContent className="p-4 md:p-6">
-        <div className="grid grid-cols-7 gap-2 text-xs text-zinc-500">
+        <div className="grid grid-cols-7 gap-2 text-xs text-[var(--color-text-tertiary)]">
           {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
             <div key={day} className="px-2 pb-2">
               {day}
@@ -805,14 +806,14 @@ function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: 
                 key={day.toISOString()}
                 className={cn(
                   "min-h-[120px] rounded-xl border p-3 text-left transition-colors",
-                  isSameMonth(day, monthDate) ? "border-zinc-900 bg-zinc-950/40 hover:border-zinc-700" : "border-zinc-950 bg-zinc-950/20 opacity-45",
+                  isSameMonth(day, monthDate) ? "border-[var(--color-border-secondary)] bg-[var(--color-surface)] hover:border-[var(--color-border-tertiary)]" : "border-[var(--color-border-secondary)] bg-[var(--color-surface)] opacity-45",
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-sm", isToday(day) ? "bg-zinc-100 text-zinc-900" : "text-zinc-200")}>
+                  <span className={cn("flex h-7 w-7 items-center justify-center rounded-full text-sm", isToday(day) ? "bg-[var(--color-accent)] text-[var(--color-on-accent)]" : "text-[var(--color-text-primary)]")}>
                     {format(day, "d")}
                   </span>
-                  {dayTasks.length > 0 ? <span className="text-xs text-zinc-500">{dayTasks.length} tasks</span> : null}
+                  {dayTasks.length > 0 ? <span className="text-xs text-[var(--color-text-tertiary)]">{dayTasks.length} tasks</span> : null}
                 </div>
                 <div className="mt-3 space-y-2">
                   {dayTasks.slice(0, 3).map((task) => {
@@ -824,14 +825,14 @@ function CalendarView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: 
                         onClick={() => onOpenTask(task)}
                         className={cn(
                           "w-full rounded-md border px-2 py-1.5 text-left text-xs transition-colors",
-                          due.overdue ? "border-rose-900 bg-rose-950/50 text-rose-200" : "border-zinc-800 bg-zinc-900 text-zinc-100",
+                          due.overdue ? "border-[var(--color-error)]/30 bg-[var(--color-error)]/10 text-[var(--color-error)]" : "border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)] text-[var(--color-text-primary)]",
                         )}
                       >
                         {task.title}
                       </button>
                     );
                   })}
-                  {dayTasks.length > 3 ? <p className="text-xs text-zinc-500">+{dayTasks.length - 3} more</p> : null}
+                  {dayTasks.length > 3 ? <p className="text-xs text-[var(--color-text-tertiary)]">+{dayTasks.length - 3} more</p> : null}
                 </div>
               </div>
             );
@@ -853,12 +854,12 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
   const totalDays = Math.max(1, differenceInCalendarDays(maxEnd, minStart) + 1);
 
   return (
-    <Card className="border-zinc-900 bg-zinc-950/60">
-      <CardHeader className="border-b border-zinc-900 pb-4">
+    <Card className="border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+      <CardHeader className="border-b border-[var(--color-border-secondary)] pb-4">
         <CardTitle className="text-xl">Gantt view</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 p-4 md:p-6">
-        <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-4 text-xs text-zinc-500">
+        <div className="grid grid-cols-[220px_minmax(0,1fr)] gap-4 text-xs text-[var(--color-text-tertiary)]">
           <div>Task</div>
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: 7 }, (_, index) => addDays(minStart, index)).map((day) => (
@@ -875,12 +876,12 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
           const due = formatDueDate(task.dueDate);
 
           return (
-            <div key={task.id} className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-4 rounded-xl border border-zinc-900 bg-zinc-950/40 p-3">
+            <div key={task.id} className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-4 rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-3">
               <button type="button" onClick={() => onOpenTask(task)} className="text-left">
-                <p className="text-sm font-medium text-zinc-100">{task.title}</p>
-                <p className="text-xs text-zinc-500">{task.assignee} - {task.priority} - {due.label}</p>
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">{task.title}</p>
+                <p className="text-xs text-[var(--color-text-tertiary)]">{task.assignee} - {task.priority} - {due.label}</p>
               </button>
-              <div className="relative h-10 rounded-lg border border-zinc-900 bg-zinc-950/50">
+              <div className="relative h-10 rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
                 <div
                   className={cn(
                     "absolute top-1.5 h-7 rounded-md",
@@ -890,7 +891,7 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
                         ? "bg-blue-500/70"
                         : task.priority === "High"
                           ? "bg-rose-500/70"
-                          : "bg-zinc-400/70",
+                          : "bg-[var(--color-text-tertiary)]/70",
                   )}
                   style={{ left: `${(left / totalDays) * 100}%`, width: `${(width / totalDays) * 100}%` }}
                 />
@@ -906,32 +907,32 @@ function GanttView({ tasks, onOpenTask }: { tasks: TaskRecord[]; onOpenTask: (ta
 function TaskLoadingSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="rounded-xl border border-zinc-900 bg-zinc-950/60 p-6">
+      <div className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-6">
         <div className="space-y-4">
-          <div className="h-8 w-32 rounded bg-zinc-800" />
-          <div className="h-4 w-48 rounded bg-zinc-800" />
+          <div className="h-8 w-32 rounded bg-[var(--color-border-secondary)]" />
+          <div className="h-4 w-48 rounded bg-[var(--color-border-secondary)]" />
           <div className="flex gap-2">
-            <div className="h-8 w-20 rounded bg-zinc-800" />
-            <div className="h-8 w-20 rounded bg-zinc-800" />
-            <div className="h-8 w-20 rounded bg-zinc-800" />
-            <div className="h-8 w-20 rounded bg-zinc-800" />
+            <div className="h-8 w-20 rounded bg-[var(--color-border-secondary)]" />
+            <div className="h-8 w-20 rounded bg-[var(--color-border-secondary)]" />
+            <div className="h-8 w-20 rounded bg-[var(--color-border-secondary)]" />
+            <div className="h-8 w-20 rounded bg-[var(--color-border-secondary)]" />
           </div>
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-xl border border-zinc-900 bg-zinc-950/50 p-6">
-            <div className="h-4 w-20 rounded bg-zinc-800" />
-            <div className="mt-3 h-8 w-16 rounded bg-zinc-800" />
+          <div key={i} className="rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-6">
+            <div className="h-4 w-20 rounded bg-[var(--color-border-secondary)]" />
+            <div className="mt-3 h-8 w-16 rounded bg-[var(--color-border-secondary)]" />
           </div>
         ))}
       </div>
       <div className="grid gap-4 xl:grid-cols-4">
         {["To Do", "In Progress", "Review", "Done"].map((col) => (
-          <div key={col} className="space-y-3 rounded-xl border border-zinc-900 bg-zinc-950/40 p-3">
-            <div className="h-5 w-16 rounded bg-zinc-800" />
+          <div key={col} className="space-y-3 rounded-xl border border-[var(--color-border-secondary)] bg-[var(--color-surface)] p-3">
+            <div className="h-5 w-16 rounded bg-[var(--color-border-secondary)]" />
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 rounded-lg border border-zinc-900 bg-zinc-900/50" />
+              <div key={i} className="h-32 rounded-lg border border-[var(--color-border-secondary)] bg-[var(--color-surface-hover)]" />
             ))}
           </div>
         ))}
@@ -942,23 +943,23 @@ function TaskLoadingSkeleton() {
 
 function TaskEmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-950/20 py-16 text-center">
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--color-border-secondary)] bg-[var(--color-surface)] py-16 text-center">
       <div className="space-y-4">
         <div className="flex justify-center">
-          <div className="rounded-full bg-zinc-900 p-4">
-            <svg className="h-8 w-8 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="rounded-full bg-[var(--color-surface-hover)] p-4">
+            <svg className="h-8 w-8 text-[var(--color-text-tertiary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
           </div>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-zinc-200">No tasks yet</h3>
-          <p className="mt-1 text-sm text-zinc-500">Create your first task to get started</p>
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">No tasks yet</h3>
+          <p className="mt-1 text-sm text-[var(--color-text-tertiary)]">Create your first task to get started</p>
         </div>
         <button
           onClick={onCreate}
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-200"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-[var(--color-on-accent)] transition-colors hover:bg-[var(--color-accent-strong)]"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -972,23 +973,23 @@ function TaskEmptyState({ onCreate }: { onCreate: () => void }) {
 
 function TaskErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-3xl border border-red-900/50 bg-red-950/20 py-16 text-center">
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-[var(--color-error)]/30 bg-[var(--color-error)]/10 py-16 text-center">
       <div className="space-y-4">
         <div className="flex justify-center">
-          <div className="rounded-full bg-red-900/30 p-4">
+          <div className="rounded-full bg-[var(--color-error)]/10 p-4">
             <svg className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-red-200">Unable to load tasks</h3>
+          <h3 className="text-lg font-semibold text-[var(--color-error)]">Unable to load tasks</h3>
           <p className="mt-1 text-sm text-red-400">{message}</p>
         </div>
         <button
           onClick={onRetry}
           type="button"
-          className="inline-flex items-center gap-2 rounded-lg bg-red-900/50 px-4 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-900"
+          className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-error)]/10 px-4 py-2 text-sm font-medium text-[var(--color-error)] transition-colors hover:bg-[var(--color-error)]/20"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -997,6 +998,98 @@ function TaskErrorState({ message, onRetry }: { message: string; onRetry: () => 
         </button>
       </div>
     </div>
+  );
+}
+
+function TaskDependencyDialog({
+  task,
+  tasks,
+  onClose,
+  onSubmit,
+}: {
+  task: TaskRecord;
+  tasks: TaskRecord[];
+  onClose: () => void;
+  onSubmit: (dependsOnTaskId: string) => Promise<void>;
+}) {
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const candidates = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return tasks.filter(
+      (candidate) => candidate.id !== task.id && (!query || candidate.title.toLowerCase().includes(query)),
+    );
+  }, [search, task.id, tasks]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedId) return;
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      await onSubmit(selectedId);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Unable to add dependency");
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg border-[var(--color-border-secondary)] bg-[var(--color-surface)]">
+        <DialogHeader>
+          <DialogTitle>Add dependency</DialogTitle>
+          <DialogDescription>Choose the task that &ldquo;{task.title}&rdquo; is blocked by.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search tasks..."
+            aria-label="Search tasks"
+            autoFocus
+          />
+          <div role="listbox" aria-label="Tasks" className="max-h-64 space-y-1 overflow-y-auto">
+            {candidates.length === 0 ? (
+              <p className="py-4 text-center text-sm text-[var(--color-text-tertiary)]">No other tasks found</p>
+            ) : (
+              candidates.map((candidate) => (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  role="option"
+                  aria-selected={selectedId === candidate.id}
+                  onClick={() => setSelectedId(candidate.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-3 rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                    selectedId === candidate.id
+                      ? "border-emerald-600 bg-[var(--color-success)]/10 text-[var(--color-text-primary)]"
+                      : "border-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-tertiary)]",
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate">{candidate.title}</span>
+                  <Badge variant="default" className="shrink-0">
+                    {candidate.status.replace("_", " ")}
+                  </Badge>
+                </button>
+              ))
+            )}
+          </div>
+          {errorMessage ? <p className="text-sm text-red-400">{errorMessage}</p> : null}
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!selectedId || isSubmitting}>
+              {isSubmitting ? "Adding..." : "Add dependency"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1021,6 +1114,7 @@ export function TaskWorkspace() {
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [isDependencyOpen, setIsDependencyOpen] = useState(false);
 
   const memberMap = useMemo(() => {
     const map = new Map<string, WorkspaceMemberDTO>();
@@ -1211,36 +1305,23 @@ export function TaskWorkspace() {
     }
   }
 
-  async function handleAddDependency() {
+  async function handleAddDependency(dependsOnTaskId: string) {
     if (!selectedTask) {
       return;
     }
 
-    const dependency = prompt("Enter task ID to link as dependency:")?.trim();
-    if (!dependency) {
-      return;
-    }
+    await addTaskDependency.mutateAsync({
+      taskId: selectedTask.id,
+      dependsOnTaskId,
+    });
 
-    if (dependency === selectedTask.id) {
-      alert("A task cannot depend on itself.");
-      return;
-    }
+    await updateTask.mutateAsync({
+      id: selectedTask.id,
+      metadata: { dependency: dependsOnTaskId },
+    });
 
-    try {
-      await addTaskDependency.mutateAsync({
-        taskId: selectedTask.id,
-        dependsOnTaskId: dependency,
-      });
-
-      await updateTask.mutateAsync({
-        id: selectedTask.id,
-        metadata: { dependency },
-      });
-
-      closeTask();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Unable to add dependency");
-    }
+    setIsDependencyOpen(false);
+    closeTask();
   }
 
   function renderView() {
@@ -1320,7 +1401,15 @@ export function TaskWorkspace() {
           onClose={closeTask}
           onStartTimer={handleStartTimer}
           onConvertToMilestone={handleConvertToMilestone}
-          onAddDependency={handleAddDependency}
+          onAddDependency={() => setIsDependencyOpen(true)}
+        />
+      ) : null}
+      {selectedTask && isDependencyOpen ? (
+        <TaskDependencyDialog
+          task={selectedTask}
+          tasks={tasks}
+          onClose={() => setIsDependencyOpen(false)}
+          onSubmit={handleAddDependency}
         />
       ) : null}
       {isCreateOpen ? <TaskCreateModal onClose={() => setIsCreateOpen(false)} onCreate={handleCreateTask} /> : null}

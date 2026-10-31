@@ -1,0 +1,12 @@
+{
+  "version": "1.19.0",
+  "covered": [
+    "css",
+    "nextjs",
+    "react",
+    "rust",
+    "sql",
+    "typescript"
+  ],
+  "updated": 1793374959.9204803
+}

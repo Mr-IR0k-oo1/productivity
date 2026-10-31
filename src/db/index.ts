@@ -14,7 +14,6 @@ import {
   LOCAL_AUTH_USER_ID,
   LOCAL_USER_EMAIL,
   LOCAL_WORKSPACE_SLUG,
-  isAuthBypassEnabled,
   isLocalMode,
   resolveDataDir,
 } from "@/src/lib/local-mode";
@@ -33,10 +32,7 @@ function createLocalDatabase() {
     await migratePglite(drizzlePglite(client, { schema }), {
       migrationsFolder: path.resolve("drizzle"),
     });
-    // With login on, accounts are created by sign-up instead (see src/lib/identity.ts).
-    if (isAuthBypassEnabled()) {
-      await seedLocalWorkspace(localDb);
-    }
+    await seedLocalWorkspace(localDb);
     console.log(`[Orbit] Local database ready at ${dataDir}`);
   })();
 

@@ -40,8 +40,8 @@ export function TaskCard({
   return (
     <Card
       className={cn(
-        "cursor-pointer border-zinc-900 bg-zinc-950/60 transition-all hover:-translate-y-0.5 hover:border-zinc-700",
-        selected && "border-zinc-700 ring-1 ring-zinc-700",
+        "cursor-pointer border-[var(--color-border-secondary)] bg-[var(--color-surface)] transition-all hover:-translate-y-0.5 hover:border-[var(--color-border-tertiary)]",
+        selected && "border-[var(--color-border-tertiary)] ring-1 ring-[var(--color-accent)]",
         className,
       )}
       onClick={onClick}
@@ -56,15 +56,15 @@ export function TaskCard({
           ) : null}
         </div>
         {description ? (
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-[var(--color-text-secondary)]">
             {typeof description === "string" ? description : "Rich text description"}
           </p>
         ) : null}
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--color-text-tertiary)]">
           {assignee && assignee !== "Unassigned" ? (
-            <div className="flex items-center gap-2 text-zinc-300">
+            <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
               <Avatar className="h-6 w-6">
                 <AvatarFallback>{initials ?? assignee.slice(0, 2)}</AvatarFallback>
               </Avatar>
@@ -88,13 +88,13 @@ export function TaskCard({
 
         {typeof subtasksDone === "number" && typeof subtasksTotal === "number" ? (
           <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-zinc-500">
+            <div className="flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
               <span>Subtasks</span>
               <span>
                 {subtasksDone}/{subtasksTotal}
               </span>
             </div>
-            <div className="h-2 rounded-full bg-zinc-900">
+            <div className="h-2 rounded-full bg-[var(--color-surface-hover)]">
               <div
                 className="h-2 rounded-full bg-emerald-500"
                 style={{ width: `${subtasksTotal > 0 ? Math.round((subtasksDone / subtasksTotal) * 100) : 0}%` }}
@@ -104,7 +104,7 @@ export function TaskCard({
         ) : null}
 
         {typeof comments === "number" ? (
-          <div className="flex items-center justify-between text-xs text-zinc-500">
+          <div className="flex items-center justify-between text-xs text-[var(--color-text-tertiary)]">
             <span>Comments</span>
             <span>{comments}</span>
           </div>

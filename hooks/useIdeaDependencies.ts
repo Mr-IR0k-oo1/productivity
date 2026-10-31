@@ -35,7 +35,7 @@ export function useIdeaDependencies(ideaId: string) {
   });
 
   // Add dependency
-  const { mutate: addDependency, isPending: isAdding } = useMutation({
+  const { mutateAsync: addDependency, isPending: isAdding } = useMutation({
     mutationFn: async (dependsOnId: string) => {
       const res = await fetchApiJson<{ data: IdeaDependencyDTO }>(
         `/api/ideas/${ideaId}/dependencies`,
@@ -54,7 +54,7 @@ export function useIdeaDependencies(ideaId: string) {
   });
 
   // Remove dependency
-  const { mutate: removeDependency, isPending: isRemoving } = useMutation({
+  const { mutateAsync: removeDependency, isPending: isRemoving } = useMutation({
     mutationFn: async (dependsOnId: string) => {
       await fetchApiJson<void>(
         `/api/ideas/${ideaId}/dependencies/${dependsOnId}`,

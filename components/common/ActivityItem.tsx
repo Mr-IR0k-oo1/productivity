@@ -8,7 +8,7 @@ type ActivityItemProps = {
 
 export function ActivityItem({ user, text, timestamp }: ActivityItemProps) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-[color:var(--card-border)] bg-[var(--surface-strong)] p-3 transition-colors hover:border-zinc-700">
+    <div className="flex items-start gap-3 rounded-lg border border-[color:var(--card-border)] bg-[var(--surface-strong)] p-3 transition-colors hover:border-[var(--color-border-tertiary)]">
       <Avatar className="h-8 w-8">
         <AvatarFallback className="bg-[var(--surface)] text-[var(--foreground)]">{user}</AvatarFallback>
       </Avatar>

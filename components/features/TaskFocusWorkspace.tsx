@@ -50,16 +50,16 @@ function priorityLabel(priority: number) {
 }
 
 function priorityClass(priority: number) {
-  if (priority === 1) return "border-rose-500/30 bg-rose-500/10 text-rose-200";
-  if (priority === 3) return "border-sky-500/30 bg-sky-500/10 text-sky-200";
-  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
+  if (priority === 1) return "border-rose-500/30 bg-rose-500/10 text-[var(--color-error)]";
+  if (priority === 3) return "border-sky-500/30 bg-sky-500/10 text-[var(--color-info)]";
+  return "border-emerald-500/30 bg-emerald-500/10 text-[var(--color-success)]";
 }
 
 function statusClass(status: string) {
-  if (status === "done") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
-  if (status === "review") return "border-amber-500/30 bg-amber-500/10 text-amber-200";
-  if (status === "in_progress") return "border-blue-500/30 bg-blue-500/10 text-blue-200";
-  return "border-zinc-500/30 bg-zinc-500/10 text-zinc-200";
+  if (status === "done") return "border-emerald-500/30 bg-emerald-500/10 text-[var(--color-success)]";
+  if (status === "review") return "border-amber-500/30 bg-amber-500/10 text-[var(--color-warning)]";
+  if (status === "in_progress") return "border-blue-500/30 bg-blue-500/10 text-[var(--color-info)]";
+  return "border-[var(--color-text-tertiary)]/30 bg-[var(--color-text-tertiary)]/10 text-[var(--color-text-primary)]";
 }
 
 export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
@@ -243,7 +243,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
           <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
             <span className="rounded-full border border-[color:var(--card-border)] bg-black/30 px-3 py-1.5">Escape returns to tasks</span>
             {runningEntry && runningEntry.taskId !== task.id ? (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-amber-200">Timer active on another task</span>
+              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[var(--color-warning)]">Timer active on another task</span>
             ) : null}
           </div>
         </div>
@@ -263,7 +263,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
 
               <div className="space-y-2">
                 <CardTitle className="text-4xl font-semibold tracking-tight md:text-5xl">{task.title}</CardTitle>
-                <CardDescription className="max-w-3xl text-base text-zinc-300">
+                <CardDescription className="max-w-3xl text-base text-[var(--color-text-secondary)]">
                   {typeof task.description === "string" ? (
                     task.description || "This task does not have a description yet."
                   ) : (
@@ -274,18 +274,18 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                 </CardDescription>
               </div>
 
-              <div className="grid gap-3 text-sm text-zinc-300 md:grid-cols-3">
+              <div className="grid gap-3 text-sm text-[var(--color-text-secondary)] md:grid-cols-3">
                 <div className="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-                  <p className="text-xs text-zinc-500">Due</p>
-                  <p className="mt-1 font-medium text-zinc-100">{dueLabel}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Due</p>
+                  <p className="mt-1 font-medium text-[var(--color-text-primary)]">{dueLabel}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-                  <p className="text-xs text-zinc-500">Focus mode</p>
-                  <p className="mt-1 font-medium text-zinc-100">{mode === "focus" ? "Pomodoro focus block" : "Short break"}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Focus mode</p>
+                  <p className="mt-1 font-medium text-[var(--color-text-primary)]">{mode === "focus" ? "Pomodoro focus block" : "Short break"}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-black/20 px-4 py-3">
-                  <p className="text-xs text-zinc-500">State</p>
-                  <p className="mt-1 font-medium text-zinc-100">{isRunning ? "Timer running" : "Timer paused"}</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">State</p>
+                  <p className="mt-1 font-medium text-[var(--color-text-primary)]">{isRunning ? "Timer running" : "Timer paused"}</p>
                 </div>
               </div>
             </CardHeader>
@@ -294,29 +294,29 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
               <div className="space-y-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                    <p className="text-xs text-zinc-500">Task details</p>
-                    <dl className="mt-3 space-y-3 text-sm text-zinc-300">
+                    <p className="text-xs text-[var(--color-text-tertiary)]">Task details</p>
+                    <dl className="mt-3 space-y-3 text-sm text-[var(--color-text-secondary)]">
                       <div className="flex items-center justify-between gap-4">
-                        <dt className="text-zinc-500">Task ID</dt>
-                        <dd className="font-mono text-xs text-zinc-200">{task.id.slice(0, 8)}...</dd>
+                        <dt className="text-[var(--color-text-tertiary)]">Task ID</dt>
+                        <dd className="font-mono text-xs text-[var(--color-text-primary)]">{task.id.slice(0, 8)}...</dd>
                       </div>
                       <div className="flex items-center justify-between gap-4">
-                        <dt className="text-zinc-500">Estimate</dt>
-                        <dd className="text-zinc-100">{estimateHours}h</dd>
+                        <dt className="text-[var(--color-text-tertiary)]">Estimate</dt>
+                        <dd className="text-[var(--color-text-primary)]">{estimateHours}h</dd>
                       </div>
                       <div className="flex items-center justify-between gap-4">
-                        <dt className="text-zinc-500">Priority</dt>
-                        <dd className="text-zinc-100">{priorityLabel(task.priority)}</dd>
+                        <dt className="text-[var(--color-text-tertiary)]">Priority</dt>
+                        <dd className="text-[var(--color-text-primary)]">{priorityLabel(task.priority)}</dd>
                       </div>
                       <div className="flex items-center justify-between gap-4">
-                        <dt className="text-zinc-500">Assigned</dt>
-                        <dd className="text-zinc-100">{task.assigneeId === userId ? "You" : task.assigneeId ? "Another teammate" : "Unassigned"}</dd>
+                        <dt className="text-[var(--color-text-tertiary)]">Assigned</dt>
+                        <dd className="text-[var(--color-text-primary)]">{task.assigneeId === userId ? "You" : task.assigneeId ? "Another teammate" : "Unassigned"}</dd>
                       </div>
                     </dl>
                   </div>
 
                   <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                    <p className="text-xs text-zinc-500">Quick actions</p>
+                    <p className="text-xs text-[var(--color-text-tertiary)]">Quick actions</p>
                     <div className="mt-3 space-y-2">
                       <Button
                         type="button"
@@ -360,7 +360,7 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                           <span className="text-xs text-[var(--muted)]">Close it out</span>
                         </Button>
                       ) : (
-                        <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+                        <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-[var(--color-success)]">
                           <span className="flex items-center gap-2">
                             <CheckCircle2 className="h-4 w-4" />
                             Task already complete
@@ -372,11 +372,11 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                 </div>
 
                 {statusMessage ? (
-                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">{statusMessage}</div>
+                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-[var(--color-info)]">{statusMessage}</div>
                 ) : null}
 
                 {startTimerMutation.error || stopTimerMutation.error || updateTaskMutation.error ? (
-                  <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                  <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-[var(--color-error)]">
                     {startTimerMutation.error instanceof Error
                       ? startTimerMutation.error.message
                       : stopTimerMutation.error instanceof Error
@@ -390,41 +390,41 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
 
               <div className="space-y-4">
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                  <p className="text-xs text-zinc-500">Checklist</p>
-                  <div className="mt-3 space-y-3 text-sm text-zinc-300">
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Checklist</p>
+                  <div className="mt-3 space-y-3 text-sm text-[var(--color-text-secondary)]">
                     <div className="flex items-start gap-3 rounded-2xl border border-white/5 bg-white/5 p-3">
-                      <Clock3 className="mt-0.5 h-4 w-4 text-emerald-300" />
+                      <Clock3 className="mt-0.5 h-4 w-4 text-[var(--color-success)]" />
                       <div>
-                        <p className="font-medium text-zinc-100">Start with the next visible action</p>
-                        <p className="text-zinc-400">Use the timer to stay on one concrete outcome until the block ends.</p>
+                        <p className="font-medium text-[var(--color-text-primary)]">Start with the next visible action</p>
+                        <p className="text-[var(--color-text-secondary)]">Use the timer to stay on one concrete outcome until the block ends.</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3 rounded-2xl border border-white/5 bg-white/5 p-3">
-                      <TimerReset className="mt-0.5 h-4 w-4 text-blue-300" />
+                      <TimerReset className="mt-0.5 h-4 w-4 text-[var(--color-info)]" />
                       <div>
-                        <p className="font-medium text-zinc-100">Use the corner timer as a cue</p>
-                        <p className="text-zinc-400">When it hits zero, pause, reset, or switch to a short break.</p>
+                        <p className="font-medium text-[var(--color-text-primary)]">Use the corner timer as a cue</p>
+                        <p className="text-[var(--color-text-secondary)]">When it hits zero, pause, reset, or switch to a short break.</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="rounded-3xl border border-white/5 bg-black/20 p-4">
-                  <p className="text-xs text-zinc-500">Navigation</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Navigation</p>
                   <div className="mt-3 flex flex-col gap-2">
-                    <Link href="/tasks" className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-zinc-100 transition-colors hover:bg-white/10">
+                    <Link href="/tasks" className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-[var(--color-text-primary)] transition-colors hover:bg-white/10">
                       <span className="flex items-center gap-2">
                         <ArrowLeft className="h-4 w-4" />
                         Back to task list
                       </span>
-                      <span className="text-xs text-zinc-500">Esc</span>
+                      <span className="text-xs text-[var(--color-text-tertiary)]">Esc</span>
                     </Link>
-                    <Link href="/my-day" className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-zinc-100 transition-colors hover:bg-white/10">
+                    <Link href="/my-day" className="inline-flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2 text-sm text-[var(--color-text-primary)] transition-colors hover:bg-white/10">
                       <span className="flex items-center gap-2">
                         <Clock3 className="h-4 w-4" />
                         Open My Day
                       </span>
-                      <span className="text-xs text-zinc-500">Morning view</span>
+                      <span className="text-xs text-[var(--color-text-tertiary)]">Morning view</span>
                     </Link>
                   </div>
                 </div>
@@ -436,17 +436,17 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs text-zinc-500">Pomodoro</p>
+                  <p className="text-xs text-[var(--color-text-tertiary)]">Pomodoro</p>
                   <CardTitle className="text-base">{mode === "focus" ? "Focus block" : "Short break"}</CardTitle>
                 </div>
-                <Badge variant="default" className="border-white/10 bg-white/10 text-zinc-100">
+                <Badge variant="default" className="border-white/10 bg-white/10 text-[var(--color-text-primary)]">
                   {isRunning ? "Running" : "Paused"}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-[1.75rem] border border-white/5 bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.18),_rgba(12,12,14,0.95)_55%)] p-5 text-center">
-                <p className="text-xs text-zinc-500">Time remaining</p>
+                <p className="text-xs text-[var(--color-text-tertiary)]">Time remaining</p>
                 <div className="mt-4 text-5xl font-semibold tracking-tight text-white tabular-nums">{formatRemaining(remainingSeconds)}</div>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                   <div
@@ -457,25 +457,25 @@ export function TaskFocusWorkspace({ taskId }: { taskId: string }) {
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <p className="mt-3 text-sm text-zinc-400">
+                <p className="mt-3 text-sm text-[var(--color-text-secondary)]">
                   {mode === "focus"
                     ? "Stay on the task until the block ends, then take a short break."
                     : "Use this break to breathe, stretch, or reset before the next block."}
                 </p>
               </div>
 
-              <div className="grid gap-2 text-sm text-zinc-300">
+              <div className="grid gap-2 text-sm text-[var(--color-text-secondary)]">
                 <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2">
                   <span>Running timer</span>
-                  <span className="text-zinc-100">{taskRunningEntry ? taskRunningEntry.description || "Focus session" : "None"}</span>
+                  <span className="text-[var(--color-text-primary)]">{taskRunningEntry ? taskRunningEntry.description || "Focus session" : "None"}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2">
                   <span>Focused task</span>
-                  <span className="max-w-[180px] truncate text-zinc-100">{task.title}</span>
+                  <span className="max-w-[180px] truncate text-[var(--color-text-primary)]">{task.title}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-2">
                   <span>Due</span>
-                  <span className="text-zinc-100">{dueLabel}</span>
+                  <span className="text-[var(--color-text-primary)]">{dueLabel}</span>
                 </div>
               </div>
 

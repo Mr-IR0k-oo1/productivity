@@ -15,14 +15,14 @@ export function DataTable() {
       <CardContent>
         <table className="w-full text-left text-sm">
           <thead>
-            <tr className="text-zinc-500">
+            <tr className="text-[var(--color-text-tertiary)]">
               <th className="pb-2">Metric</th>
               <th className="pb-2">Value</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.metric} className="border-t border-zinc-900 text-zinc-300">
+              <tr key={row.metric} className="border-t border-[var(--color-border-secondary)] text-[var(--color-text-secondary)]">
                 <td className="py-2.5">{row.metric}</td>
                 <td className="py-2.5">{row.value}</td>
               </tr>

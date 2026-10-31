@@ -7,9 +7,11 @@ export type ThemeMode = "dark" | "light" | "system";
 type UIState = {
   sidebarCollapsed: boolean;
   searchOpen: boolean;
+  mobileMenuOpen: boolean;
   theme: ThemeMode;
   toggleSidebar: () => void;
   setSearchOpen: (value: boolean) => void;
+  setMobileMenuOpen: (value: boolean) => void;
   toggleTheme: () => void;
   setTheme: (value: ThemeMode) => void;
 };
@@ -25,12 +27,14 @@ export const useUIStore = create<UIState>()(
     (set) => ({
       sidebarCollapsed: false,
       searchOpen: false,
+      mobileMenuOpen: false,
       theme: "system",
       toggleSidebar: () =>
         set((state) => ({
           sidebarCollapsed: !state.sidebarCollapsed,
         })),
       setSearchOpen: (value) => set({ searchOpen: value }),
+      setMobileMenuOpen: (value) => set({ mobileMenuOpen: value }),
       toggleTheme: () =>
         set((state) => ({
           theme: resolveTheme(state.theme) === "dark" ? "light" : "dark",

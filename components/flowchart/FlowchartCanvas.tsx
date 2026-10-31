@@ -20,9 +20,10 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { CommentDialog } from "@/components/flowchart/CommentDialog";
 import { EDGE_TYPES, NODE_TYPES } from "@/components/flowchart/registry";
 import { useFlowchartKeyboard } from "@/hooks/useFlowchartKeyboard";
 import { useFlowchartRealtime } from "@/hooks/useFlowchartRealtime";
@@ -117,6 +118,7 @@ function CanvasSurface({
   const router = useRouter();
   const { userId, workspaceId, authToken } = useSessionContext();
   const reactFlow = useReactFlow<OrbitNode, OrbitEdge>();
+  const [pendingCommentPosition, setPendingCommentPosition] = useState<{ x: number; y: number } | null>(null);
   const nodes = useFlowchartStore((state) => state.nodes);
   const edges = useFlowchartStore((state) => state.edges);
   const mode = useFlowchartStore((state) => state.mode);
@@ -357,10 +359,7 @@ function CanvasSurface({
     });
 
     if (activeTool === "comment") {
-      const content = window.prompt("Comment");
-      if (content?.trim()) {
-        await onCreateComment({ content: content.trim(), x: position.x, y: position.y });
-      }
+      setPendingCommentPosition(position);
       return;
     }
 
@@ -523,6 +522,12 @@ function CanvasSurface({
         {mode === "infinite" && showMinimap ? <MiniMap pannable zoomable /> : null}
         <Controls />
       </ReactFlow>
+      {pendingCommentPosition ? (
+        <CommentDialog
+          onClose={() => setPendingCommentPosition(null)}
+          onSubmit={(content) => onCreateComment({ content, ...pendingCommentPosition })}
+        />
+      ) : null}
     </div>
   );
 }

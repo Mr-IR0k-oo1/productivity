@@ -1,0 +1,23 @@
+# Rust backend for Orbit.
+#   server/     the API (axum + Postgres), shared by every target
+#   api/main.rs Vercel function entry point (this package)
+#   src-tauri/  desktop app, which runs the API in-process
+[workspace]
+members = [".", "server", "src-tauri"]
+resolver = "2"
+
+[package]
+name = "orbit-vercel"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "main"
+path = "api/main.rs"
+
+[dependencies]
+orbit-server = { path = "server", default-features = false }
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
+tower = "0.5"
+vercel_runtime = { version = "2.4.1", features = ["axum"] }

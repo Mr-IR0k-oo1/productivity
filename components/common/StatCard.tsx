@@ -12,7 +12,7 @@ type StatCardProps = {
 
 export function StatCard({ title, value, trend, positive = true }: StatCardProps) {
   return (
-    <Card className="group transition-colors hover:border-zinc-700">
+    <Card className="group transition-colors hover:border-[var(--color-border-tertiary)]">
       <CardHeader className="pb-3">
         <p className="text-sm text-[var(--muted)]">{title}</p>
         <CardTitle className="text-3xl font-semibold">{value}</CardTitle>

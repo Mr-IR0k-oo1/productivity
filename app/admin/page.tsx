@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { PlusCircle, RefreshCw, ShieldCheck, UserMinus, Users } from "lucide-react";
+import { Activity, CreditCard, PlusCircle, RefreshCw, Shield, ShieldCheck, UserMinus, Users } from "lucide-react";
 
 import { useSessionContext } from "@/components/providers/SessionProvider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -362,6 +362,42 @@ export default function AdminPanel() {
             </div>
           </div>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[color:var(--card-border)] pt-4">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+            Enterprise Governance:
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/settings/roles")}
+            className="h-8 gap-1.5 text-xs font-medium rounded-xl border-[color:var(--card-border)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]"
+          >
+            <Shield className="h-3.5 w-3.5 text-purple-400" />
+            <span>Roles & Permissions Matrix</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/settings/audit")}
+            className="h-8 gap-1.5 text-xs font-medium rounded-xl border-[color:var(--card-border)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]"
+          >
+            <Activity className="h-3.5 w-3.5 text-blue-400" />
+            <span>Audit Trail & Security</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/settings/billing")}
+            className="h-8 gap-1.5 text-xs font-medium rounded-xl border-[color:var(--card-border)] bg-[var(--surface-strong)] hover:bg-[var(--surface)]"
+          >
+            <CreditCard className="h-3.5 w-3.5 text-amber-400" />
+            <span>Billing & Seat Allocation</span>
+          </Button>
+        </div>
       </section>
 
       <section className="grid gap-4 md:grid-cols-3">
@@ -379,7 +415,7 @@ export default function AdminPanel() {
 
         <Card>
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="rounded-2xl bg-emerald-500/10 p-3 text-emerald-300">
+            <div className="rounded-2xl bg-emerald-500/10 p-3 text-[var(--color-success)]">
               <PlusCircle className="h-6 w-6" />
             </div>
             <div>
@@ -391,7 +427,7 @@ export default function AdminPanel() {
 
         <Card>
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="rounded-2xl bg-amber-500/10 p-3 text-amber-300">
+            <div className="rounded-2xl bg-amber-500/10 p-3 text-[var(--color-warning)]">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div>

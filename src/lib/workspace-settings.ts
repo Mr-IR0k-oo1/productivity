@@ -17,7 +17,7 @@ export type WorkspaceSettingsSectionKey = (typeof workspaceSettingsSectionKeys)[
 const connectionStateSchema = z.enum(["connected", "disconnected"]);
 
 const generalSettingsSchema = z.object({
-  workspaceName: z.string().min(2).default("Orbit"),
+  workspaceName: z.string().min(2).default("My workspace"),
   workspaceDescription: z.string().default("Execution stack for startup teams."),
   timezone: z.string().default("Asia/Kolkata"),
   dateFormat: z.enum(["12h", "24h"]).default("24h"),
